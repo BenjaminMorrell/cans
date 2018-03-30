@@ -103,6 +103,7 @@ include_directories(
 add_executable(test_mapping examples/test_mapping.cpp src/mapping3D.cpp src/object3D.cpp)
 add_executable(crv_test examples/curveTesting.cpp src/mapping3D.cpp)
 add_executable(srf_test examples/surfaceJoining.cpp src/mapping3D.cpp)
+add_executable(pcl_test examples/pointCloudTesting.cpp)
 
 
 # add_definitions( -DMAGICKCORE_QUANTUM_DEPTH=16 )
@@ -122,6 +123,7 @@ add_executable(srf_test examples/surfaceJoining.cpp src/mapping3D.cpp)
 target_link_libraries(test_mapping ${catkin_LIBRARIES} ${NURBS3_LIBRARIES}) 
 target_link_libraries(crv_test ${catkin_LIBRARIES} ${NURBS3_LIBRARIES}) 
 target_link_libraries(srf_test ${catkin_LIBRARIES} ${NURBS3_LIBRARIES}) 
+target_link_libraries(pcl_test ${catkin_LIBRARIES} ${NURBS3_LIBRARIES}) 
 
 #############
 ## Install ##

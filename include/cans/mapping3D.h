@@ -38,9 +38,9 @@ public:
 
     // Convenience functions
     Vector_HPoint3Df getMatRow(Matrix_HPoint3Df, int);
-    Vector_HPoint3Df getMatCol(Matrix_HPoint3Df, int);
+    Vector_HPoint3Df getMatCol(Matrix_HPoint3Df, int, bool);
     void insertMatRow(Matrix_HPoint3Df&,Vector_HPoint3Df, int);
-    void insertMatCol(Matrix_HPoint3Df&,Vector_HPoint3Df, int);
+    void insertMatCol(Matrix_HPoint3Df&,Vector_HPoint3Df, int, bool);
 
 };
 

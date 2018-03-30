@@ -72,6 +72,7 @@ void testSurfaceJoin(){
   
   cout << "scan (0,0) is: " << scan1(0,0) << endl;
   cout << "scan (end,0) is: " << scan1(n_points-1,0) << endl;
+  cout << "scan (0,end) is: " << scan1(0,n_points-1) << endl;
   cout << "scan (end,end) is: " << scan1(n_points-1,n_points-1) << endl;
 
   // Fit surfaces
@@ -176,8 +177,8 @@ void testSurfaceJoin(){
 
   cout << "strcmp check is : " << strcmp(extendDirection,"RU") << endl;
 
-
-  NurbsSurfacef srf4 = map.joinSurfaces(srf1,srf2,"RR")
+// take columns in same order: assume a rotation, so order changes if not flipped
+  NurbsSurfacef srf4 = map.joinSurfaces(srf1,srf2,"RR");
 
   srf4.writePS("srf4.ps",15,15,cam,look);
 }
