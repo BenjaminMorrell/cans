@@ -13,64 +13,15 @@ using namespace PLib ;
 */
 Mapping3D::Mapping3D():
     n_ctrl_default(7), order{3,3}, number_downsample_points(45), overlap_d_frac(0.6), 
-    search_thresh {0.75,0.75,0.75,0,0,0,0,0,0}
+    search_thresh {0.75,0.75,0.75,0,0,0,0,0,0}, numRowsDesired(45), numColsDesired(45),
+    maxNanAllowed(10), removeNanBuffer(0)
 {
 }
 
 
-//-------------------------------------------------------------------
-/*! 
-  \brief  Find the centre of data, to be used for data association
-
-  \author Benjamin Morrell
-  \date 23 March 2018
-*/
-Point3Df Mapping3D::compute_centre_of_data(const Matrix_Point3Df &scan){
-
-    Point3Df centre(0.0,0.0,0.0);
-
-    // Define step size to only use a subset of points for sampling the mean
-    int step_size(1);
-
-    // Add up all the points
-    for (int i = 0; i < scan.rows(); i++){
-        for (int j = 0; j < scan.cols(); j++){
-            // Compute the mean for x, y and z
-            centre += scan(i,j);
-        }
-    }
-    // Divide by the number of terms to get the average
-    centre /= (float)(scan.rows()*scan.cols());
-    // centre /= static_cast<float>(scan.rows()*scan.cols())
-
-
-
-    // return by value as it is a local variable, and not very large
-    return centre;
-}
 
 //-------------------------------------------------------------------
-/*! 
-  \brief  Form an ordered mesh from input scan data
-
-  \author Benjamin Morrell
-  \date 23 March 2018
-*/
-Matrix_Point3Df Mapping3D::mesh_from_scan(const Matrix_Point3Df scan){
-
-    
-
-    return scan;
-
-    // Try to pass back a pointer to the data?
-
-}
-
-
-
-
-//-------------------------------------------------------------------
-// PRIVATE METHODS
+// Methods...
 //-------------------------------------------------------------------
 
 //-------------------------------------------------------------------
@@ -440,6 +391,408 @@ NurbsSurface<float,3> Mapping3D::joinSurfaces(NurbsSurfacef& srf1, NurbsSurfacef
     return *srfOut;
 
 }
+
+//-------------------------------------------------------------------
+// ------------- Scan Processing  -----------------------------
+//-------------------------------------------------------------------
+
+//-------------------------------------------------------------------
+
+/*! 
+  \brief  Searches through an organised pointcloud and makes a boolean array with 1s where the point cloud is nan
+
+  \param nanArray   the output boolean array
+  \param cloud      a pointer to the point cloud to process
+  
+  
+  \author Benjamin Morrell
+  \date 30 March 2018
+*/
+void Mapping3D::meshFromScan(pcl::PointCloud<pcl::PointXYZ>::Ptr cloudOut, pcl::PointCloud<pcl::PointXYZ>::Ptr cloudIn){
+  // Initialise
+  Eigen::Array<bool, Eigen::Dynamic, 1> rowFlags(cloudIn->height, 1); rowFlags.setOnes(cloudIn->height, 1);
+  Eigen::Array<bool, 1, Eigen::Dynamic> colFlags(1, cloudIn->width); colFlags.setOnes(1, cloudIn->width);
+  // Initialise Nan array
+  Eigen::Array<bool, Eigen::Dynamic, Eigen::Dynamic> nanArray(cloudIn->height,cloudIn->width);
+  nanArray.setZero(cloudIn->height,cloudIn->width);
+
+  std::cerr << "PointCloud before filtering: W: " << cloudIn->width << "\tH: " << cloudIn->height << "\tdata points." << std::endl;
+
+  // Fill the Nan Array
+  getNanMatrixFromPointCloud(nanArray, cloudIn);
+
+  cout << "Number of Nans: " << nanArray.count() << endl;
+
+  bool exitFlag = false;
+
+  bool nansPresent = true;
+
+  // Loop to remove Nans
+  while (!exitFlag){
+    nansPresent = removeRowsNan(nanArray, rowFlags);
+
+    if (nansPresent){
+      nansPresent = removeColsNan(nanArray, colFlags);
+      if (nansPresent){
+        // Check dimensions 
+        cout << "Nans removed: Row count: " << rowFlags.count() << "\nCol Count: " << colFlags.count() << endl;
+        if (rowFlags.count() <= this->numRowsDesired || colFlags.count() <= this->numColsDesired){
+          exitFlag = true;
+          cout << "Exiting because dimensions are too small" << endl;
+        }
+      }else{
+        exitFlag = true;
+        cout << "Exiting because there are few enough NaNs" << endl;
+      }
+    }else{
+      exitFlag = true;
+      cout << "Exiting because there are few enough NaNs" << endl;
+    }
+  }
+
+  // Downsample 
+  downsampleRow(rowFlags);
+  downsampleCol(colFlags);
+
+  cout << "Number of nans left: " << nanArray.count() << endl;
+
+  // Extract point cloud
+  int ii = 0;
+  int jj = 0;
+  int ijk = 0;
+  Eigen::Array<int, 2, Eigen::Dynamic> nanIndices(2,nanArray.count());
+  nanIndices.setConstant(2,nanArray.count(),-1);
+
+  for (int i = 0; i < cloudIn->height; i++){
+    // Reset jj index
+    jj = 0; 
+    // For each row selected in rowFlags
+    if (rowFlags(i,0)){
+      for (int j = 0; j < cloudIn->width; j++){
+        // For each column selected in colFlags
+        if (colFlags(0,j)){
+          // Get the data from the cloud
+          cloudOut->at(jj,ii) = cloudIn->at(j,i);
+
+          // Store indices if the value is nan
+          if (!pcl::isFinite(cloudIn->at(j,i))){
+            nanIndices(0,ijk) = ii;
+            nanIndices(1,ijk) = jj;
+            ijk++; 
+          }
+
+          // Increment the new column index
+          jj++;
+        }
+      }
+      // Increment the new row index
+      ii++;
+    }
+  }
+
+  cout << "Finished copying data across" << endl;
+
+  cout << "NanIndices are: " << nanIndices << endl;
+
+  // Average Nans
+  averageOutNans(cloudOut, nanIndices);
+  
+}
+
+/*! 
+  \brief  Searches through an organised pointcloud and makes a boolean array with 1s where the point cloud is nan
+
+  \param nanArray   the output boolean array
+  \param cloud      a pointer to the point cloud to process
+  
+  
+  \author Benjamin Morrell
+  \date 30 March 2018
+*/
+void Mapping3D::getNanMatrixFromPointCloud(Eigen::Array<bool, Eigen::Dynamic, Eigen::Dynamic>& nanArray, pcl::PointCloud<pcl::PointXYZ>::Ptr cloud){
+
+   // Loop through Point cloud 
+  for (int i = 0; i < cloud->height; i++){
+    for (int j = 0; j < cloud->width; j++){
+      // If nan value
+      if (!pcl::isFinite(cloud->at(j,i))){ // cloud->at(col,row)
+        nanArray(i,j) = true;
+      }else{
+        nanArray(i,j) = false;
+      }
+    }
+  }
+}
+
+/*! 
+  \brief  Removes rows as being actively selected, and then clears out nanArray to no longer consider that row
+
+  \param nanArray       input boolean array with true where there were nan values in a point cloud
+  \param rowFlags       the array of boolean flags indicating the active rows
+  \param maxNanAllowed  maximum number of NaNs that is permissible
+
+  The function will return true if rows were removed and false if they were not.
+  Uses removeNanBuffer to select more rows in one go. 
+  
+  \author Benjamin Morrell
+  \date 30 March 2018
+*/
+bool Mapping3D::removeRowsNan(Eigen::Array<bool, Eigen::Dynamic, Eigen::Dynamic>& nanArray,Eigen::Array<bool,Eigen::Dynamic, 1>& rowFlags){
+
+  Eigen::Array<int, Eigen::Dynamic, 1> rowNan = nanArray.rowwise().count().cast<int>();
+
+  // Maximum number of Nans in a row
+  int maxNan = rowNan.maxCoeff();
+
+  cout << "Max NaN count: " << maxNan << "\tmax allowed is: " << this->maxNanAllowed << endl;
+
+  // If the maximum number Nans is above the set limit
+  if (maxNan > this->maxNanAllowed){
+    for (int i = 0; i < rowNan.rows(); i++){
+      // If this rows has equal to the maximum number of nans
+      if (rowNan(i) >= maxNan-this->removeNanBuffer){
+        // Set the row values to zero in the array
+        nanArray.row(i) = Eigen::Array<bool, 1, Eigen::Dynamic>::Zero(1,nanArray.cols());
+
+        // Set the rowFlags value to zero
+        rowFlags(i) = false;
+      }
+    }
+    return true;
+  }else{
+    return false;
+  }
+}
+
+/*! 
+  \brief  Removes cols as being actively selected, and then clears out nanArray to no longer consider that col
+
+  \param nanArray       input boolean array with true where there were nan values in a point cloud
+  \param colFlags       the array of boolean flags indicating the active cols
+  \param maxNanAllowed  maximum number of NaNs that is permissible
+
+  The function will return true if cols were removed and false if they were not.
+  Uses removeNanBuffer to select more cols in one go. 
+  
+  \author Benjamin Morrell
+  \date 30 March 2018
+*/
+bool Mapping3D::removeColsNan(Eigen::Array<bool, Eigen::Dynamic, Eigen::Dynamic>& nanArray,Eigen::Array<bool, 1, Eigen::Dynamic>& colFlags){
+
+  Eigen::Array<int, 1, Eigen::Dynamic> colNan = nanArray.colwise().count().cast<int>();
+
+  // Maximum number of Nans in a col
+  int maxNan = colNan.maxCoeff();
+
+  cout << "Max NaN count: " << maxNan << "\tmax allowed is: " << this->maxNanAllowed << endl;
+
+  // If the maximum number Nans is above the set limit
+  if (maxNan > this->maxNanAllowed){
+    for (int i = 0; i < colNan.cols(); i++){
+      // If this cols has equal to the maximum number of nans
+      if (colNan(i) >= maxNan-this->removeNanBuffer){
+        // Set the col values to zero in the array
+        nanArray.col(i) = Eigen::Array<bool, Eigen::Dynamic, 1>::Zero(nanArray.rows(), 1);
+
+        // Set the colFlags value to zero
+        colFlags(i) = false;
+
+      }
+    }
+    return true;
+  }else{
+    return false;
+  }
+}
+
+/*! 
+  \brief  select a set number of rows - indicated by an array of boolean flags
+
+  \param rowFlags       the array of boolean flags indicating the active rows
+  \param numRowsDesired The number of rows desired out 
+  
+  Uses linspace to exclude rows so that the number of 1's in rowFlags is equal to numRowsDesired
+  
+  \author Benjamin Morrell
+  \date 30 March 2018
+*/
+void Mapping3D::downsampleRow(Eigen::Array<bool,Eigen::Dynamic, 1>& rowFlags){
+
+  // Create linspaced array 
+  Eigen::Array<float, Eigen::Dynamic, 1> selectArrayf;
+  Eigen::Array<int, Eigen::Dynamic, 1> selectArray;
+  selectArrayf.setLinSpaced(this->numRowsDesired, 0, rowFlags.count()-1);
+  selectArray = selectArrayf.round().cast<int>();
+
+  int j = 0;
+
+  // Make the flags false if not included
+  for (int i = 0; i < rowFlags.rows(); i++){
+    if (rowFlags(i)){
+      if (!(selectArray == j).any()){
+        rowFlags(i) = false;
+      }
+      j++;
+    }
+  }
+}
+
+/*! 
+  \brief  select a set number of columns - indicated by an array of boolean flags
+
+  \param colFlags       the array of boolean flags indicating the active columns
+  \param numColDesired The number of columns desired out 
+  
+  Uses linspace to exclude columnss so that the number of 1's in colFlags is equal to numColsDesired
+  
+  \author Benjamin Morrell
+  \date 30 March 2018
+*/
+void Mapping3D::downsampleCol(Eigen::Array<bool, 1, Eigen::Dynamic>& colFlags){
+
+  // Create linspaced array 
+  Eigen::Array<float, Eigen::Dynamic, 1> selectArrayf;
+  Eigen::Array<int, Eigen::Dynamic, 1> selectArray;
+  selectArrayf.setLinSpaced(this->numColsDesired, 0, colFlags.count()-1);
+  selectArray = selectArrayf.round().cast<int>();
+  
+  int j = 0;
+
+  // Make the flags false if not included
+  for (int i = 0; i < colFlags.cols(); i++){
+    if (colFlags(i)){
+      if (!(selectArray == j).any()){
+        colFlags(i) = false;
+      }
+      j++;
+    }
+  }
+}
+
+/*! 
+  \brief  Steps through nans in a point cloud and replaces with averages from neighbouring points
+
+  \param cloud       The point cloud to modify
+  \param nanIndices  An array of indices of the points to replace
+  
+  Uses linspace to exclude columnss so that the number of 1's in colFlags is equal to numColsDesired
+  
+  \author Benjamin Morrell
+  \date 30 March 2018
+*/
+void Mapping3D::averageOutNans(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, Eigen::Array<int,2,Eigen::Dynamic> nanIndices){
+  cout << "Number of cols: " << nanIndices.cols() << endl;
+  for (int i = 0; i < nanIndices.cols(); i++){
+    if (nanIndices(0,i) == -1){
+      // Flag meaning that those terms are not valid (not used)
+      break;
+    }
+    cout << "Before: " << cloud->at(nanIndices(1,i),nanIndices(0,i)) << endl;
+    regionAverage(cloud,nanIndices(0,i),nanIndices(1,i));
+    cout << "After:  " << cloud->at(nanIndices(1,i),nanIndices(0,i)) << endl;
+  }
+
+}
+
+/*! 
+  \brief  Replaces a given point by projecting from nearby points
+
+  \param cloud  pointer to cloud to process
+  \param i      row index of point to change
+  \param j      col index of point to change
+  
+  Will search +_ in i and j, then try to take the delta from i-2 to i-1 and apply to i-1 to get a new point for i 
+  (similarly for i+1, j-1, j+1). The results are averaged together. 
+  If the neighbouring points are nan, they are not used. 
+  
+  \author Benjamin Morrell
+  \date 30 March 2018
+*/
+void Mapping3D::regionAverage(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, int i, int j){
+
+  pcl::PointXYZ average(0.0,0.0,0.0);
+
+  int add_count = 0; // to track how many values are averaged. 
+
+  // Back in i
+  if (i > 0){
+    if (pcl::isFinite(cloud->at(j,i-1))){
+      if (i > 1){
+        if (pcl::isFinite(cloud->at(j,i-2))){
+          // Step with same delta as neighbours
+          average.getArray3fMap() += 2*cloud->at(j,i-1).getArray3fMap() - cloud->at(j,i-2).getArray3fMap();
+        }else{
+          average.getArray3fMap() += cloud->at(j,i-1).getArray3fMap();
+        }
+
+      }else{
+        average.getArray3fMap() += cloud->at(j,i-1).getArray3fMap();
+      }
+      add_count ++;
+    }    
+  }
+
+  // Forward in i
+  if (i < cloud->height-1){
+    if (pcl::isFinite(cloud->at(j,i+1))){
+      if (i < cloud->height-2){
+        if (pcl::isFinite(cloud->at(j,i+2))){
+          // Step with same delta as neighbours
+          average.getArray3fMap() += 2*cloud->at(j,i+1).getArray3fMap() - cloud->at(j,i+2).getArray3fMap();    
+        }else{
+          average.getArray3fMap() += cloud->at(j,i+1).getArray3fMap();
+        }
+      }else{
+        average.getArray3fMap() += cloud->at(j,i+1).getArray3fMap();
+      }
+      add_count ++;
+    }    
+  }
+
+  // Back in j
+  if (j > 0){
+    if (pcl::isFinite(cloud->at(j-1,i))){
+      if (j > 1){
+        if (pcl::isFinite(cloud->at(j-2,i))){
+          // Step with same delta as neighbours
+          average.getArray3fMap() += 2*cloud->at(j-1,i).getArray3fMap() - cloud->at(j-2,i).getArray3fMap();
+        }else{
+          average.getArray3fMap() += cloud->at(j-1,i).getArray3fMap();
+        }
+      }else{
+        average.getArray3fMap() += cloud->at(j-1,i).getArray3fMap();
+      }
+      add_count ++;
+    }    
+  }
+
+  // Forward in j
+  if (j < cloud->width-1){
+    if (pcl::isFinite(cloud->at(j+1,i))){
+      if (j < cloud->width-2){
+        if (pcl::isFinite(cloud->at(j+2,i))){
+          // Step with same delta as neighbours
+          average.getArray3fMap() += 2*cloud->at(j+1,i).getArray3fMap() - cloud->at(j+2,i).getArray3fMap();
+        }else{
+          average.getArray3fMap() += cloud->at(j+1,i).getArray3fMap();
+        }
+      }else{
+        average.getArray3fMap() += cloud->at(j+1,i).getArray3fMap();
+      }
+      add_count ++;
+    }    
+  }
+
+  // Divide by count to get the average
+  average.getArray3fMap() /= (float)add_count;
+
+  //update cloud
+  cloud->at(j,i) = average;
+
+}
+
+
+
 
 //-------------------------------------------------------------------
 // ------------- CONVENIENCE FUNCTIONS -----------------------------

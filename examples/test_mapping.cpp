@@ -30,9 +30,9 @@ void test_mapping_class(){
   Mapping3D map;
 
   // Get centre
-  Point3Df centre = map.compute_centre_of_data(scan);
+  // Point3Df centre = map.compute_centre_of_data(scan);
 
-  cout << "Centre is: " << centre << endl;
+  // cout << "Centre is: " << centre << endl;
 
   // Initialise Object3D
   Object3D obj(scan);
@@ -88,6 +88,32 @@ void test_mapping_class(){
   cout << "Point (0.3,0.3) on obj3: " << obj3.pointAt(0.3,0.3) << endl;
 
 }
+
+// void testMappingWorkflow(int argc, char** argv){
+
+//   pcl::PCLPointCloud2::Ptr cloud_blob (new pcl::PCLPointCloud2);
+//   pcl::PCLPointCloud2::Ptr cloud_blob2 (new pcl::PCLPointCloud2);
+//   pcl::PointCloud<pcl::PointNormal>::Ptr cloud (new pcl::PointCloud<pcl::PointNormal>);
+//   pcl::PointCloud<pcl::PointNormal>::Ptr cloud2 (new pcl::PointCloud<pcl::PointNormal>);
+ 
+ 
+//   // Fill in the cloud data
+//   pcl::PCDReader reader;
+//   reader.read (argv[1], *cloud_blob);
+//   if (argc == 3){
+//     reader.read (argv[2], *cloud_blob2);
+//   }
+  
+
+//   // Convert to the templated PointCloud (PointCoud<T> to PointCloud2)
+//   pcl::fromPCLPointCloud2 (*cloud_blob, *cloud); 
+//   if (argc > 3){
+//     pcl::fromPCLPointCloud2 (*cloud_blob, *cloud2_orig); 
+//   }else{
+//     pcl::fromPCLPointCloud2 (*cloud_blob2, *cloud2); 
+//   }
+
+// }
 
 
 int

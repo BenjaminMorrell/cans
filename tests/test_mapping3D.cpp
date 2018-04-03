@@ -35,17 +35,6 @@ TEST_F (mapping3DTest, BlankConstructor){
     Mapping3D map;
 }
 
-TEST_F (mapping3DTest, TestComputeCentre){
-    // Initialise class
-    Mapping3D map;
-
-    // Get centre
-    Point3Df centre = map.compute_centre_of_data(scan);
-    Point3Df expect(1,1,0);
-
-    EXPECT_EQ(centre, expect);
-}
-
 
 //--------------------------------------------
 //-------- Join Curve Tests -----
@@ -252,8 +241,6 @@ TEST_F (nurbsJoiningTest, TestJoinDifferentNctrl){
 
 }
 
-
-
 //--------------------------------------------
 //-------- Join Surface Tests -----
 //--------------------------------------------
@@ -447,7 +434,6 @@ TEST_F (nurbsSurfaceJoiningTest, testLL){
     EXPECT_FLOAT_EQ(1.0,srfOut(1.0,0.3).y());
     EXPECT_FLOAT_EQ(1.0,srfOut(1.0,0.7).y());
 }
-
 
 TEST_F (nurbsSurfaceJoiningTest, testLR){
 
@@ -659,6 +645,7 @@ TEST_F (nurbsSurfaceJoiningTest, testDU){
     EXPECT_FLOAT_EQ(2.0,srfOut(0.3,1.0).x());
     EXPECT_FLOAT_EQ(2.0,srfOut(0.7,1.0).x());
 }
+
 TEST_F (nurbsSurfaceJoiningTest, testDR){
 
     NurbsSurfacef srfOut = map.joinSurfaces(srf1D,srf2C,"DR");
@@ -699,10 +686,420 @@ TEST_F (nurbsSurfaceJoiningTest, testDL){
     EXPECT_EQ(HPoint3Df(2.0,2.0,0.0,1.0),srfOut(1.0,1.0));
 
     // Test mid-extension points 
-    EXPECT_FLOAT_EQ(1.0,srfOut(0.3,0.0).x());
+    EXPECT_FLOAT_EQ(1.0,srfOut(0.3,0.0).x());   
     EXPECT_FLOAT_EQ(1.0,srfOut(0.7,0.0).x());
     EXPECT_FLOAT_EQ(2.0,srfOut(0.3,1.0).x());
     EXPECT_FLOAT_EQ(2.0,srfOut(0.7,1.0).x());
+}
+
+
+class meshFromScanTest : public ::testing::Test{
+    protected:
+        meshFromScanTest() : cloud(new pcl::PointCloud<pcl::PointXYZ>(10,10)), nanArray(10,10), expectNanArray(10,10),
+                rowFlags(10,1), colFlags(1,10)
+        {
+        
+            int n_points = 10;
+            bool nanFlag = false;
+
+            // Set to all zeros
+            expectNanArray.setZero();
+            nanArray.setZero();
+
+            // Create data with Nans
+            for (int i = 0; i<n_points; i++){
+                for (int j = 0; j<n_points; j++){
+                    if (i <= 1 || (i == 2 && (j < 3 || j > 7)) || i == 9 || j == 0 || j == 9 || (i == 5 && j == 4)){
+                        nanFlag = true;
+                    }
+                    if (nanFlag) {
+                        cloud->at(j,i).x = NAN;
+                        cloud->at(j,i).y = NAN;
+                        cloud->at(j,i).z = NAN;
+                        expectNanArray(i,j) = true;
+                    }else{
+                        cloud->at(j,i).x = (float)j/(n_points-1);
+                        cloud->at(j,i).y = (float)i/(n_points-1);
+                        cloud->at(j,i).z = 0.0;//(float)i*2.0f - (float)j*5.0f;
+                    }
+                    nanFlag = false;
+                } 
+            }
+
+            // Set flags to 1s
+            rowFlags.setOnes(10, 1);
+            colFlags.setOnes(1, 10);
+
+            // Set to remove all nans
+            mp.maxNanAllowed = 0;
+            mp.numRowsDesired = 2;
+            mp.numColsDesired = 2;
+
+        }
+
+        pcl::PointCloud<pcl::PointXYZ>::Ptr cloud;
+
+        Eigen::Array<bool, 10, 10> expectNanArray;
+
+        Eigen::Array<bool, Eigen::Dynamic, Eigen::Dynamic> nanArray;
+
+        // Initialise
+        Eigen::Array<bool, Eigen::Dynamic, 1> rowFlags;
+        Eigen::Array<bool, 1, Eigen::Dynamic> colFlags;
+  
+        // Init class
+        Mapping3D mp;
+};
+
+TEST_F (meshFromScanTest, nanMatrixFromPCTest){
+
+  // Fill the Nan Array
+  mp.getNanMatrixFromPointCloud(nanArray, cloud);
+
+  cout << "Expected Nan array is:\n" << expectNanArray << endl;
+  cout << "Computed Nan array is:\n" << nanArray << endl;
+
+  EXPECT_TRUE((nanArray==expectNanArray).all());
+
+}
+
+TEST_F (meshFromScanTest, rowNanRemoveOnce){
+
+
+    // Fill the Nan Array
+    mp.getNanMatrixFromPointCloud(nanArray, cloud);
+    
+    // Run the function
+    int nansPresent = mp.removeRowsNan(nanArray, rowFlags);
+    
+    EXPECT_TRUE(nansPresent);
+
+    Eigen::Array<bool, 10, 1> expectRowFlags(10,1); expectRowFlags.setOnes(10,1);
+    expectRowFlags[0] = false;
+    expectRowFlags[1] = false;
+    expectRowFlags[9] = false;
+
+    cout << "Expected Row Flags: " << expectRowFlags << endl;
+    cout << "Computed Row Flags: " << rowFlags << endl;
+
+    EXPECT_TRUE((expectRowFlags==rowFlags).all());
+
+    EXPECT_EQ(false,nanArray(0,0));
+    EXPECT_EQ(false,nanArray(1,1));
+    EXPECT_EQ(false,nanArray(9,9));
+}
+
+TEST_F (meshFromScanTest, colNanRemoveOnce){
+
+
+    // Fill the Nan Array
+    mp.getNanMatrixFromPointCloud(nanArray, cloud);
+    
+    // Run the function
+    int nansPresent = mp.removeColsNan(nanArray, colFlags);
+    
+    EXPECT_TRUE(nansPresent);
+
+    Eigen::Array<bool, 1, 10> expectColFlags(1,10); expectColFlags.setOnes(1,10);
+    expectColFlags[0] = false;
+    expectColFlags[9] = false;
+
+    cout << "Expected Col Flags: " << expectColFlags << endl;
+    cout << "Computed Col Flags: " << colFlags << endl;
+
+    EXPECT_TRUE((expectColFlags==colFlags).all());
+    EXPECT_EQ(false,nanArray(0,0));
+    EXPECT_EQ(false,nanArray(0,9));
+}
+
+TEST_F (meshFromScanTest, colRowNanRemove){
+
+
+    // Fill the Nan Array
+    mp.getNanMatrixFromPointCloud(nanArray, cloud);
+    
+    bool exitFlag = false;
+
+    bool nansPresent = true;
+
+    // Loop to remove Nans
+    while (!exitFlag){
+        nansPresent = mp.removeRowsNan(nanArray, rowFlags);
+
+        if (nansPresent){
+        nansPresent = mp.removeColsNan(nanArray, colFlags);
+        if (nansPresent){
+            // Check dimensions 
+            cout << "Nans removed: Row count: " << rowFlags.count() << "\nCol Count: " << colFlags.count() << endl;
+            if (rowFlags.count() <= 0 || colFlags.count() <= 0){
+            exitFlag = true;
+            cout << "Exiting because dimensions are too small" << endl;
+            }
+        }else{
+            exitFlag = true;
+            cout << "Exiting because there are few enough NaNs" << endl;
+        }
+        }else{
+        exitFlag = true;
+        cout << "Exiting because there are few enough NaNs" << endl;
+        }
+    }
+    
+    Eigen::Array<bool, 10, 1> expectRowFlags(10,1); expectRowFlags.setOnes(10,1);
+    expectRowFlags[0] = false;
+    expectRowFlags[1] = false;
+    expectRowFlags[2] = false;
+    expectRowFlags[9] = false;
+
+    Eigen::Array<bool, 1, 10> expectColFlags(1,10); expectColFlags.setOnes(1,10);
+    expectColFlags[0] = false;
+    expectColFlags[4] = false;
+    expectColFlags[9] = false;
+
+    cout << "Expected Row Flags: " << expectRowFlags << endl;
+    cout << "Computed Row Flags: " << rowFlags << endl;
+
+    EXPECT_TRUE((expectRowFlags==rowFlags).all());
+
+    cout << "Expected Col Flags: " << expectColFlags << endl;
+    cout << "Computed Col Flags: " << colFlags << endl;
+
+    EXPECT_TRUE((expectColFlags==colFlags).all());
+
+    EXPECT_EQ(false,nanArray(5,4));
+}
+
+TEST_F (meshFromScanTest, downsampleRowTestAllOnes){
+    
+    Eigen::Array<bool, Eigen::Dynamic, 1> rowFlagsT(10,1);rowFlagsT.setOnes(10,1);
+
+    mp.numRowsDesired = 5;
+
+    mp.downsampleRow(rowFlagsT);
+
+    EXPECT_EQ(mp.numRowsDesired,rowFlagsT.count());
+
+    cout << "rowFlags out: " << rowFlagsT << endl;
+
+    EXPECT_EQ(true,rowFlagsT[0]);
+    EXPECT_EQ(true,rowFlagsT[9]);
+    EXPECT_EQ(false,rowFlagsT[1]);
+    EXPECT_EQ(false,rowFlagsT[8]);
+}
+
+TEST_F (meshFromScanTest, downsampleRowTestMixed1){
+    
+    Eigen::Array<bool, Eigen::Dynamic, 1> rowFlagsT(10,1);rowFlagsT.setOnes(10,1);
+    rowFlagsT[0] = false;
+    rowFlagsT[1] = false;
+    rowFlagsT[5] = false;
+    rowFlagsT[6] = false;
+    rowFlagsT[8] = false;
+
+    mp.numRowsDesired = 5;
+
+    mp.downsampleRow(rowFlagsT);
+
+    EXPECT_EQ(mp.numRowsDesired,rowFlagsT.count());
+
+    cout << "rowFlags out: " << rowFlagsT << endl;
+
+    EXPECT_EQ(true,rowFlagsT[2]);
+    EXPECT_EQ(true,rowFlagsT[9]);
+    EXPECT_EQ(false,rowFlagsT[1]);
+    EXPECT_EQ(false,rowFlagsT[8]);
+}
+
+TEST_F (meshFromScanTest, downsampleRowTestMixed2){
+    
+    Eigen::Array<bool, Eigen::Dynamic, 1> rowFlagsT(10,1);rowFlagsT.setOnes(10,1);
+    rowFlagsT[0] = false;
+    rowFlagsT[1] = false;
+    rowFlagsT[5] = false;
+ 
+    mp.numRowsDesired = 5;
+
+    mp.downsampleRow(rowFlagsT);
+
+    EXPECT_EQ(mp.numRowsDesired,rowFlagsT.count());
+
+    cout << "rowFlags out: " << rowFlagsT << endl;
+
+    EXPECT_EQ(true,rowFlagsT[2]);
+    EXPECT_EQ(true,rowFlagsT[9]);
+    EXPECT_EQ(false,rowFlagsT[1]);
+}
+
+TEST_F (meshFromScanTest, downsampleColTestAllOnes){
+    
+    Eigen::Array<bool, 1, Eigen::Dynamic> colFlagsT(1,10);colFlagsT.setOnes(1,10);
+
+    mp.numColsDesired = 5;
+
+    mp.downsampleCol(colFlagsT);
+
+    EXPECT_EQ(mp.numColsDesired,colFlagsT.count());
+
+    cout << "colFlags out: " << colFlagsT << endl;
+
+    EXPECT_EQ(true,colFlagsT[0]);
+    EXPECT_EQ(true,colFlagsT[9]);
+    EXPECT_EQ(false,colFlagsT[1]);
+    EXPECT_EQ(false,colFlagsT[8]);
+}
+
+TEST_F (meshFromScanTest, downsampleColTestMixed1){
+    
+    Eigen::Array<bool, 1, Eigen::Dynamic> colFlagsT(1,10);colFlagsT.setOnes(1,10);
+    colFlagsT[0] = false;
+    colFlagsT[1] = false;
+    colFlagsT[5] = false;
+    colFlagsT[6] = false;
+    colFlagsT[8] = false;
+
+    mp.numColsDesired = 5;
+
+    mp.downsampleCol(colFlagsT);
+
+    EXPECT_EQ(mp.numColsDesired,colFlagsT.count());
+
+    cout << "colFlags out: " << colFlagsT << endl;
+
+    EXPECT_EQ(true,colFlagsT[2]);
+    EXPECT_EQ(true,colFlagsT[9]);
+    EXPECT_EQ(false,colFlagsT[1]);
+    EXPECT_EQ(false,colFlagsT[8]);
+}
+
+TEST_F (meshFromScanTest, downsampleColTestMixed2){
+    
+    Eigen::Array<bool, 1, Eigen::Dynamic> colFlagsT(1,10);colFlagsT.setOnes(1,10);
+    colFlagsT[0] = false;
+    colFlagsT[1] = false;
+    colFlagsT[5] = false;
+ 
+    mp.numColsDesired = 5;
+
+    mp.downsampleCol(colFlagsT);
+
+    EXPECT_EQ(mp.numColsDesired,colFlagsT.count());
+
+    cout << "colFlags out: " << colFlagsT << endl;
+
+    EXPECT_EQ(true,colFlagsT[2]);
+    EXPECT_EQ(true,colFlagsT[9]);
+    EXPECT_EQ(false,colFlagsT[1]);
+}
+
+// TEST_F (meshFromScanTest, regionAverageTest){
+
+// }
+
+TEST_F (meshFromScanTest, averageOutNanTest){
+
+    Eigen::Array<int, 2, Eigen::Dynamic> nanIndices(2,1);
+    nanIndices(0,0) = 5;
+    nanIndices(1,0) = 4;
+
+    // Average Nans
+    mp.averageOutNans(cloud, nanIndices);
+
+    pcl::PointXYZ expectP;
+
+    expectP.x = (float)nanIndices(1,0)/(10-1);
+    expectP.y = (float)nanIndices(0,0)/(10-1);
+    expectP.z = 0.0;
+
+    EXPECT_NEAR(expectP.x,cloud->at(nanIndices(1,0),nanIndices(0,0)).x,0.0001);
+    EXPECT_NEAR(expectP.y,cloud->at(nanIndices(1,0),nanIndices(0,0)).y,0.0001);
+    EXPECT_NEAR(expectP.z,cloud->at(nanIndices(1,0),nanIndices(0,0)).z,0.0001);
+
+    cout << "Expected point:\n" << expectP << endl;
+    cout << "Computed point:\n" << cloud->at(nanIndices(1,0),nanIndices(0,0)) << endl;
+}
+
+TEST_F (meshFromScanTest, meshFromScanFunction){
+
+    mp.numRowsDesired = 6;
+    mp.numColsDesired = 6;
+
+    pcl::PointCloud<pcl::PointXYZ>::Ptr cloudOut (new pcl::PointCloud<pcl::PointXYZ>(mp.numColsDesired,mp.numRowsDesired,pcl::PointXYZ(0.0,0.0,0.0)));
+
+    // Mesh from scan
+    mp.meshFromScan(cloudOut, cloud);
+
+    EXPECT_EQ(6,cloudOut->width);
+    EXPECT_EQ(6,cloudOut->height);
+
+    // Test the desired corner points
+    EXPECT_FLOAT_EQ(cloud->at(1,3).x,cloudOut->at(0,0).x);
+    EXPECT_FLOAT_EQ(cloud->at(1,3).y,cloudOut->at(0,0).y);
+    EXPECT_FLOAT_EQ(cloud->at(1,3).z,cloudOut->at(0,0).z);
+
+    EXPECT_FLOAT_EQ(cloud->at(1,8).x,cloudOut->at(0,5).x);
+    EXPECT_FLOAT_EQ(cloud->at(1,8).y,cloudOut->at(0,5).y);
+    EXPECT_FLOAT_EQ(cloud->at(1,8).z,cloudOut->at(0,5).z);
+    
+    EXPECT_FLOAT_EQ(cloud->at(8,8).x,cloudOut->at(5,5).x);
+    EXPECT_FLOAT_EQ(cloud->at(8,8).y,cloudOut->at(5,5).y);
+    EXPECT_FLOAT_EQ(cloud->at(8,8).z,cloudOut->at(5,5).z);
+
+    EXPECT_FLOAT_EQ(cloud->at(8,3).x,cloudOut->at(5,0).x);
+    EXPECT_FLOAT_EQ(cloud->at(8,3).y,cloudOut->at(5,0).y);
+    EXPECT_FLOAT_EQ(cloud->at(8,3).z,cloudOut->at(5,0).z);
+
+}
+
+class meshFromScanLargeTest : public ::testing::Test{
+    protected:
+        meshFromScanLargeTest() : cloud(new pcl::PointCloud<pcl::PointXYZ>(1000,1000))
+        {
+        
+            int n_points = 1000;
+            bool nanFlag = false;
+
+            // Create data with Nans
+            for (int i = 0; i<n_points; i++){
+                for (int j = 0; j<n_points; j++){
+                    if (i <= 1 || (i == 2 && (j < 3 || j > 7)) || i == 9 || j == 0 || i == 5 || j == 578 || i == 345 || j == 9 || (i == 5 && j == 4)){
+                        nanFlag = true;
+                    }
+                    if ()
+                    if (nanFlag) {
+                        cloud->at(j,i).x = NAN;
+                        cloud->at(j,i).y = NAN;
+                        cloud->at(j,i).z = NAN;
+                    }else{
+                        cloud->at(j,i).x = (float)j/(n_points-1);
+                        cloud->at(j,i).y = (float)i/(n_points-1);
+                        cloud->at(j,i).z = 0.0;//(float)i*2.0f - (float)j*5.0f;
+                    }
+                    nanFlag = false;
+                } 
+            }
+
+            // Set to remove all nans
+            mp.maxNanAllowed = 10;
+            mp.numRowsDesired = 100;
+            mp.numColsDesired = 100;
+
+        }
+
+        pcl::PointCloud<pcl::PointXYZ>::Ptr cloud;
+  
+        // Init class
+        Mapping3D mp;
+};
+
+TEST_F (meshFromScanLargeTest, meshFromScanFunctionLarge){
+
+    pcl::PointCloud<pcl::PointXYZ>::Ptr cloudOut (new pcl::PointCloud<pcl::PointXYZ>(mp.numColsDesired,mp.numRowsDesired,pcl::PointXYZ(0.0,0.0,0.0)));
+
+    // Mesh from scan
+    mp.meshFromScan(cloudOut, cloud);
+
+    EXPECT_EQ(100,cloudOut->width);
+    EXPECT_EQ(100,cloudOut->height);
 }
 
 } // namespace

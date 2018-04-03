@@ -1,14 +1,18 @@
 #include <ros/ros.h>
 #include <iostream>
 
-// #include <nurbsS.h>
+#include "cans/mapping3D.h"
+
 #include <cmath>
 // PCL specific includes
 #include <pcl/io/pcd_io.h>
 #include <pcl/point_types.h>
 #include <pcl/point_cloud.h>
 
+
+
 using namespace std;
+using namespace PLib;
 
 void downsampleRow(Eigen::Array<bool,Eigen::Dynamic, 1>& rowFlags, int numRowsDesired){
 
@@ -28,15 +32,14 @@ void downsampleRow(Eigen::Array<bool,Eigen::Dynamic, 1>& rowFlags, int numRowsDe
       j++;
     }
   }
-
 }
 
-void downsampleCol(Eigen::Array<bool, 1, Eigen::Dynamic>& colFlags, int numcolsDesired){
+void downsampleCol(Eigen::Array<bool, 1, Eigen::Dynamic>& colFlags, int numColsDesired){
 
   // Create linspaced array 
   Eigen::Array<float, Eigen::Dynamic, 1> selectArrayf;
   Eigen::Array<int, Eigen::Dynamic, 1> selectArray;
-  selectArrayf.setLinSpaced(numcolsDesired, 0, colFlags.count()-1);
+  selectArrayf.setLinSpaced(numColsDesired, 0, colFlags.count()-1);
   selectArray = selectArrayf.round().cast<int>();
   
   int j = 0;
@@ -49,7 +52,6 @@ void downsampleCol(Eigen::Array<bool, 1, Eigen::Dynamic>& colFlags, int numcolsD
       j++;
     }
   }
-
 }
 
 
@@ -62,7 +64,17 @@ void regionAverage(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, int i, int j){
   // Back in i
   if (i > 0){
     if (pcl::isFinite(cloud->at(j,i-1))){
-      average.getArray3fMap() += cloud->at(j,i-1).getArray3fMap();
+      if (i > 1){
+        if (pcl::isFinite(cloud->at(j,i-2))){
+          // Step with same delta as neighbours
+          average.getArray3fMap() += 2*cloud->at(j,i-1).getArray3fMap() - cloud->at(j,i-2).getArray3fMap();
+        }else{
+          average.getArray3fMap() += cloud->at(j,i-1).getArray3fMap();
+        }
+
+      }else{
+        average.getArray3fMap() += cloud->at(j,i-1).getArray3fMap();
+      }
       add_count ++;
     }    
   }
@@ -70,7 +82,15 @@ void regionAverage(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, int i, int j){
   // Forward in i
   if (i < cloud->height-1){
     if (pcl::isFinite(cloud->at(j,i+1))){
-      average.getArray3fMap() += cloud->at(j,i+1).getArray3fMap();
+      if (i < cloud->height-2){
+        if (pcl::isFinite(cloud->at(j,i+2))){
+          average.getArray3fMap() += 2*cloud->at(j,i+1).getArray3fMap() - cloud->at(j,i+2).getArray3fMap();    
+        }else{
+          average.getArray3fMap() += cloud->at(j,i+1).getArray3fMap();
+        }
+      }else{
+        average.getArray3fMap() += cloud->at(j,i+1).getArray3fMap();
+      }
       add_count ++;
     }    
   }
@@ -78,7 +98,15 @@ void regionAverage(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, int i, int j){
   // Back in j
   if (j > 0){
     if (pcl::isFinite(cloud->at(j-1,i))){
-      average.getArray3fMap() += cloud->at(j-1,i).getArray3fMap();
+      if (j > 1){
+        if (pcl::isFinite(cloud->at(j-2,i))){
+          average.getArray3fMap() += 2*cloud->at(j-1,i).getArray3fMap() - cloud->at(j-2,i).getArray3fMap();
+        }else{
+          average.getArray3fMap() += cloud->at(j-1,i).getArray3fMap();
+        }
+      }else{
+        average.getArray3fMap() += cloud->at(j-1,i).getArray3fMap();
+      }
       add_count ++;
     }    
   }
@@ -86,7 +114,15 @@ void regionAverage(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, int i, int j){
   // Forward in j
   if (j < cloud->width-1){
     if (pcl::isFinite(cloud->at(j+1,i))){
-      average.getArray3fMap() += cloud->at(j+1,i).getArray3fMap();
+      if (j < cloud->width-2){
+        if (pcl::isFinite(cloud->at(j+2,i))){
+          average.getArray3fMap() += 2*cloud->at(j+1,i).getArray3fMap() - cloud->at(j+2,i).getArray3fMap();
+        }else{
+          average.getArray3fMap() += cloud->at(j+1,i).getArray3fMap();
+        }
+      }else{
+        average.getArray3fMap() += cloud->at(j+1,i).getArray3fMap();
+      }
       add_count ++;
     }    
   }
@@ -95,56 +131,71 @@ void regionAverage(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, int i, int j){
   average.getArray3fMap() /= (float)add_count;
 
   //update cloud
-  cloud->at(i,j) = average;
+  cloud->at(j,i) = average;
 
 }
 
 void averageOutNans(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, Eigen::Array<int,2,Eigen::Dynamic> nanIndices){
   cout << "Number of cols: " << nanIndices.cols() << endl;
   for (int i = 0; i < nanIndices.cols(); i++){
-    cout << "Before: " << cloud->at(nanIndices(0,i),nanIndices(1,i)) << endl;
+    if (nanIndices(0,i) == -1){
+      // Flag meaning that those terms are not valid (not used)
+      break;
+    }
+    cout << "Before: " << cloud->at(nanIndices(1,i),nanIndices(0,i)) << endl;
     regionAverage(cloud,nanIndices(0,i),nanIndices(1,i));
-    cout << "After:  " << cloud->at(nanIndices(0,i),nanIndices(1,i)) << endl;
+    cout << "After:  " << cloud->at(nanIndices(1,i),nanIndices(0,i)) << endl;
   }
 
 }
 
-void removeRowsNan(Eigen::Array<bool, Eigen::Dynamic, Eigen::Dynamic>& nanArray,Eigen::Array<bool,Eigen::Dynamic, 1>& rowFlags, int maxNanAllowed){
+bool removeRowsNan(Eigen::Array<bool, Eigen::Dynamic, Eigen::Dynamic>& nanArray,Eigen::Array<bool,Eigen::Dynamic, 1>& rowFlags, int maxNanAllowed){
 
   Eigen::Array<int, Eigen::Dynamic, 1> rowNan = nanArray.rowwise().count().cast<int>();
 
   // Maximum number of Nans in a row
   int maxNan = rowNan.maxCoeff();
 
+  int buffer = 5;
+
+  cout << "Max NaN count: " << maxNan << "\tmax allowed is: " << maxNanAllowed << endl;
+
   // If the maximum number Nans is above the set limit
   if (maxNan > maxNanAllowed){
     for (int i = 0; i < rowNan.rows(); i++){
       // If this rows has equal to the maximum number of nans
-      if (rowNan(i) == maxNan){
+      if (rowNan(i) >= maxNan-buffer){
         // Set the row values to zero in the array
         nanArray.row(i) = Eigen::Array<bool, 1, Eigen::Dynamic>::Zero(1,nanArray.cols());
 
         // Set the rowFlags value to zero
         rowFlags(i) = false;
-
       }
     }
+    return true;
+  }else{
+    return false;
   }
 
 }
 
-void removeColsNan(Eigen::Array<bool, Eigen::Dynamic, Eigen::Dynamic>& nanArray,Eigen::Array<bool, 1, Eigen::Dynamic>& colFlags, int maxNanAllowed){
+bool removeColsNan(Eigen::Array<bool, Eigen::Dynamic, Eigen::Dynamic>& nanArray,Eigen::Array<bool, 1, Eigen::Dynamic>& colFlags, int maxNanAllowed){
 
   Eigen::Array<int, 1, Eigen::Dynamic> colNan = nanArray.colwise().count().cast<int>();
 
   // Maximum number of Nans in a col
   int maxNan = colNan.maxCoeff();
 
+  int buffer = 5;
+  // TODO: Make this a user setting - or a member variable of the class in which this function lies 
+
+  cout << "Max NaN count: " << maxNan << "\tmax allowed is: " << maxNanAllowed << endl;
+
   // If the maximum number Nans is above the set limit
   if (maxNan > maxNanAllowed){
     for (int i = 0; i < colNan.cols(); i++){
       // If this cols has equal to the maximum number of nans
-      if (colNan(i) == maxNan){
+      if (colNan(i) >= maxNan-buffer){
         // Set the col values to zero in the array
         nanArray.col(i) = Eigen::Array<bool, Eigen::Dynamic, 1>::Zero(nanArray.rows(), 1);
 
@@ -153,8 +204,10 @@ void removeColsNan(Eigen::Array<bool, Eigen::Dynamic, Eigen::Dynamic>& nanArray,
 
       }
     }
+    return true;
+  }else{
+    return false;
   }
-
 }
 
 void getNanMatrixFromPointCloud(Eigen::Array<bool, Eigen::Dynamic, Eigen::Dynamic>& nanArray, pcl::PointCloud<pcl::PointXYZ>::Ptr cloud){
@@ -241,7 +294,7 @@ void pclTest(){
   //   for (int j = 0; j < cloud->width; j++){
   //     // if nan or infinite
   //     if (!pcl::isFinite(cloud->at(j,i))){        
-  //       cloud->at(j,i).x = 0.0;// NOTE: at(row,col) so input is at(j, i)
+  //       cloud->at(j,i).x = 0.0;// NOTE: at(col,row) so input is at(j, i)
   //       cloud->at(j,i).y = 0.0;
   //       cloud->at(j,i).z = 0.0;
   //       // cout << "replacing Nan at (i,j): (" << i << ", " << j << ")\n" ;
@@ -385,6 +438,140 @@ void pclTest(){
   // cout << "Nan array output is: " << nanArray << "count" << nanArray.count() << endl;
 
   cout << "Number of Nans: " << nanArray.count() << endl;
+
+}
+
+void downsampMeshFromScan(){
+  // pcl::PointCloud<pcl::PointXYZ>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZ>);
+  pcl::PCLPointCloud2::Ptr cloud_blob (new pcl::PCLPointCloud2);
+  pcl::PointCloud<pcl::PointXYZ>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZ>);
+
+  // Fill in the cloud data
+  pcl::PCDReader reader;
+//   reader.read ("/home/bjm/SpaceCRAFT/ros_ws/src/pcl_testing/data/table_scene_lms400.pcd", *cloud_blob);
+  reader.read ("/home/bjm/Dropbox/PhD_Code/Data/3D_Scans/Blensor/Scan01/BlobScan_Data00010.pcd", *cloud_blob);
+  // reader.read ("/home/bjm/Dropbox/PhD_Code/NURBS_2018_01_02/test_data.pcd", *cloud_blob);
+
+  // Convert to the templated PointCloud (PointCoud<T> to PointCloud2)
+  pcl::fromPCLPointCloud2 (*cloud_blob, *cloud);  
+
+  std::cerr << "PointCloud before filtering: W: " << cloud->width << "\tH: " << cloud->height << "\t data points." << std::endl;
+
+  // Get Nan array
+  Eigen::Array<bool, Eigen::Dynamic, Eigen::Dynamic> nanArray(cloud->height,cloud->width);
+  nanArray.setZero(cloud->height,cloud->width);
+
+  cout << "nanarray number of rows: " << nanArray.rows() << "\t number of cols: " << nanArray.cols() << endl;
+
+  getNanMatrixFromPointCloud(nanArray, cloud);
+
+  cout << "Number of Nans: " << nanArray.count() << endl;
+
+  // Settings
+  int numRowsDesired = 45;
+  int numColsDesired = 45;
+  int maxNanAllowed = numRowsDesired/5; 
+
+  // Initialise
+  Eigen::Array<bool, Eigen::Dynamic, 1> rowFlags(cloud->height, 1); rowFlags.setOnes(cloud->height, 1);
+  Eigen::Array<bool, 1, Eigen::Dynamic> colFlags(1, cloud->width); colFlags.setOnes(1, cloud->width);
+  // PointCloud (uint32_t width_, uint32_t height_, const PointT& value_ = PointT ())
+  pcl::PointCloud<pcl::PointXYZ>::Ptr cloudOut (new pcl::PointCloud<pcl::PointXYZ>(numColsDesired,numRowsDesired,pcl::PointXYZ(0.0,0.0,0.0)));
+
+  cout << "Size of rowFlags: " << rowFlags.rows() << endl;
+  cout << "Size of colFlags: " << colFlags.cols() << endl;
+
+  bool exitFlag = false;
+
+  bool nansPresent = true;
+
+  // Loop to remove Nans
+  while (!exitFlag){
+    nansPresent = removeRowsNan(nanArray, rowFlags, maxNanAllowed);
+
+    if (nansPresent){
+      nansPresent = removeColsNan(nanArray, colFlags, maxNanAllowed);
+      if (nansPresent){
+        // Check dimensions 
+        cout << "Nans removed: Row count: " << rowFlags.count() << "\nCol Count: " << colFlags.count() << endl;
+        if (rowFlags.count() <= numRowsDesired || colFlags.count() <= numColsDesired){
+          exitFlag = true;
+          cout << "Exiting because dimensions are too small" << endl;
+        }
+      }else{
+        exitFlag = true;
+        cout << "Exiting because there are few enough NaNs" << endl;
+      }
+    }else{
+      exitFlag = true;
+      cout << "Exiting because there are few enough NaNs" << endl;
+    }
+  }
+
+  // Downsample 
+  downsampleRow(rowFlags, numRowsDesired);
+  downsampleCol(colFlags, numColsDesired);
+
+  // cout << "Row flags are: " << rowFlags << endl;
+  // cout << "Col flags are: " << colFlags << endl;
+  cout << "Number of nans left: " << nanArray.count() << endl;
+
+  // Extract point cloud
+  int ii = 0;
+  int jj = 0;
+  int ijk = 0;
+  Eigen::Array<int, 2, Eigen::Dynamic> nanIndices(2,nanArray.count());
+  nanIndices.setConstant(2,nanArray.count(),-1);
+
+  for (int i = 0; i < cloud->height; i++){
+    // Reset jj index
+    jj = 0; 
+    // For each row selected in rowFlags
+    if (rowFlags(i)){
+      for (int j = 0; j < cloud->width; j++){
+        // For each column selected in colFlags
+        if (colFlags(j)){
+          // Get the data from the cloud
+          cloudOut->at(jj,ii) = cloud->at(j,i);
+
+          // Store indices if the value is nan
+          if (!pcl::isFinite(cloud->at(j,i))){
+            nanIndices(0,ijk) = ii;
+            nanIndices(1,ijk) = jj;
+            ijk++; 
+          }
+
+          // Increment the new column index
+          jj++;
+        }
+      }
+      // Increment the new row index
+      ii++;
+    }
+  }
+
+  cout << "ii = " << ii << "\tjj = " << jj << endl;
+
+  // NOTE: this matrix will not be full, as there has been downsampling - so we have less rows and columns  
+  cout << "Nan indices are: " << nanIndices << endl;
+
+  // Average Nans
+  averageOutNans(cloudOut, nanIndices);
+
+  // Write the downsampled version to disk
+  pcl::PCDWriter writer;
+  writer.write<pcl::PointXYZ> ("blender_downsampled.pcd", *cloudOut, false);
+
+  Mapping3D mp;
+
+  pcl::PointCloud<pcl::PointXYZ>::Ptr cloudOut2 (new pcl::PointCloud<pcl::PointXYZ>(numColsDesired,numRowsDesired,pcl::PointXYZ(0.0,0.0,0.0)));
+  
+  mp.meshFromScan(cloudOut2,cloud);
+ 
+  writer.write<pcl::PointXYZ> ("blender_downsampled_2.pcd", *cloudOut2, false);
+
+
+
 }
 
 int
@@ -394,7 +581,8 @@ main (int argc, char** argv)
   ros::init (argc, argv, "planar_seg_testing");
   ros::NodeHandle nh;
 
-  pclTest();
+  downsampMeshFromScan();
+  // pclTest();
 
   // Spin
   // ros::spin ();

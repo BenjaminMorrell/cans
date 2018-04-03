@@ -103,7 +103,9 @@ include_directories(
 add_executable(test_mapping examples/test_mapping.cpp src/mapping3D.cpp src/object3D.cpp)
 add_executable(crv_test examples/curveTesting.cpp src/mapping3D.cpp)
 add_executable(srf_test examples/surfaceJoining.cpp src/mapping3D.cpp)
-add_executable(pcl_test examples/pointCloudTesting.cpp)
+add_executable(pcl_test examples/pointCloudTesting.cpp src/mapping3D.cpp)
+add_executable(localize_test examples/localizationTesting.cpp)
+add_executable(split_test examples/testingSplitSurface.cpp src/splitSurface.cpp)
 
 
 # add_definitions( -DMAGICKCORE_QUANTUM_DEPTH=16 )
@@ -124,6 +126,8 @@ target_link_libraries(test_mapping ${catkin_LIBRARIES} ${NURBS3_LIBRARIES})
 target_link_libraries(crv_test ${catkin_LIBRARIES} ${NURBS3_LIBRARIES}) 
 target_link_libraries(srf_test ${catkin_LIBRARIES} ${NURBS3_LIBRARIES}) 
 target_link_libraries(pcl_test ${catkin_LIBRARIES} ${NURBS3_LIBRARIES}) 
+target_link_libraries(localize_test ${catkin_LIBRARIES} ${NURBS3_LIBRARIES}) 
+target_link_libraries(split_test ${catkin_LIBRARIES} ${NURBS3_LIBRARIES}) 
 
 #############
 ## Install ##
@@ -175,6 +179,8 @@ if (CATKIN_ENABLE_TESTING)
   target_link_libraries(test_mapping3D ${catkin_LIBRARIES} ${NURBS3_LIBRARIES})
   catkin_add_gtest(test_object3D tests/test_object3D.cpp src/object3D.cpp)
   target_link_libraries(test_object3D ${catkin_LIBRARIES} ${NURBS3_LIBRARIES})
+  catkin_add_gtest(test_splitSurface tests/test_splitSurface.cpp src/splitSurface.cpp)
+  target_link_libraries(test_splitSurface ${catkin_LIBRARIES} ${NURBS3_LIBRARIES})
 endif()
 
 ## Add folders to be run by python nosetests
