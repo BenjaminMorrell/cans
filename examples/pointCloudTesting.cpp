@@ -564,11 +564,11 @@ void downsampMeshFromScan(){
 
   Mapping3D mp;
 
-  pcl::PointCloud<pcl::PointXYZ>::Ptr cloudOut2 (new pcl::PointCloud<pcl::PointXYZ>(numColsDesired,numRowsDesired,pcl::PointXYZ(0.0,0.0,0.0)));
+  pcl::PointCloud<pcl::PointNormal>::Ptr cloudOut2 (new pcl::PointCloud<pcl::PointNormal>(numColsDesired,numRowsDesired));
   
   mp.meshFromScan(cloudOut2,cloud);
  
-  writer.write<pcl::PointXYZ> ("blender_downsampled_2.pcd", *cloudOut2, false);
+  writer.write<pcl::PointNormal> ("blender_downsampled_2.pcd", *cloudOut2, false);
 
 
 

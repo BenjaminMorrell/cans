@@ -12,9 +12,26 @@ using namespace PLib ;
 Object3D::Object3D():
   centre(0,0,0), 
   color(0,0,0),
-  obj_size(0.0),
-  GIS_texture(0.0),
-  GIS_roughness(0.0)
+  objSize(0.0),
+  GISTexture(0.0),
+  GISRoughness(0.0)
+{}
+
+//-------------------------------------------------------------------
+/*! 
+  \brief  Copy Constructor
+
+  \author Benjamin Morrell
+  \date 23 March 2018
+*/
+
+Object3D::Object3D(const Object3D & obj):
+  centre(obj.centre), 
+  color(obj.color),
+  objSize(obj.objSize),
+  GISTexture(obj.GISTexture),
+  GISRoughness(obj.GISRoughness),
+  NurbsSurfacef(obj)
 {}
 
 
@@ -27,13 +44,13 @@ Object3D::Object3D():
 //   \author Benjamin Morrell
 //   \date 23 March 2018
 // */
-// Object3D::Object3D(PlNurbsSurfacef &nS, Point3Df &cp, Point3Df &col, float obj_size, float GIS1, float GIS2)  :
+// Object3D::Object3D(PlNurbsSurfacef &nS, Point3Df &cp, Point3Df &col, float objSize, float GIS1, float GIS2)  :
 //   PlNurbsSurfacef(nS),
 //   centre(cp),
-//   obj_size(obj_size),
+//   objSize(objSize),
 //   color(col),
-//   GIS_texture(GIS1),
-//   GIS_roughness(GIS2) {}
+//   GISTexture(GIS1),
+//   GISRoughness(GIS2) {}
 
 
 
@@ -44,8 +61,8 @@ Object3D::Object3D():
   \param   Q  a matrix of 3D points
   \param  pU  the degree of interpolation in the U direction
   \param  pV  the degree of interpolation in the V direction
-  \param  nU  the number of points in the U direction
-  \param  nV  the number of poitns in the V direction
+  \param  nU  the number of control points in the U direction
+  \param  nV  the number of control points in the V direction
 
   \author Benjamin Morrell
   \date 23 March 2018
@@ -91,6 +108,53 @@ Object3D::Object3D(const Matrix_Point3Df& Q){
 
 }
 
+
+//-------------------------------------------------------------------
+/*! 
+  \brief  NURBS initialised constructor
+
+  \param   Q  a matrix of 3D points
+
+  \warning Uses default values for nurbs parameters
+
+  \author Benjamin Morrell
+  \date 23 March 2018
+*/
+Object3D::Object3D(int pU, int pV, Vector_FLOAT& UVec, Vector_FLOAT& Vvec, Matrix_HPoint3Df& ctrlPnts) :
+  NurbsSurfacef(pU, pV, UVec, Vvec, ctrlPnts)
+{
+
+  // Compute the centre from the data (or the control points?)
+  // computeCentreFromData(Q); // sets the centre variable
+  computeCentreFromControlPoints(); // sets the centre variable
+
+  // Compute the size from the data
+  // computeSizeFromData(Q); // sets the object_size variable
+  computeSizeFromControlPoints(); // sets the object_size variable
+
+}
+
+Object3D::~Object3D(){
+  ;
+}
+
+//-------------------------------------------------------------------
+/*! 
+  \brief  Assignment operator 
+  
+  TDBM - this may not copy the nurbsSruface properties...
+
+  \author Benjamin Morrell
+  \date 23 March 2018
+*/
+void Object3D::operator = (const Object3D& obj){
+  centre = obj.centre; 
+  color = obj.color;
+  objSize = obj.objSize;
+  GISTexture = obj.GISTexture;
+  GISRoughness = obj.GISRoughness;
+  NurbsSurfacef::operator = (obj);
+}
 
 
 //-------------------------------------------------------------------
@@ -189,7 +253,7 @@ void Object3D::computeSizeFromData(const Matrix_Point3Df& Q){
   Point3Df delta = maxVals - minVals;
 
   // Size as the maximum dimenation TODO: Come up with a better metric
-  obj_size = std::max(delta.x(),std::max(delta.y(),delta.z()));
+  objSize = std::max(delta.x(),std::max(delta.y(),delta.z()));
   
 
 }
@@ -236,7 +300,7 @@ void Object3D::computeSizeFromControlPoints(){
   Point3Df delta = maxVals - minVals;
 
   // Size as the maximum dimenation TODO: Come up with a better metric
-  obj_size = std::max(delta.x(),std::max(delta.y(),delta.z()));
+  objSize = std::max(delta.x(),std::max(delta.y(),delta.z()));
 
 }
 
@@ -277,7 +341,7 @@ Point3Df& Object3D::getColor(){
 float Object3D::getObjSize(){
 
   // do I need to do this->centre?
-  return obj_size;
+  return objSize;
 }
 
 

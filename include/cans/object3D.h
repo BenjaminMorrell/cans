@@ -12,20 +12,32 @@ class Object3D : public NurbsSurfacef {
   protected:
     Point3Df centre;
     Point3Df color;
-    float obj_size;
-    float GIS_texture;
-    float GIS_roughness;
+    float objSize;
+    float GISTexture;
+    float GISRoughness;
 
   public:
     // Empty, default
     Object3D() ;
 
+    // Copy constructor 
+    Object3D(const Object3D & obj);
+
     // Surface input with defaults for properties
-    // Object3D(PlNurbsSurfacef &nS, Point3Df &cp, Point3Df &col, float obj_size = 0, float GIS1 = 0.0, float GIS2 = 0.0) ;
+    // Object3D(PlNurbsSurfacef &nS, Point3Df &cp, Point3Df &col, float objSize = 0, float GIS1 = 0.0, float GIS2 = 0.0) ;
 
     // LS fit constructor
     Object3D(const Matrix_Point3Df& Q); // with defaults
     Object3D(const Matrix_Point3Df& Q, int pU, int pV, int nU, int nV);
+
+    // Knots and control points constructor
+    Object3D(int pU, int pV, Vector_FLOAT& UVec, Vector_FLOAT& Vvec, Matrix_HPoint3Df& ctrlPnts);
+
+    
+
+    ~Object3D();
+
+    void operator = (const Object3D& obj);
     
     // virtual ~Object3D(){;}// empty destructor?
   public:

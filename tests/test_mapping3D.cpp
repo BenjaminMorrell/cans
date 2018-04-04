@@ -692,10 +692,460 @@ TEST_F (nurbsSurfaceJoiningTest, testDL){
     EXPECT_FLOAT_EQ(2.0,srfOut(0.7,1.0).x());
 }
 
+//--------------------------------------------
+//-------- Join Object3D Tests -----
+//--------------------------------------------
+
+class object3DJoiningTest : public ::testing::Test {
+ protected:
+  object3DJoiningTest() : deg(3), n_ctrl(5) {
+    
+    int n_points = 11;
+    
+    Matrix_Point3Df scan1A(n_points,n_points);
+    Matrix_Point3Df scan1B(n_points,n_points);
+    Matrix_Point3Df scan1C(n_points,n_points);
+    Matrix_Point3Df scan1D(n_points,n_points);        
+    Matrix_Point3Df scan2A(n_points,n_points);
+    Matrix_Point3Df scan2B(n_points,n_points);
+    Matrix_Point3Df scan2C(n_points,n_points);
+    Matrix_Point3Df scan2D(n_points,n_points);
+
+    for (int i = 0; i<n_points; i++){
+        for (int j = 0; j<n_points; j++){
+            scan1A(i,j) = Point3Df((float)j/(n_points-1),(float)i/(n_points-1),0.0);
+            scan1B(i,j) = Point3Df((float)j/(n_points-1) + 2.0,(float)i/(n_points-1),0.0);
+            scan1C(i,j) = Point3Df((float)j/(n_points-1) + 1.0,(float)i/(n_points-1) - 1.0,0.0);
+            scan1D(i,j) = Point3Df((float)j/(n_points-1) + 1.0,(float)i/(n_points-1) + 1.0,0.0);
+            
+            
+            scan2A(i,j) = Point3Df((float)j/(n_points-1)+1.0,(float)i/(n_points-1),0.0);
+            scan2B(n_points - 1 - i,n_points - 1 - j) = Point3Df((float)j/(n_points-1)+1.0,(float)i/(n_points-1),0.0);
+            scan2C(j,n_points - 1 - i) = Point3Df((float)j/(n_points-1)+1.0,(float)i/(n_points-1),0.0);
+            scan2D(n_points - 1 - j,i) = Point3Df((float)j/(n_points-1)+1.0,(float)i/(n_points-1),0.0);
+            // cout << "(i, j) = (" << n_points - 1 - j << ", " << i << "), scan2D is: " << scan2D(n_points - 1 - j,i) << endl;
+        } 
+
+        
+    }
+    // cout << "Scan2C (1,1): " << scan2C(10,10) << endl;
+    // for (int i = 0; i < 4; i ++){
+    //     srf1_arr[i]* = new Object3D;
+    //     srf2_arr[i]* = new Object3D;
+
+    //     srf1_arr[i].leastSquares(scan1A,deg,deg,n_ctrl,n_ctrl);
+    //     srf2_arr[i].leastSquares(scan2A,deg,deg,n_ctrl,n_ctrl);
+    // }
+
+    srf1A.leastSquares(scan1A, deg, deg, n_ctrl, n_ctrl);
+    srf1B.leastSquares(scan1B, deg, deg, n_ctrl, n_ctrl);
+    srf1C.leastSquares(scan1C, deg, deg, n_ctrl, n_ctrl);
+    srf1D.leastSquares(scan1D, deg, deg, n_ctrl, n_ctrl);
+
+    srf2A.leastSquares(scan2A, deg, deg, n_ctrl, n_ctrl);
+    srf2B.leastSquares(scan2B, deg, deg, n_ctrl, n_ctrl);
+    srf2C.leastSquares(scan2C, deg, deg, n_ctrl, n_ctrl);
+    srf2D.leastSquares(scan2D, deg, deg, n_ctrl, n_ctrl);
+    
+  }
+
+  
+//   NurbsSurfaceArray srf1_arr(Object3D * srf1, 4);
+//   NurbsSurfaceArray srf2_arr(Object3D * srf2, 4);
+
+  Object3D srf1A;
+  Object3D srf1B;
+  Object3D srf1C;
+  Object3D srf1D;
+  Object3D srf2A;
+  Object3D srf2B;
+  Object3D srf2C;
+  Object3D srf2D;
+
+  int deg;
+  int n_ctrl;
+
+  Mapping3D map;
+
+};
+
+
+TEST_F (object3DJoiningTest, testRR){
+
+    Object3D srfOut = map.joinSurfaces(srf1A,srf2A,"RR");
+
+    // Test dimensions of output
+    EXPECT_EQ(n_ctrl,srfOut.ctrlPnts().rows());
+    EXPECT_EQ(2*n_ctrl - deg,srfOut.ctrlPnts().cols());
+    EXPECT_EQ(n_ctrl + 1 + deg,srfOut.knotU().size());
+    EXPECT_EQ(2*n_ctrl + 1,srfOut.knotV().size());
+
+    // Test Corner points 
+    EXPECT_EQ(HPoint3Df(0.0,0.0,0.0,1.0),srfOut(0.0,0.0));
+    EXPECT_EQ(HPoint3Df(0.0,1.0,0.0,1.0),srfOut(1.0,0.0));
+    EXPECT_EQ(HPoint3Df(2.0,0.0,0.0,1.0),srfOut(0.0,1.0));
+    EXPECT_EQ(HPoint3Df(2.0,1.0,0.0,1.0),srfOut(1.0,1.0));
+
+    // Test mid-extension points 
+    EXPECT_FLOAT_EQ(0.0,srfOut(0.0,0.3).y());
+    EXPECT_FLOAT_EQ(0.0,srfOut(0.0,0.7).y());
+    EXPECT_FLOAT_EQ(1.0,srfOut(1.0,0.3).y());
+    EXPECT_FLOAT_EQ(1.0,srfOut(1.0,0.7).y());
+}
+
+TEST_F (object3DJoiningTest, testRL){
+
+    Object3D srfOut = map.joinSurfaces(srf1A,srf2B,"RL");
+
+    // Test dimensions of output
+    EXPECT_EQ(n_ctrl,srfOut.ctrlPnts().rows());
+    EXPECT_EQ(2*n_ctrl - deg,srfOut.ctrlPnts().cols());
+    EXPECT_EQ(n_ctrl + 1 + deg,srfOut.knotU().size());
+    EXPECT_EQ(2*n_ctrl + 1,srfOut.knotV().size());
+
+    // Test Corner points 
+    EXPECT_EQ(HPoint3Df(0.0,0.0,0.0,1.0),srfOut(0.0,0.0));
+    EXPECT_EQ(HPoint3Df(0.0,1.0,0.0,1.0),srfOut(1.0,0.0));
+    EXPECT_EQ(HPoint3Df(2.0,0.0,0.0,1.0),srfOut(0.0,1.0));
+    EXPECT_EQ(HPoint3Df(2.0,1.0,0.0,1.0),srfOut(1.0,1.0));
+
+    // Test mid-extension points 
+    EXPECT_FLOAT_EQ(0.0,srfOut(0.0,0.3).y());
+    EXPECT_FLOAT_EQ(0.0,srfOut(0.0,0.7).y());
+    EXPECT_FLOAT_EQ(1.0,srfOut(1.0,0.3).y());
+    EXPECT_FLOAT_EQ(1.0,srfOut(1.0,0.7).y());
+}
+
+TEST_F (object3DJoiningTest, testRU){
+
+    Object3D srfOut = map.joinSurfaces(srf1A,srf2C,"RU");
+
+    // Test dimensions of output
+    EXPECT_EQ(n_ctrl,srfOut.ctrlPnts().rows());
+    EXPECT_EQ(2*n_ctrl - deg,srfOut.ctrlPnts().cols());
+    EXPECT_EQ(n_ctrl + 1 + deg,srfOut.knotU().size());
+    EXPECT_EQ(2*n_ctrl + 1,srfOut.knotV().size());
+
+    // Test Corner points 
+    EXPECT_EQ(HPoint3Df(0.0,0.0,0.0,1.0),srfOut(0.0,0.0));
+    EXPECT_EQ(HPoint3Df(0.0,1.0,0.0,1.0),srfOut(1.0,0.0));
+    EXPECT_EQ(HPoint3Df(2.0,0.0,0.0,1.0),srfOut(0.0,1.0));
+    EXPECT_EQ(HPoint3Df(2.0,1.0,0.0,1.0),srfOut(1.0,1.0));
+
+    // Test mid-extension points 
+    EXPECT_FLOAT_EQ(0.0,srfOut(0.0,0.3).y());
+    EXPECT_FLOAT_EQ(0.0,srfOut(0.0,0.7).y());
+    EXPECT_FLOAT_EQ(1.0,srfOut(1.0,0.3).y());
+    EXPECT_FLOAT_EQ(1.0,srfOut(1.0,0.7).y());
+}
+
+TEST_F (object3DJoiningTest, testRD){
+
+    Object3D srfOut = map.joinSurfaces(srf1A,srf2D,"RD");
+
+    // Test dimensions of output
+    EXPECT_EQ(n_ctrl,srfOut.ctrlPnts().rows());
+    EXPECT_EQ(2*n_ctrl - deg,srfOut.ctrlPnts().cols());
+    EXPECT_EQ(n_ctrl + 1 + deg,srfOut.knotU().size());
+    EXPECT_EQ(2*n_ctrl + 1,srfOut.knotV().size());
+
+    // Test Corner points 
+    EXPECT_EQ(HPoint3Df(0.0,0.0,0.0,1.0),srfOut(0.0,0.0));
+    EXPECT_EQ(HPoint3Df(0.0,1.0,0.0,1.0),srfOut(1.0,0.0));
+    EXPECT_EQ(HPoint3Df(2.0,0.0,0.0,1.0),srfOut(0.0,1.0));
+    EXPECT_EQ(HPoint3Df(2.0,1.0,0.0,1.0),srfOut(1.0,1.0));
+
+    // Test mid-extension points 
+    EXPECT_FLOAT_EQ(0.0,srfOut(0.0,0.3).y());
+    EXPECT_FLOAT_EQ(0.0,srfOut(0.0,0.7).y());
+    EXPECT_FLOAT_EQ(1.0,srfOut(1.0,0.3).y());
+    EXPECT_FLOAT_EQ(1.0,srfOut(1.0,0.7).y());
+}
+
+//------------------------------------------
+TEST_F (object3DJoiningTest, testLL){
+
+    Object3D srfOut = map.joinSurfaces(srf1B,srf2A,"LL");
+
+    // Test dimensions of output
+    EXPECT_EQ(n_ctrl,srfOut.ctrlPnts().rows());
+    EXPECT_EQ(2*n_ctrl - deg,srfOut.ctrlPnts().cols());
+    EXPECT_EQ(n_ctrl + 1 + deg,srfOut.knotU().size());
+    EXPECT_EQ(2*n_ctrl + 1,srfOut.knotV().size());
+
+    // Test Corner points 
+    EXPECT_EQ(HPoint3Df(1.0,0.0,0.0,1.0),srfOut(0.0,0.0));
+    EXPECT_EQ(HPoint3Df(1.0,1.0,0.0,1.0),srfOut(1.0,0.0));
+    EXPECT_EQ(HPoint3Df(3.0,0.0,0.0,1.0),srfOut(0.0,1.0));
+    EXPECT_EQ(HPoint3Df(3.0,1.0,0.0,1.0),srfOut(1.0,1.0));
+
+    // Test mid-extension points 
+    EXPECT_FLOAT_EQ(0.0,srfOut(0.0,0.3).y());
+    EXPECT_FLOAT_EQ(0.0,srfOut(0.0,0.7).y());
+    EXPECT_FLOAT_EQ(1.0,srfOut(1.0,0.3).y());
+    EXPECT_FLOAT_EQ(1.0,srfOut(1.0,0.7).y());
+}
+
+TEST_F (object3DJoiningTest, testLR){
+
+    Object3D srfOut = map.joinSurfaces(srf1B,srf2B,"LR");
+
+    // Test dimensions of output
+    EXPECT_EQ(n_ctrl,srfOut.ctrlPnts().rows());
+    EXPECT_EQ(2*n_ctrl - deg,srfOut.ctrlPnts().cols());
+    EXPECT_EQ(n_ctrl + 1 + deg,srfOut.knotU().size());
+    EXPECT_EQ(2*n_ctrl + 1,srfOut.knotV().size());
+
+    // Test Corner points 
+    EXPECT_EQ(HPoint3Df(1.0,0.0,0.0,1.0),srfOut(0.0,0.0));
+    EXPECT_EQ(HPoint3Df(1.0,1.0,0.0,1.0),srfOut(1.0,0.0));
+    EXPECT_EQ(HPoint3Df(3.0,0.0,0.0,1.0),srfOut(0.0,1.0));
+    EXPECT_EQ(HPoint3Df(3.0,1.0,0.0,1.0),srfOut(1.0,1.0));
+
+    // Test mid-extension points 
+    EXPECT_FLOAT_EQ(0.0,srfOut(0.0,0.3).y());
+    EXPECT_FLOAT_EQ(0.0,srfOut(0.0,0.7).y());
+    EXPECT_FLOAT_EQ(1.0,srfOut(1.0,0.3).y());
+    EXPECT_FLOAT_EQ(1.0,srfOut(1.0,0.7).y());
+}
+
+TEST_F (object3DJoiningTest, testLD){
+
+    Object3D srfOut = map.joinSurfaces(srf1B,srf2C,"LD");
+
+    // Test dimensions of output
+    EXPECT_EQ(n_ctrl,srfOut.ctrlPnts().rows());
+    EXPECT_EQ(2*n_ctrl - deg,srfOut.ctrlPnts().cols());
+    EXPECT_EQ(n_ctrl + 1 + deg,srfOut.knotU().size());
+    EXPECT_EQ(2*n_ctrl + 1,srfOut.knotV().size());
+
+    // Test Corner points 
+    EXPECT_EQ(HPoint3Df(1.0,0.0,0.0,1.0),srfOut(0.0,0.0));
+    EXPECT_EQ(HPoint3Df(1.0,1.0,0.0,1.0),srfOut(1.0,0.0));
+    EXPECT_EQ(HPoint3Df(3.0,0.0,0.0,1.0),srfOut(0.0,1.0));
+    EXPECT_EQ(HPoint3Df(3.0,1.0,0.0,1.0),srfOut(1.0,1.0));
+
+    // Test mid-extension points 
+    EXPECT_FLOAT_EQ(0.0,srfOut(0.0,0.3).y());
+    EXPECT_FLOAT_EQ(0.0,srfOut(0.0,0.7).y());
+    EXPECT_FLOAT_EQ(1.0,srfOut(1.0,0.3).y());
+    EXPECT_FLOAT_EQ(1.0,srfOut(1.0,0.7).y());
+}
+
+TEST_F (object3DJoiningTest, testLU){
+
+    Object3D srfOut = map.joinSurfaces(srf1B,srf2D,"LU");
+
+    // Test dimensions of output
+    EXPECT_EQ(n_ctrl,srfOut.ctrlPnts().rows());
+    EXPECT_EQ(2*n_ctrl - deg,srfOut.ctrlPnts().cols());
+    EXPECT_EQ(n_ctrl + 1 + deg,srfOut.knotU().size());
+    EXPECT_EQ(2*n_ctrl + 1,srfOut.knotV().size());
+
+    // Test Corner points 
+    EXPECT_EQ(HPoint3Df(1.0,0.0,0.0,1.0),srfOut(0.0,0.0));
+    EXPECT_EQ(HPoint3Df(1.0,1.0,0.0,1.0),srfOut(1.0,0.0));
+    EXPECT_EQ(HPoint3Df(3.0,0.0,0.0,1.0),srfOut(0.0,1.0));
+    EXPECT_EQ(HPoint3Df(3.0,1.0,0.0,1.0),srfOut(1.0,1.0));
+
+    // Test mid-extension points 
+    EXPECT_FLOAT_EQ(0.0,srfOut(0.0,0.3).y());
+    EXPECT_FLOAT_EQ(0.0,srfOut(0.0,0.7).y());
+    EXPECT_FLOAT_EQ(1.0,srfOut(1.0,0.3).y());
+    EXPECT_FLOAT_EQ(1.0,srfOut(1.0,0.7).y());
+}
+// --------------------------------------
+// Move srf 1 to be below srf 2
+// --------------------------------------
+TEST_F (object3DJoiningTest, testUU){
+
+    Object3D srfOut = map.joinSurfaces(srf1C,srf2A,"UU");
+
+    // Test dimensions of output
+    EXPECT_EQ(n_ctrl,srfOut.ctrlPnts().cols());
+    EXPECT_EQ(2*n_ctrl - deg,srfOut.ctrlPnts().rows());
+    EXPECT_EQ(n_ctrl + 1 + deg,srfOut.knotV().size());
+    EXPECT_EQ(2*n_ctrl + 1,srfOut.knotU().size());
+
+    // Test Corner points 
+    EXPECT_EQ(HPoint3Df(1.0,-1.0,0.0,1.0),srfOut(0.0,0.0));
+    EXPECT_EQ(HPoint3Df(1.0,1.0,0.0,1.0),srfOut(1.0,0.0));
+    EXPECT_EQ(HPoint3Df(2.0,-1.0,0.0,1.0),srfOut(0.0,1.0));
+    EXPECT_EQ(HPoint3Df(2.0,1.0,0.0,1.0),srfOut(1.0,1.0));
+
+    // Test mid-extension points 
+    EXPECT_FLOAT_EQ(1.0,srfOut(0.3,0.0).x());
+    EXPECT_FLOAT_EQ(1.0,srfOut(0.7,0.0).x());
+    EXPECT_FLOAT_EQ(2.0,srfOut(0.3,1.0).x());
+    EXPECT_FLOAT_EQ(2.0,srfOut(0.7,1.0).x());
+}
+
+TEST_F (object3DJoiningTest, testUD){
+
+    Object3D srfOut = map.joinSurfaces(srf1C,srf2B,"UD");
+
+    // Test dimensions of output
+    EXPECT_EQ(n_ctrl,srfOut.ctrlPnts().cols());
+    EXPECT_EQ(2*n_ctrl - deg,srfOut.ctrlPnts().rows());
+    EXPECT_EQ(n_ctrl + 1 + deg,srfOut.knotV().size());
+    EXPECT_EQ(2*n_ctrl + 1,srfOut.knotU().size());
+
+    // Test Corner points 
+    EXPECT_EQ(HPoint3Df(1.0,-1.0,0.0,1.0),srfOut(0.0,0.0));
+    EXPECT_EQ(HPoint3Df(1.0,1.0,0.0,1.0),srfOut(1.0,0.0));
+    EXPECT_EQ(HPoint3Df(2.0,-1.0,0.0,1.0),srfOut(0.0,1.0));
+    EXPECT_EQ(HPoint3Df(2.0,1.0,0.0,1.0),srfOut(1.0,1.0));
+
+    // Test mid-extension points 
+    EXPECT_FLOAT_EQ(1.0,srfOut(0.3,0.0).x());
+    EXPECT_FLOAT_EQ(1.0,srfOut(0.7,0.0).x());
+    EXPECT_FLOAT_EQ(2.0,srfOut(0.3,1.0).x());
+    EXPECT_FLOAT_EQ(2.0,srfOut(0.7,1.0).x());
+}
+
+TEST_F (object3DJoiningTest, testUL){
+
+    Object3D srfOut = map.joinSurfaces(srf1C,srf2C,"UL");
+
+    // Test dimensions of output
+    EXPECT_EQ(n_ctrl,srfOut.ctrlPnts().cols());
+    EXPECT_EQ(2*n_ctrl - deg,srfOut.ctrlPnts().rows());
+    EXPECT_EQ(n_ctrl + 1 + deg,srfOut.knotV().size());
+    EXPECT_EQ(2*n_ctrl + 1,srfOut.knotU().size());
+
+    // Test Corner points 
+    EXPECT_EQ(HPoint3Df(1.0,-1.0,0.0,1.0),srfOut(0.0,0.0));
+    EXPECT_EQ(HPoint3Df(1.0,1.0,0.0,1.0),srfOut(1.0,0.0));
+    EXPECT_EQ(HPoint3Df(2.0,-1.0,0.0,1.0),srfOut(0.0,1.0));
+    EXPECT_EQ(HPoint3Df(2.0,1.0,0.0,1.0),srfOut(1.0,1.0));
+
+    // Test mid-extension points 
+    EXPECT_FLOAT_EQ(1.0,srfOut(0.3,0.0).x());
+    EXPECT_FLOAT_EQ(1.0,srfOut(0.7,0.0).x());
+    EXPECT_FLOAT_EQ(2.0,srfOut(0.3,1.0).x());
+    EXPECT_FLOAT_EQ(2.0,srfOut(0.7,1.0).x());
+}
+
+TEST_F (object3DJoiningTest, testUR){
+
+    Object3D srfOut = map.joinSurfaces(srf1C,srf2D,"UR");
+
+    // Test dimensions of output
+    EXPECT_EQ(n_ctrl,srfOut.ctrlPnts().cols());
+    EXPECT_EQ(2*n_ctrl - deg,srfOut.ctrlPnts().rows());
+    EXPECT_EQ(n_ctrl + 1 + deg,srfOut.knotV().size());
+    EXPECT_EQ(2*n_ctrl + 1,srfOut.knotU().size());
+
+    // Test Corner points 
+    EXPECT_EQ(HPoint3Df(1.0,-1.0,0.0,1.0),srfOut(0.0,0.0));
+    EXPECT_EQ(HPoint3Df(1.0,1.0,0.0,1.0),srfOut(1.0,0.0));
+    EXPECT_EQ(HPoint3Df(2.0,-1.0,0.0,1.0),srfOut(0.0,1.0));
+    EXPECT_EQ(HPoint3Df(2.0,1.0,0.0,1.0),srfOut(1.0,1.0));
+
+    // Test mid-extension points 
+    EXPECT_FLOAT_EQ(1.0,srfOut(0.3,0.0).x());
+    EXPECT_FLOAT_EQ(1.0,srfOut(0.7,0.0).x());
+    EXPECT_FLOAT_EQ(2.0,srfOut(0.3,1.0).x());
+    EXPECT_FLOAT_EQ(2.0,srfOut(0.7,1.0).x());
+}
+// --------------------------------------
+// Move srf 1 to be above srf 2
+// --------------------------------------
+TEST_F (object3DJoiningTest, testDD){
+
+    Object3D srfOut = map.joinSurfaces(srf1D,srf2A,"DD");
+
+    // Test dimensions of output
+    EXPECT_EQ(n_ctrl,srfOut.ctrlPnts().cols());
+    EXPECT_EQ(2*n_ctrl - deg,srfOut.ctrlPnts().rows());
+    EXPECT_EQ(n_ctrl + 1 + deg,srfOut.knotV().size());
+    EXPECT_EQ(2*n_ctrl + 1,srfOut.knotU().size());
+
+    // Test Corner points 
+    EXPECT_EQ(HPoint3Df(1.0,0.0,0.0,1.0),srfOut(0.0,0.0));
+    EXPECT_EQ(HPoint3Df(1.0,2.0,0.0,1.0),srfOut(1.0,0.0));
+    EXPECT_EQ(HPoint3Df(2.0,0.0,0.0,1.0),srfOut(0.0,1.0));
+    EXPECT_EQ(HPoint3Df(2.0,2.0,0.0,1.0),srfOut(1.0,1.0));
+
+    // Test mid-extension points 
+    EXPECT_FLOAT_EQ(1.0,srfOut(0.3,0.0).x());
+    EXPECT_FLOAT_EQ(1.0,srfOut(0.7,0.0).x());
+    EXPECT_FLOAT_EQ(2.0,srfOut(0.3,1.0).x());
+    EXPECT_FLOAT_EQ(2.0,srfOut(0.7,1.0).x());
+}
+
+TEST_F (object3DJoiningTest, testDU){
+
+    Object3D srfOut = map.joinSurfaces(srf1D,srf2B,"DU");
+
+    // Test dimensions of output
+    EXPECT_EQ(n_ctrl,srfOut.ctrlPnts().cols());
+    EXPECT_EQ(2*n_ctrl - deg,srfOut.ctrlPnts().rows());
+    EXPECT_EQ(n_ctrl + 1 + deg,srfOut.knotV().size());
+    EXPECT_EQ(2*n_ctrl + 1,srfOut.knotU().size());
+
+    // Test Corner points 
+    EXPECT_EQ(HPoint3Df(1.0,0.0,0.0,1.0),srfOut(0.0,0.0));
+    EXPECT_EQ(HPoint3Df(1.0,2.0,0.0,1.0),srfOut(1.0,0.0));
+    EXPECT_EQ(HPoint3Df(2.0,0.0,0.0,1.0),srfOut(0.0,1.0));
+    EXPECT_EQ(HPoint3Df(2.0,2.0,0.0,1.0),srfOut(1.0,1.0));
+
+    // Test mid-extension points 
+    EXPECT_FLOAT_EQ(1.0,srfOut(0.3,0.0).x());
+    EXPECT_FLOAT_EQ(1.0,srfOut(0.7,0.0).x());
+    EXPECT_FLOAT_EQ(2.0,srfOut(0.3,1.0).x());
+    EXPECT_FLOAT_EQ(2.0,srfOut(0.7,1.0).x());
+}
+
+TEST_F (object3DJoiningTest, testDR){
+
+    Object3D srfOut = map.joinSurfaces(srf1D,srf2C,"DR");
+
+    // Test dimensions of output
+    EXPECT_EQ(n_ctrl,srfOut.ctrlPnts().cols());
+    EXPECT_EQ(2*n_ctrl - deg,srfOut.ctrlPnts().rows());
+    EXPECT_EQ(n_ctrl + 1 + deg,srfOut.knotV().size());
+    EXPECT_EQ(2*n_ctrl + 1,srfOut.knotU().size());
+
+    // Test Corner points 
+    EXPECT_EQ(HPoint3Df(1.0,0.0,0.0,1.0),srfOut(0.0,0.0));
+    EXPECT_EQ(HPoint3Df(1.0,2.0,0.0,1.0),srfOut(1.0,0.0));
+    EXPECT_EQ(HPoint3Df(2.0,0.0,0.0,1.0),srfOut(0.0,1.0));
+    EXPECT_EQ(HPoint3Df(2.0,2.0,0.0,1.0),srfOut(1.0,1.0));
+
+    // Test mid-extension points 
+    EXPECT_FLOAT_EQ(1.0,srfOut(0.3,0.0).x());
+    EXPECT_FLOAT_EQ(1.0,srfOut(0.7,0.0).x());
+    EXPECT_FLOAT_EQ(2.0,srfOut(0.3,1.0).x());
+    EXPECT_FLOAT_EQ(2.0,srfOut(0.7,1.0).x());
+}
+
+TEST_F (object3DJoiningTest, testDL){
+
+    Object3D srfOut = map.joinSurfaces(srf1D,srf2D,"DL");
+
+    // Test dimensions of output
+    EXPECT_EQ(n_ctrl,srfOut.ctrlPnts().cols());
+    EXPECT_EQ(2*n_ctrl - deg,srfOut.ctrlPnts().rows());
+    EXPECT_EQ(n_ctrl + 1 + deg,srfOut.knotV().size());
+    EXPECT_EQ(2*n_ctrl + 1,srfOut.knotU().size());
+
+    // Test Corner points 
+    EXPECT_EQ(HPoint3Df(1.0,0.0,0.0,1.0),srfOut(0.0,0.0));
+    EXPECT_EQ(HPoint3Df(1.0,2.0,0.0,1.0),srfOut(1.0,0.0));
+    EXPECT_EQ(HPoint3Df(2.0,0.0,0.0,1.0),srfOut(0.0,1.0));
+    EXPECT_EQ(HPoint3Df(2.0,2.0,0.0,1.0),srfOut(1.0,1.0));
+
+    // Test mid-extension points 
+    EXPECT_FLOAT_EQ(1.0,srfOut(0.3,0.0).x());   
+    EXPECT_FLOAT_EQ(1.0,srfOut(0.7,0.0).x());
+    EXPECT_FLOAT_EQ(2.0,srfOut(0.3,1.0).x());
+    EXPECT_FLOAT_EQ(2.0,srfOut(0.7,1.0).x());
+}
 
 class meshFromScanTest : public ::testing::Test{
     protected:
-        meshFromScanTest() : cloud(new pcl::PointCloud<pcl::PointXYZ>(10,10)), nanArray(10,10), expectNanArray(10,10),
+        meshFromScanTest() : cloud(new pcl::PointCloud<pcl::PointNormal>(10,10)), nanArray(10,10), expectNanArray(10,10),
                 rowFlags(10,1), colFlags(1,10)
         {
         
@@ -737,7 +1187,7 @@ class meshFromScanTest : public ::testing::Test{
 
         }
 
-        pcl::PointCloud<pcl::PointXYZ>::Ptr cloud;
+        pcl::PointCloud<pcl::PointNormal>::Ptr cloud;
 
         Eigen::Array<bool, 10, 10> expectNanArray;
 
@@ -1004,18 +1454,21 @@ TEST_F (meshFromScanTest, averageOutNanTest){
     // Average Nans
     mp.averageOutNans(cloud, nanIndices);
 
-    pcl::PointXYZ expectP;
+    pcl::PointNormal expectP;
 
-    expectP.x = (float)nanIndices(1,0)/(10-1);
-    expectP.y = (float)nanIndices(0,0)/(10-1);
-    expectP.z = 0.0;
-
-    EXPECT_NEAR(expectP.x,cloud->at(nanIndices(1,0),nanIndices(0,0)).x,0.0001);
-    EXPECT_NEAR(expectP.y,cloud->at(nanIndices(1,0),nanIndices(0,0)).y,0.0001);
-    EXPECT_NEAR(expectP.z,cloud->at(nanIndices(1,0),nanIndices(0,0)).z,0.0001);
+    expectP.x = 4.0f/9.0f;
+    expectP.y = 5.0f/9.0f;
+    expectP.z = 0.0f;
 
     cout << "Expected point:\n" << expectP << endl;
-    cout << "Computed point:\n" << cloud->at(nanIndices(1,0),nanIndices(0,0)) << endl;
+    
+    cout << "Computed point:\n" << cloud->at(4,5) << endl;
+
+    EXPECT_NEAR(expectP.x,cloud->at(4,5).x,0.0001);
+    EXPECT_NEAR(expectP.y,cloud->at(4,5).y,0.0001);
+    EXPECT_NEAR(expectP.z,cloud->at(4,5).z,0.0001);
+    
+    
 }
 
 TEST_F (meshFromScanTest, meshFromScanFunction){
@@ -1023,7 +1476,7 @@ TEST_F (meshFromScanTest, meshFromScanFunction){
     mp.numRowsDesired = 6;
     mp.numColsDesired = 6;
 
-    pcl::PointCloud<pcl::PointXYZ>::Ptr cloudOut (new pcl::PointCloud<pcl::PointXYZ>(mp.numColsDesired,mp.numRowsDesired,pcl::PointXYZ(0.0,0.0,0.0)));
+    pcl::PointCloud<pcl::PointNormal>::Ptr cloudOut (new pcl::PointCloud<pcl::PointNormal>(mp.numColsDesired,mp.numRowsDesired));
 
     // Mesh from scan
     mp.meshFromScan(cloudOut, cloud);
@@ -1052,7 +1505,7 @@ TEST_F (meshFromScanTest, meshFromScanFunction){
 
 class meshFromScanLargeTest : public ::testing::Test{
     protected:
-        meshFromScanLargeTest() : cloud(new pcl::PointCloud<pcl::PointXYZ>(1000,1000))
+        meshFromScanLargeTest() : cloud(new pcl::PointCloud<pcl::PointNormal>(1000,1000))
         {
         
             int n_points = 1000;
@@ -1064,7 +1517,6 @@ class meshFromScanLargeTest : public ::testing::Test{
                     if (i <= 1 || (i == 2 && (j < 3 || j > 7)) || i == 9 || j == 0 || i == 5 || j == 578 || i == 345 || j == 9 || (i == 5 && j == 4)){
                         nanFlag = true;
                     }
-                    if ()
                     if (nanFlag) {
                         cloud->at(j,i).x = NAN;
                         cloud->at(j,i).y = NAN;
@@ -1085,7 +1537,7 @@ class meshFromScanLargeTest : public ::testing::Test{
 
         }
 
-        pcl::PointCloud<pcl::PointXYZ>::Ptr cloud;
+        pcl::PointCloud<pcl::PointNormal>::Ptr cloud;
   
         // Init class
         Mapping3D mp;
@@ -1093,7 +1545,7 @@ class meshFromScanLargeTest : public ::testing::Test{
 
 TEST_F (meshFromScanLargeTest, meshFromScanFunctionLarge){
 
-    pcl::PointCloud<pcl::PointXYZ>::Ptr cloudOut (new pcl::PointCloud<pcl::PointXYZ>(mp.numColsDesired,mp.numRowsDesired,pcl::PointXYZ(0.0,0.0,0.0)));
+    pcl::PointCloud<pcl::PointNormal>::Ptr cloudOut (new pcl::PointCloud<pcl::PointNormal>(mp.numColsDesired,mp.numRowsDesired));
 
     // Mesh from scan
     mp.meshFromScan(cloudOut, cloud);
@@ -1101,6 +1553,198 @@ TEST_F (meshFromScanLargeTest, meshFromScanFunctionLarge){
     EXPECT_EQ(100,cloudOut->width);
     EXPECT_EQ(100,cloudOut->height);
 }
+
+//----------------------------------------------------------------
+//----------------------------------------------------------------
+//------------- Surface update testing ------------------
+//----------------------------------------------------------------
+//----------------------------------------------------------------
+
+// class updateSurfaceTest : public ::testing::Test {
+//  protected:
+//   updateSurfaceTest() : data(new pcl::PointCloud<pcl::PointNormal>(10,10))//, data_rot(new pcl::PointCloud<pcl::PointNormal>(10,10)) 
+//   {
+    
+//     int n_points = 10;
+
+//     // *data = pcl::PointCloud<pcl::PointNormal>(10,10);
+    
+//     // Create data
+//     for (int i = 0; i<n_points; i++){
+//         for (int j = 0; j<n_points; j++){
+//             data->at(j,i).x = (float)j/(n_points-1);
+//             data->at(j,i).y = (float)i/(n_points-1);
+//             data->at(j,i).z = 0.0f;
+
+//             data_rot->at(j,i).x = (float)j/(n_points-1) - 0.5;
+//             data_rot->at(j,i).y = (float)i/(n_points-1) - 0.5;
+//             data_rot->at(j,i).z = 0.0f;
+//         } 
+//     }
+
+//     // Create transformation matrix
+//     Eigen::Affine3f transform = Eigen::Affine3f::Identity();
+
+//     // Create Mesh and object3D
+//     Matrix_Point3Df mesh = mp.nurbsDataFromPointCloud(data);
+//     Object3D mapObj(mesh);
+
+
+    
+//     // Transform data to get test data sets   
+//     // Left 
+//     transform.translation() << -0.4, 0.2, 0.0;
+//     data_l.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr(new pcl::PointCloud<pcl::PointNormal>(10,10)));
+//     pcl::transformPointCloud(*data, *data_l[0], transform);
+//     transform.translation() << -0.4, -0.2, 0.0;
+//     data_l.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr(new pcl::PointCloud<pcl::PointNormal>(10,10)));
+//     pcl::transformPointCloud(*data, *data_l[1], transform);
+//     transform.translation() << -0.4, 0.0, 0.0;
+//     data_l.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr(new pcl::PointCloud<pcl::PointNormal>(10,10)));
+//     pcl::transformPointCloud(*data, *data_l[2], transform);  
+//     /*
+//     // Right
+//     transform.translation() << 0.4, 0.2, 0.0;
+//     data_r.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr(new pcl::PointCloud<pcl::PointNormal>(10,10)));
+//     pcl::transformPointCloud(*data, *data_r[0], transform);
+//     transform.translation() << 0.4, -0.2, 0.0;
+//     data_r.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr(new pcl::PointCloud<pcl::PointNormal>(10,10)));
+//     pcl::transformPointCloud(*data, *data_r[1], transform);
+//     transform.translation() << 0.4, 0.0, 0.0;
+//     data_r.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr(new pcl::PointCloud<pcl::PointNormal>(10,10)));
+//     pcl::transformPointCloud(*data, *data_r[2], transform);
+
+//     // Down
+//     transform.translation() << 0.2, -0.4, 0.0;
+//     data_d.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr(new pcl::PointCloud<pcl::PointNormal>(10,10)));
+//     pcl::transformPointCloud(*data, *data_d[0], transform);
+//     transform.translation() << -0.2, -0.4, 0.0;
+//     data_d.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr(new pcl::PointCloud<pcl::PointNormal>(10,10)));
+//     pcl::transformPointCloud(*data, *data_d[1], transform);
+//     transform.translation() << 0.0, -0.4, 0.0;
+//     data_d.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr(new pcl::PointCloud<pcl::PointNormal>(10,10)));
+//     pcl::transformPointCloud(*data, *data_d[2], transform);
+
+//     // Up
+//     transform.translation() << 0.2, 0.4, 0.0;
+//     data_u.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr(new pcl::PointCloud<pcl::PointNormal>(10,10)));
+//     pcl::transformPointCloud(*data, *data_u[0], transform);
+//     transform.translation() << -0.2, 0.4, 0.0;
+//     data_u.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr(new pcl::PointCloud<pcl::PointNormal>(10,10)));
+//     pcl::transformPointCloud(*data, *data_u[1], transform);
+//     transform.translation() << 0.0, 0.4, 0.0;
+//     data_u.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr(new pcl::PointCloud<pcl::PointNormal>(10,10)));
+//     pcl::transformPointCloud(*data, *data_u[2], transform);
+
+//     // Overlap (complete overlap)
+//     transform.scale(0.5f);// Scale by 1/2
+//     // cout << "transform for overlap is:\n" << transform.matrix() << endl;
+//     transform.translation() << 0.2, 0.2, 0.0;
+//     data_ol.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr(new pcl::PointCloud<pcl::PointNormal>(10,10)));
+//     pcl::transformPointCloud(*data, *data_ol[0], transform);
+//     transform.translation() << 0.2, 0.4, 0.0;
+//     data_ol.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr(new pcl::PointCloud<pcl::PointNormal>(10,10)));
+//     pcl::transformPointCloud(*data, *data_ol[1], transform);
+//     transform.translation() << 0.4, 0.4, 0.0;
+//     data_ol.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr(new pcl::PointCloud<pcl::PointNormal>(10,10)));
+//     pcl::transformPointCloud(*data, *data_ol[2], transform);
+
+//     // Mostly Overlap
+//     transform.translation() << -0.05, 0.2, 0.0;
+//     data_m_ol.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr(new pcl::PointCloud<pcl::PointNormal>(10,10)));
+//     pcl::transformPointCloud(*data, *data_m_ol[0], transform);
+//     transform.translation() << 0.2, -0.05, 0.0;
+//     data_m_ol.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr(new pcl::PointCloud<pcl::PointNormal>(10,10)));
+//     pcl::transformPointCloud(*data, *data_m_ol[1], transform);
+//     transform.translation() << 0.55, 0.55, 0.0;
+//     data_m_ol.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr(new pcl::PointCloud<pcl::PointNormal>(10,10)));
+//     pcl::transformPointCloud(*data, *data_m_ol[2], transform);  
+
+//     // Rotations
+//     Eigen::Vector3f rotVec(0.0, 0.0, 1); // Rotations about the z axis
+//     transform.scale(2.0f);// no scaling
+
+//     // Rotate 90 degrees (-ve angle for a transformation)
+//     transform.rotate (Eigen::AngleAxisf (-M_PI/2.0f, rotVec));
+//     // cout << "transform for rot 90 is:\n" << transform.matrix() << endl;
+//     transform.translation() << -0.4, 0.2, 0.0;
+//     data_rot1.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr(new pcl::PointCloud<pcl::PointNormal>(10,10)));
+//     pcl::transformPointCloud(*data_rot, *data_rot1[0], transform);
+//     transform.translation() << 0.4, 0.2, 0.0;
+//     data_rot1.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr(new pcl::PointCloud<pcl::PointNormal>(10,10)));
+//     pcl::transformPointCloud(*data_rot, *data_rot1[1], transform);
+//     transform.translation() << 0.2, 0.4, 0.0;
+//     data_rot1.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr(new pcl::PointCloud<pcl::PointNormal>(10,10)));
+//     pcl::transformPointCloud(*data_rot, *data_rot1[2], transform);
+//     transform.translation() << 0.2, -0.4, 0.0;
+//     data_rot1.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr(new pcl::PointCloud<pcl::PointNormal>(10,10)));
+//     pcl::transformPointCloud(*data_rot, *data_rot1[3], transform);
+    
+//     // Rotate 90 degrees   (-ve angle for a transformation)
+//     transform.rotate (Eigen::AngleAxisf (M_PI, rotVec));// Rotate 180 from 90
+//     // cout << "transform for rot -90 is:\n" << transform.matrix() << endl;
+//     transform.translation() << -0.4, 0.2, 0.0;
+//     data_rot2.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr(new pcl::PointCloud<pcl::PointNormal>(10,10)));
+//     pcl::transformPointCloud(*data_rot, *data_rot2[0], transform);
+//     transform.translation() << 0.4, 0.2, 0.0;
+//     data_rot2.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr(new pcl::PointCloud<pcl::PointNormal>(10,10)));
+//     pcl::transformPointCloud(*data_rot, *data_rot2[1], transform);
+//     transform.translation() << 0.2, 0.4, 0.0;
+//     data_rot2.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr(new pcl::PointCloud<pcl::PointNormal>(10,10)));
+//     pcl::transformPointCloud(*data_rot, *data_rot2[2], transform);
+//     transform.translation() << 0.2, -0.4, 0.0;
+//     data_rot2.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr(new pcl::PointCloud<pcl::PointNormal>(10,10)));
+//     pcl::transformPointCloud(*data_rot, *data_rot2[3], transform);
+
+//     // Rotate 180 degrees   (-ve angle for a transformation)
+//     transform.rotate (Eigen::AngleAxisf (M_PI/2, rotVec));// Rotate another 90 to get to 180
+//     // cout << "transform for rot 180 is:\n" << transform.matrix() << endl;
+//     transform.translation() << -0.4, 0.2, 0.0;
+//     data_rot3.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr(new pcl::PointCloud<pcl::PointNormal>(10,10)));
+//     pcl::transformPointCloud(*data_rot, *data_rot3[0], transform);
+//     transform.translation() << 0.4, 0.2, 0.0;
+//     data_rot3.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr(new pcl::PointCloud<pcl::PointNormal>(10,10)));
+//     pcl::transformPointCloud(*data_rot, *data_rot3[1], transform);
+//     transform.translation() << 0.2, 0.4, 0.0;
+//     data_rot3.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr(new pcl::PointCloud<pcl::PointNormal>(10,10)));
+//     pcl::transformPointCloud(*data_rot, *data_rot3[2], transform);
+//     transform.translation() << 0.2, -0.4, 0.0;
+//     data_rot3.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr(new pcl::PointCloud<pcl::PointNormal>(10,10)));
+//     pcl::transformPointCloud(*data_rot, *data_rot3[3], transform);
+//     */
+//   }
+
+//   pcl::PointCloud<pcl::PointNormal>::Ptr data;
+// //   pcl::PointCloud<pcl::PointNormal>::Ptr data_rot;
+
+//   Matrix_Point3Df mesh;
+
+//   Object3D mapObj
+
+
+//   // Vectors of point clouds 
+//   std::vector<pcl::PointCloud<pcl::PointNormal>::Ptr, Eigen::aligned_allocator <pcl::PointCloud <pcl::PointNormal>::Ptr > > data_l;
+// //   std::vector<pcl::PointCloud<pcl::PointNormal>::Ptr, Eigen::aligned_allocator <pcl::PointCloud <pcl::PointNormal>::Ptr > > data_r;
+// //   std::vector<pcl::PointCloud<pcl::PointNormal>::Ptr, Eigen::aligned_allocator <pcl::PointCloud <pcl::PointNormal>::Ptr > > data_d;
+// //   std::vector<pcl::PointCloud<pcl::PointNormal>::Ptr, Eigen::aligned_allocator <pcl::PointCloud <pcl::PointNormal>::Ptr > > data_u;
+// //   std::vector<pcl::PointCloud<pcl::PointNormal>::Ptr, Eigen::aligned_allocator <pcl::PointCloud <pcl::PointNormal>::Ptr > > data_ol;
+// //   std::vector<pcl::PointCloud<pcl::PointNormal>::Ptr, Eigen::aligned_allocator <pcl::PointCloud <pcl::PointNormal>::Ptr > > data_m_ol;
+// //   // For rotation
+// //   std::vector<pcl::PointCloud<pcl::PointNormal>::Ptr, Eigen::aligned_allocator <pcl::PointCloud <pcl::PointNormal>::Ptr > > data_rot1;
+// //   std::vector<pcl::PointCloud<pcl::PointNormal>::Ptr, Eigen::aligned_allocator <pcl::PointCloud <pcl::PointNormal>::Ptr > > data_rot2;
+// //   std::vector<pcl::PointCloud<pcl::PointNormal>::Ptr, Eigen::aligned_allocator <pcl::PointCloud <pcl::PointNormal>::Ptr > > data_rot3;  
+
+//   // Class instatiation
+//   SplitSurface ss;
+//   Mapping3D mp;
+
+// };
+
+// TEST_F (updateSurfaceTest, testLeft){
+
+//     mp.updateObject(mapObj, data, data_l[0]);
+// }
+
 
 } // namespace
 

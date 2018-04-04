@@ -100,10 +100,10 @@ include_directories(
 ## Declare a C++ executable
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
-add_executable(test_mapping examples/test_mapping.cpp src/mapping3D.cpp src/object3D.cpp)
-add_executable(crv_test examples/curveTesting.cpp src/mapping3D.cpp)
-add_executable(srf_test examples/surfaceJoining.cpp src/mapping3D.cpp)
-add_executable(pcl_test examples/pointCloudTesting.cpp src/mapping3D.cpp)
+add_executable(test_mapping examples/test_mapping.cpp src/mapping3D.cpp src/object3D.cpp src/splitSurface.cpp)
+add_executable(crv_test examples/curveTesting.cpp src/mapping3D.cpp src/object3D.cpp src/splitSurface.cpp)
+add_executable(srf_test examples/surfaceJoining.cpp src/mapping3D.cpp src/object3D.cpp src/splitSurface.cpp)
+add_executable(pcl_test examples/pointCloudTesting.cpp src/mapping3D.cpp src/object3D.cpp src/splitSurface.cpp)
 add_executable(localize_test examples/localizationTesting.cpp)
 add_executable(split_test examples/testingSplitSurface.cpp src/splitSurface.cpp)
 
@@ -175,7 +175,7 @@ target_link_libraries(split_test ${catkin_LIBRARIES} ${NURBS3_LIBRARIES})
 #   target_link_libraries(${PROJECT_NAME}-test ${PROJECT_NAME})
 # endif()
 if (CATKIN_ENABLE_TESTING)
-  catkin_add_gtest(test_mapping3D tests/test_mapping3D.cpp src/mapping3D.cpp)
+  catkin_add_gtest(test_mapping3D tests/test_mapping3D.cpp src/mapping3D.cpp src/object3D.cpp src/splitSurface.cpp)
   target_link_libraries(test_mapping3D ${catkin_LIBRARIES} ${NURBS3_LIBRARIES})
   catkin_add_gtest(test_object3D tests/test_object3D.cpp src/object3D.cpp)
   target_link_libraries(test_object3D ${catkin_LIBRARIES} ${NURBS3_LIBRARIES})
