@@ -13,6 +13,7 @@ find_package(catkin REQUIRED COMPONENTS
   pcl_ros
   roscpp
   sensor_msgs
+  tf_conversions
 )
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}")
@@ -106,6 +107,9 @@ add_executable(srf_test examples/surfaceJoining.cpp src/mapping3D.cpp src/object
 add_executable(pcl_test examples/pointCloudTesting.cpp src/mapping3D.cpp src/object3D.cpp src/splitSurface.cpp)
 add_executable(localize_test examples/localizationTesting.cpp)
 add_executable(split_test examples/testingSplitSurface.cpp src/splitSurface.cpp)
+add_executable(cloud_publish examples/rosScanPublish.cpp)
+add_executable(tf_publish examples/tfPubTest.cpp)
+add_executable(cans_ros examples/rosInterfaceNURBSTest.cpp src/mapping3D.cpp src/object3D.cpp src/splitSurface.cpp)
 
 
 # add_definitions( -DMAGICKCORE_QUANTUM_DEPTH=16 )
@@ -128,6 +132,9 @@ target_link_libraries(srf_test ${catkin_LIBRARIES} ${NURBS3_LIBRARIES})
 target_link_libraries(pcl_test ${catkin_LIBRARIES} ${NURBS3_LIBRARIES}) 
 target_link_libraries(localize_test ${catkin_LIBRARIES} ${NURBS3_LIBRARIES}) 
 target_link_libraries(split_test ${catkin_LIBRARIES} ${NURBS3_LIBRARIES}) 
+target_link_libraries(cloud_publish ${catkin_LIBRARIES} ${NURBS3_LIBRARIES}) 
+target_link_libraries(tf_publish ${catkin_LIBRARIES} ${NURBS3_LIBRARIES}) 
+target_link_libraries(cans_ros ${catkin_LIBRARIES} ${NURBS3_LIBRARIES}) 
 
 #############
 ## Install ##
