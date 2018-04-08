@@ -791,6 +791,8 @@ TEST_F (object3DJoiningTest, testRR){
     EXPECT_FLOAT_EQ(0.0,srfOut(0.0,0.7).y());
     EXPECT_FLOAT_EQ(1.0,srfOut(1.0,0.3).y());
     EXPECT_FLOAT_EQ(1.0,srfOut(1.0,0.7).y());
+
+    // srfOut.writeVRML("RR.wrl",Color(255,100,255),50,80);
 }
 
 TEST_F (object3DJoiningTest, testRL){
@@ -907,6 +909,8 @@ TEST_F (object3DJoiningTest, testLR){
     EXPECT_FLOAT_EQ(0.0,srfOut(0.0,0.7).y());
     EXPECT_FLOAT_EQ(1.0,srfOut(1.0,0.3).y());
     EXPECT_FLOAT_EQ(1.0,srfOut(1.0,0.7).y());
+
+    
 }
 
 TEST_F (object3DJoiningTest, testLD){
@@ -930,6 +934,8 @@ TEST_F (object3DJoiningTest, testLD){
     EXPECT_FLOAT_EQ(0.0,srfOut(0.0,0.7).y());
     EXPECT_FLOAT_EQ(1.0,srfOut(1.0,0.3).y());
     EXPECT_FLOAT_EQ(1.0,srfOut(1.0,0.7).y());
+
+    // srfOut.writeVRML("LD.wrl",Color(255,100,255),50,80);
 }
 
 TEST_F (object3DJoiningTest, testLU){
@@ -1024,6 +1030,8 @@ TEST_F (object3DJoiningTest, testUL){
     EXPECT_FLOAT_EQ(1.0,srfOut(0.7,0.0).x());
     EXPECT_FLOAT_EQ(2.0,srfOut(0.3,1.0).x());
     EXPECT_FLOAT_EQ(2.0,srfOut(0.7,1.0).x());
+
+    // srfOut.writeVRML("UL.wrl",Color(255,100,255),50,80);
 }
 
 TEST_F (object3DJoiningTest, testUR){
@@ -1095,6 +1103,8 @@ TEST_F (object3DJoiningTest, testDU){
     EXPECT_FLOAT_EQ(1.0,srfOut(0.7,0.0).x());
     EXPECT_FLOAT_EQ(2.0,srfOut(0.3,1.0).x());
     EXPECT_FLOAT_EQ(2.0,srfOut(0.7,1.0).x());
+
+    // srfOut.writeVRML("DU.wrl",Color(255,100,255),50,80);
 }
 
 TEST_F (object3DJoiningTest, testDR){
@@ -1141,6 +1151,112 @@ TEST_F (object3DJoiningTest, testDL){
     EXPECT_FLOAT_EQ(1.0,srfOut(0.7,0.0).x());
     EXPECT_FLOAT_EQ(2.0,srfOut(0.3,1.0).x());
     EXPECT_FLOAT_EQ(2.0,srfOut(0.7,1.0).x());
+}
+
+TEST_F (object3DJoiningTest, testAsymRR){
+
+    // Insert knots into the first surface
+    Vector_FLOAT params(3);
+    params[0] = 0.1;
+    params[1] = 0.5;
+    params[2] = 0.6;
+
+    srf1A.refineKnotV(params);
+
+    Object3D srfOut = map.joinSurfaces(srf1A,srf2A,"RR");
+
+    // Test dimensions of output
+    EXPECT_EQ(n_ctrl,srfOut.ctrlPnts().rows());
+    EXPECT_EQ(2*n_ctrl - deg + 3,srfOut.ctrlPnts().cols());
+    EXPECT_EQ(n_ctrl + 1 + deg,srfOut.knotU().size());
+    EXPECT_EQ(2*n_ctrl + 1 + 3,srfOut.knotV().size());
+
+    // Test Corner points 
+    EXPECT_EQ(HPoint3Df(0.0,0.0,0.0,1.0),srfOut(0.0,0.0));
+    EXPECT_EQ(HPoint3Df(0.0,1.0,0.0,1.0),srfOut(1.0,0.0));
+    EXPECT_EQ(HPoint3Df(2.0,0.0,0.0,1.0),srfOut(0.0,1.0));
+    EXPECT_EQ(HPoint3Df(2.0,1.0,0.0,1.0),srfOut(1.0,1.0));
+
+    // Test mid-extension points 
+    EXPECT_FLOAT_EQ(0.0,srfOut(0.0,0.3).y());
+    EXPECT_FLOAT_EQ(0.0,srfOut(0.0,0.7).y());
+    EXPECT_FLOAT_EQ(1.0,srfOut(1.0,0.3).y());
+    EXPECT_FLOAT_EQ(1.0,srfOut(1.0,0.7).y());
+
+    // srfOut.writeVRML("RR.wrl",Color(255,100,255),50,80);
+}
+
+TEST_F (object3DJoiningTest, testAsymRRGiveEmptyBecauseError){
+
+    // Insert knots into the first surface
+    Vector_FLOAT params(3);
+    params[0] = 0.1;
+    params[1] = 0.5;
+    params[2] = 0.6;
+
+    srf1A.refineKnotU(params);
+
+    Object3D srfOut = map.joinSurfaces(srf1A,srf2A,"RR");
+
+    // Test dimensions of output
+    EXPECT_EQ(1,srfOut.ctrlPnts().rows());
+    EXPECT_EQ(1,srfOut.ctrlPnts().cols());
+    EXPECT_EQ(1,srfOut.knotU().size());
+    EXPECT_EQ(1,srfOut.knotV().size());
+
+}
+
+TEST_F (object3DJoiningTest, testAsymDD){
+
+    // Insert knots into the first surface
+    Vector_FLOAT params(3);
+    params[0] = 0.1;
+    params[1] = 0.5;
+    params[2] = 0.6;
+
+    srf1D.refineKnotU(params);
+
+    Object3D srfOut = map.joinSurfaces(srf1D,srf2A,"DD");
+
+    // Test dimensions of output
+    EXPECT_EQ(n_ctrl,srfOut.ctrlPnts().cols());
+    EXPECT_EQ(2*n_ctrl - deg + 3,srfOut.ctrlPnts().rows());
+    EXPECT_EQ(n_ctrl + 1 + deg,srfOut.knotV().size());
+    EXPECT_EQ(2*n_ctrl + 1 + 3,srfOut.knotU().size());
+
+    // Test Corner points 
+    EXPECT_EQ(HPoint3Df(1.0,0.0,0.0,1.0),srfOut(0.0,0.0));
+    EXPECT_EQ(HPoint3Df(1.0,2.0,0.0,1.0),srfOut(1.0,0.0));
+    EXPECT_EQ(HPoint3Df(2.0,0.0,0.0,1.0),srfOut(0.0,1.0));
+    EXPECT_EQ(HPoint3Df(2.0,2.0,0.0,1.0),srfOut(1.0,1.0));
+
+    // Test mid-extension points 
+    EXPECT_FLOAT_EQ(1.0,srfOut(0.3,0.0).x());
+    EXPECT_FLOAT_EQ(1.0,srfOut(0.7,0.0).x());
+    EXPECT_FLOAT_EQ(2.0,srfOut(0.3,1.0).x());
+    EXPECT_FLOAT_EQ(2.0,srfOut(0.7,1.0).x());
+
+    // srfOut.writeVRML("RR.wrl",Color(255,100,255),50,80);
+}
+
+TEST_F (object3DJoiningTest, testAsymDDGiveEmptyBecauseError){
+
+    // Insert knots into the first surface
+    Vector_FLOAT params(3);
+    params[0] = 0.1;
+    params[1] = 0.5;
+    params[2] = 0.6;
+
+    srf1D.refineKnotV(params);
+
+    Object3D srfOut = map.joinSurfaces(srf1D,srf2A,"DD");
+
+    // Test dimensions of output
+    EXPECT_EQ(1,srfOut.ctrlPnts().rows());
+    EXPECT_EQ(1,srfOut.ctrlPnts().cols());
+    EXPECT_EQ(1,srfOut.knotU().size());
+    EXPECT_EQ(1,srfOut.knotV().size());
+
 }
 
 class meshFromScanTest : public ::testing::Test{
@@ -1556,194 +1672,449 @@ TEST_F (meshFromScanLargeTest, meshFromScanFunctionLarge){
 
 //----------------------------------------------------------------
 //----------------------------------------------------------------
+//------------- Scan Processing Functions Test  ------------------
+//----------------------------------------------------------------
+//----------------------------------------------------------------
+
+class scanProcessFunctionsTest : public ::testing::Test {
+ protected:
+  scanProcessFunctionsTest() : data(new pcl::PointCloud<pcl::PointNormal>(10,10))//, data_rot(new pcl::PointCloud<pcl::PointNormal>(10,10)) 
+  {
+    int n_points = 10;
+
+    // *data = pcl::PointCloud<pcl::PointNormal>(10,10);
+    
+    // Create data
+    for (int i = 0; i<n_points; i++){
+        for (int j = 0; j<n_points; j++){
+            data->at(j,i).x = (float)j/(n_points-1);
+            data->at(j,i).y = (float)i/(n_points-1);
+            data->at(j,i).z = 0.0f;
+        } 
+    }
+  }
+
+  pcl::PointCloud<pcl::PointNormal>::Ptr data;
+
+  Mapping3D mp;
+};
+
+TEST_F (scanProcessFunctionsTest,computSearchMetricsTest){
+
+    std::vector<float> searchMetrics = mp.computeSearchMetrics(data);
+
+    EXPECT_FLOAT_EQ(0.5, searchMetrics[0]);
+    EXPECT_FLOAT_EQ(0.5, searchMetrics[1]);
+    EXPECT_FLOAT_EQ(0.0, searchMetrics[2]);
+    EXPECT_FLOAT_EQ(1.0, searchMetrics[3]);
+}
+
+TEST_F (scanProcessFunctionsTest, addObjectTest){
+
+    std::vector<float> searchMetrics = mp.computeSearchMetrics(data);
+
+    mp.addObject(data,searchMetrics);
+
+    EXPECT_EQ(1,mp.objectMap.size());
+    EXPECT_EQ(1,mp.objectMetrics.size());
+
+    EXPECT_FLOAT_EQ(0.0,mp.objectMap[0].pointAt(0.0,0.0).x());
+    EXPECT_FLOAT_EQ(0.0,mp.objectMap[0].pointAt(0.0,0.0).y());
+    EXPECT_FLOAT_EQ(0.0,mp.objectMap[0].pointAt(0.0,0.0).z());
+    EXPECT_FLOAT_EQ(1.0,mp.objectMap[0].pointAt(1.0,1.0).x());
+    EXPECT_FLOAT_EQ(1.0,mp.objectMap[0].pointAt(1.0,1.0).y());
+    EXPECT_FLOAT_EQ(0.0,mp.objectMap[0].pointAt(1.0,1.0).z());
+
+
+    // TDBM more tests?
+}
+
+
+//----------------------------------------------------------------
+//----------------------------------------------------------------
 //------------- Surface update testing ------------------
 //----------------------------------------------------------------
 //----------------------------------------------------------------
 
-// class updateSurfaceTest : public ::testing::Test {
-//  protected:
-//   updateSurfaceTest() : data(new pcl::PointCloud<pcl::PointNormal>(10,10))//, data_rot(new pcl::PointCloud<pcl::PointNormal>(10,10)) 
-//   {
+class updateSurfaceTest : public ::testing::Test {
+ protected:
+  updateSurfaceTest() : data(new pcl::PointCloud<pcl::PointNormal>(30,30))//, data_rot(new pcl::PointCloud<pcl::PointNormal>(10,10)) 
+  {
     
-//     int n_points = 10;
+    int n_points = 30;
 
-//     // *data = pcl::PointCloud<pcl::PointNormal>(10,10);
+    // *data = pcl::PointCloud<pcl::PointNormal>(30,30);
     
-//     // Create data
-//     for (int i = 0; i<n_points; i++){
-//         for (int j = 0; j<n_points; j++){
-//             data->at(j,i).x = (float)j/(n_points-1);
-//             data->at(j,i).y = (float)i/(n_points-1);
-//             data->at(j,i).z = 0.0f;
+    // Create data
+    for (int i = 0; i<n_points; i++){
+        for (int j = 0; j<n_points; j++){
+            data->at(j,i).x = (float)j/(n_points-1);
+            data->at(j,i).y = (float)i/(n_points-1);
+            data->at(j,i).z = 0.0f;
 
-//             data_rot->at(j,i).x = (float)j/(n_points-1) - 0.5;
-//             data_rot->at(j,i).y = (float)i/(n_points-1) - 0.5;
-//             data_rot->at(j,i).z = 0.0f;
-//         } 
-//     }
+            // data_rot->at(j,i).x = (float)j/(n_points-1) - 0.5;
+            // data_rot->at(j,i).y = (float)i/(n_points-1) - 0.5;
+            // data_rot->at(j,i).z = 0.0f;
+        } 
+    }
 
-//     // Create transformation matrix
-//     Eigen::Affine3f transform = Eigen::Affine3f::Identity();
+    // Create transformation matrix
+    Eigen::Affine3f transform = Eigen::Affine3f::Identity();
 
-//     // Create Mesh and object3D
-//     Matrix_Point3Df mesh = mp.nurbsDataFromPointCloud(data);
-//     Object3D mapObj(mesh);
+    // Compute Metrics
+    std::vector<float> searchMetrics = mp.computeSearchMetrics(data);
 
+    // Add object to map
+    mp.addObject(data, searchMetrics);
 
+    obj = mp.objectMap[0];
+
+    cout << "data point after adding object is: " << data->at(0,0) << endl;
+
+    // Transform data to get test data sets   
+    // Left 
+    transform.translation() << -0.4, 0.2, 0.0;
+    data_l.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr(new pcl::PointCloud<pcl::PointNormal>(30,30)));
+    pcl::transformPointCloud(*data, *data_l[0], transform);
+    transform.translation() << -0.4, -0.2, 0.0;
+    data_l.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr(new pcl::PointCloud<pcl::PointNormal>(30,30)));
+    pcl::transformPointCloud(*data, *data_l[1], transform);
+    transform.translation() << -0.4, 0.0, 0.0;
+    data_l.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr(new pcl::PointCloud<pcl::PointNormal>(30,30)));
+    pcl::transformPointCloud(*data, *data_l[2], transform);  
     
-//     // Transform data to get test data sets   
-//     // Left 
-//     transform.translation() << -0.4, 0.2, 0.0;
-//     data_l.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr(new pcl::PointCloud<pcl::PointNormal>(10,10)));
-//     pcl::transformPointCloud(*data, *data_l[0], transform);
-//     transform.translation() << -0.4, -0.2, 0.0;
-//     data_l.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr(new pcl::PointCloud<pcl::PointNormal>(10,10)));
-//     pcl::transformPointCloud(*data, *data_l[1], transform);
-//     transform.translation() << -0.4, 0.0, 0.0;
-//     data_l.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr(new pcl::PointCloud<pcl::PointNormal>(10,10)));
-//     pcl::transformPointCloud(*data, *data_l[2], transform);  
-//     /*
-//     // Right
-//     transform.translation() << 0.4, 0.2, 0.0;
-//     data_r.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr(new pcl::PointCloud<pcl::PointNormal>(10,10)));
-//     pcl::transformPointCloud(*data, *data_r[0], transform);
-//     transform.translation() << 0.4, -0.2, 0.0;
-//     data_r.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr(new pcl::PointCloud<pcl::PointNormal>(10,10)));
-//     pcl::transformPointCloud(*data, *data_r[1], transform);
-//     transform.translation() << 0.4, 0.0, 0.0;
-//     data_r.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr(new pcl::PointCloud<pcl::PointNormal>(10,10)));
-//     pcl::transformPointCloud(*data, *data_r[2], transform);
+    // Right
+    transform.translation() << 0.4, 0.2, 0.0;
+    data_r.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr(new pcl::PointCloud<pcl::PointNormal>(30,30)));
+    pcl::transformPointCloud(*data, *data_r[0], transform);
+    transform.translation() << 0.4, -0.2, 0.0;
+    data_r.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr(new pcl::PointCloud<pcl::PointNormal>(30,30)));
+    pcl::transformPointCloud(*data, *data_r[1], transform);
+    transform.translation() << 0.4, 0.0, 0.0;
+    data_r.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr(new pcl::PointCloud<pcl::PointNormal>(30,30)));
+    pcl::transformPointCloud(*data, *data_r[2], transform);
 
-//     // Down
-//     transform.translation() << 0.2, -0.4, 0.0;
-//     data_d.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr(new pcl::PointCloud<pcl::PointNormal>(10,10)));
-//     pcl::transformPointCloud(*data, *data_d[0], transform);
-//     transform.translation() << -0.2, -0.4, 0.0;
-//     data_d.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr(new pcl::PointCloud<pcl::PointNormal>(10,10)));
-//     pcl::transformPointCloud(*data, *data_d[1], transform);
-//     transform.translation() << 0.0, -0.4, 0.0;
-//     data_d.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr(new pcl::PointCloud<pcl::PointNormal>(10,10)));
-//     pcl::transformPointCloud(*data, *data_d[2], transform);
+    // Down
+    transform.translation() << 0.2, -0.4, 0.0;
+    data_d.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr(new pcl::PointCloud<pcl::PointNormal>(30,30)));
+    pcl::transformPointCloud(*data, *data_d[0], transform);
+    transform.translation() << -0.2, -0.4, 0.0;
+    data_d.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr(new pcl::PointCloud<pcl::PointNormal>(30,30)));
+    pcl::transformPointCloud(*data, *data_d[1], transform);
+    transform.translation() << 0.0, -0.4, 0.0;
+    data_d.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr(new pcl::PointCloud<pcl::PointNormal>(30,30)));
+    pcl::transformPointCloud(*data, *data_d[2], transform);
 
-//     // Up
-//     transform.translation() << 0.2, 0.4, 0.0;
-//     data_u.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr(new pcl::PointCloud<pcl::PointNormal>(10,10)));
-//     pcl::transformPointCloud(*data, *data_u[0], transform);
-//     transform.translation() << -0.2, 0.4, 0.0;
-//     data_u.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr(new pcl::PointCloud<pcl::PointNormal>(10,10)));
-//     pcl::transformPointCloud(*data, *data_u[1], transform);
-//     transform.translation() << 0.0, 0.4, 0.0;
-//     data_u.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr(new pcl::PointCloud<pcl::PointNormal>(10,10)));
-//     pcl::transformPointCloud(*data, *data_u[2], transform);
+    // Up
+    transform.translation() << 0.2, 0.4, 0.0;
+    data_u.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr(new pcl::PointCloud<pcl::PointNormal>(30,30)));
+    pcl::transformPointCloud(*data, *data_u[0], transform);
+    transform.translation() << -0.2, 0.4, 0.0;
+    data_u.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr(new pcl::PointCloud<pcl::PointNormal>(30,30)));
+    pcl::transformPointCloud(*data, *data_u[1], transform);
+    transform.translation() << 0.0, 0.4, 0.0;
+    data_u.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr(new pcl::PointCloud<pcl::PointNormal>(30,30)));
+    pcl::transformPointCloud(*data, *data_u[2], transform);
 
-//     // Overlap (complete overlap)
-//     transform.scale(0.5f);// Scale by 1/2
-//     // cout << "transform for overlap is:\n" << transform.matrix() << endl;
-//     transform.translation() << 0.2, 0.2, 0.0;
-//     data_ol.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr(new pcl::PointCloud<pcl::PointNormal>(10,10)));
-//     pcl::transformPointCloud(*data, *data_ol[0], transform);
-//     transform.translation() << 0.2, 0.4, 0.0;
-//     data_ol.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr(new pcl::PointCloud<pcl::PointNormal>(10,10)));
-//     pcl::transformPointCloud(*data, *data_ol[1], transform);
-//     transform.translation() << 0.4, 0.4, 0.0;
-//     data_ol.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr(new pcl::PointCloud<pcl::PointNormal>(10,10)));
-//     pcl::transformPointCloud(*data, *data_ol[2], transform);
+    // Overlap (complete overlap)
+    transform.scale(0.5f);// Scale by 1/2
+    // cout << "transform for overlap is:\n" << transform.matrix() << endl;
+    transform.translation() << 0.2, 0.2, 0.0;
+    data_ol.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr(new pcl::PointCloud<pcl::PointNormal>(30,30)));
+    pcl::transformPointCloud(*data, *data_ol[0], transform);
+    transform.translation() << 0.2, 0.4, 0.0;
+    data_ol.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr(new pcl::PointCloud<pcl::PointNormal>(30,30)));
+    pcl::transformPointCloud(*data, *data_ol[1], transform);
+    transform.translation() << 0.4, 0.4, 0.0;
+    data_ol.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr(new pcl::PointCloud<pcl::PointNormal>(30,30)));
+    pcl::transformPointCloud(*data, *data_ol[2], transform);
 
-//     // Mostly Overlap
-//     transform.translation() << -0.05, 0.2, 0.0;
-//     data_m_ol.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr(new pcl::PointCloud<pcl::PointNormal>(10,10)));
-//     pcl::transformPointCloud(*data, *data_m_ol[0], transform);
-//     transform.translation() << 0.2, -0.05, 0.0;
-//     data_m_ol.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr(new pcl::PointCloud<pcl::PointNormal>(10,10)));
-//     pcl::transformPointCloud(*data, *data_m_ol[1], transform);
-//     transform.translation() << 0.55, 0.55, 0.0;
-//     data_m_ol.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr(new pcl::PointCloud<pcl::PointNormal>(10,10)));
-//     pcl::transformPointCloud(*data, *data_m_ol[2], transform);  
+    // Mostly Overlap
+    transform.translation() << -0.05, 0.2, 0.0;
+    data_m_ol.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr(new pcl::PointCloud<pcl::PointNormal>(30,30)));
+    pcl::transformPointCloud(*data, *data_m_ol[0], transform);
+    transform.translation() << 0.2, -0.05, 0.0;
+    data_m_ol.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr(new pcl::PointCloud<pcl::PointNormal>(30,30)));
+    pcl::transformPointCloud(*data, *data_m_ol[1], transform);
+    transform.translation() << 0.55, 0.55, 0.0;
+    data_m_ol.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr(new pcl::PointCloud<pcl::PointNormal>(30,30)));
+    pcl::transformPointCloud(*data, *data_m_ol[2], transform);  
 
-//     // Rotations
-//     Eigen::Vector3f rotVec(0.0, 0.0, 1); // Rotations about the z axis
-//     transform.scale(2.0f);// no scaling
+    // // Rotations
+    // Eigen::Vector3f rotVec(0.0, 0.0, 1); // Rotations about the z axis
+    // transform.scale(2.0f);// no scaling
 
-//     // Rotate 90 degrees (-ve angle for a transformation)
-//     transform.rotate (Eigen::AngleAxisf (-M_PI/2.0f, rotVec));
-//     // cout << "transform for rot 90 is:\n" << transform.matrix() << endl;
-//     transform.translation() << -0.4, 0.2, 0.0;
-//     data_rot1.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr(new pcl::PointCloud<pcl::PointNormal>(10,10)));
-//     pcl::transformPointCloud(*data_rot, *data_rot1[0], transform);
-//     transform.translation() << 0.4, 0.2, 0.0;
-//     data_rot1.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr(new pcl::PointCloud<pcl::PointNormal>(10,10)));
-//     pcl::transformPointCloud(*data_rot, *data_rot1[1], transform);
-//     transform.translation() << 0.2, 0.4, 0.0;
-//     data_rot1.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr(new pcl::PointCloud<pcl::PointNormal>(10,10)));
-//     pcl::transformPointCloud(*data_rot, *data_rot1[2], transform);
-//     transform.translation() << 0.2, -0.4, 0.0;
-//     data_rot1.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr(new pcl::PointCloud<pcl::PointNormal>(10,10)));
-//     pcl::transformPointCloud(*data_rot, *data_rot1[3], transform);
+    // // Rotate 90 degrees (-ve angle for a transformation)
+    // transform.rotate (Eigen::AngleAxisf (-M_PI/2.0f, rotVec));
+    // // cout << "transform for rot 90 is:\n" << transform.matrix() << endl;
+    // transform.translation() << -0.4, 0.2, 0.0;
+    // data_rot1.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr(new pcl::PointCloud<pcl::PointNormal>(30,30)));
+    // pcl::transformPointCloud(*data_rot, *data_rot1[0], transform);
+    // transform.translation() << 0.4, 0.2, 0.0;
+    // data_rot1.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr(new pcl::PointCloud<pcl::PointNormal>(30,30)));
+    // pcl::transformPointCloud(*data_rot, *data_rot1[1], transform);
+    // transform.translation() << 0.2, 0.4, 0.0;
+    // data_rot1.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr(new pcl::PointCloud<pcl::PointNormal>(30,30)));
+    // pcl::transformPointCloud(*data_rot, *data_rot1[2], transform);
+    // transform.translation() << 0.2, -0.4, 0.0;
+    // data_rot1.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr(new pcl::PointCloud<pcl::PointNormal>(30,30)));
+    // pcl::transformPointCloud(*data_rot, *data_rot1[3], transform);
     
-//     // Rotate 90 degrees   (-ve angle for a transformation)
-//     transform.rotate (Eigen::AngleAxisf (M_PI, rotVec));// Rotate 180 from 90
-//     // cout << "transform for rot -90 is:\n" << transform.matrix() << endl;
-//     transform.translation() << -0.4, 0.2, 0.0;
-//     data_rot2.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr(new pcl::PointCloud<pcl::PointNormal>(10,10)));
-//     pcl::transformPointCloud(*data_rot, *data_rot2[0], transform);
-//     transform.translation() << 0.4, 0.2, 0.0;
-//     data_rot2.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr(new pcl::PointCloud<pcl::PointNormal>(10,10)));
-//     pcl::transformPointCloud(*data_rot, *data_rot2[1], transform);
-//     transform.translation() << 0.2, 0.4, 0.0;
-//     data_rot2.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr(new pcl::PointCloud<pcl::PointNormal>(10,10)));
-//     pcl::transformPointCloud(*data_rot, *data_rot2[2], transform);
-//     transform.translation() << 0.2, -0.4, 0.0;
-//     data_rot2.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr(new pcl::PointCloud<pcl::PointNormal>(10,10)));
-//     pcl::transformPointCloud(*data_rot, *data_rot2[3], transform);
+    // // Rotate 90 degrees   (-ve angle for a transformation)
+    // transform.rotate (Eigen::AngleAxisf (M_PI, rotVec));// Rotate 180 from 90
+    // // cout << "transform for rot -90 is:\n" << transform.matrix() << endl;
+    // transform.translation() << -0.4, 0.2, 0.0;
+    // data_rot2.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr(new pcl::PointCloud<pcl::PointNormal>(30,30)));
+    // pcl::transformPointCloud(*data_rot, *data_rot2[0], transform);
+    // transform.translation() << 0.4, 0.2, 0.0;
+    // data_rot2.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr(new pcl::PointCloud<pcl::PointNormal>(30,30)));
+    // pcl::transformPointCloud(*data_rot, *data_rot2[1], transform);
+    // transform.translation() << 0.2, 0.4, 0.0;
+    // data_rot2.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr(new pcl::PointCloud<pcl::PointNormal>(30,30)));
+    // pcl::transformPointCloud(*data_rot, *data_rot2[2], transform);
+    // transform.translation() << 0.2, -0.4, 0.0;
+    // data_rot2.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr(new pcl::PointCloud<pcl::PointNormal>(30,30)));
+    // pcl::transformPointCloud(*data_rot, *data_rot2[3], transform);
 
-//     // Rotate 180 degrees   (-ve angle for a transformation)
-//     transform.rotate (Eigen::AngleAxisf (M_PI/2, rotVec));// Rotate another 90 to get to 180
-//     // cout << "transform for rot 180 is:\n" << transform.matrix() << endl;
-//     transform.translation() << -0.4, 0.2, 0.0;
-//     data_rot3.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr(new pcl::PointCloud<pcl::PointNormal>(10,10)));
-//     pcl::transformPointCloud(*data_rot, *data_rot3[0], transform);
-//     transform.translation() << 0.4, 0.2, 0.0;
-//     data_rot3.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr(new pcl::PointCloud<pcl::PointNormal>(10,10)));
-//     pcl::transformPointCloud(*data_rot, *data_rot3[1], transform);
-//     transform.translation() << 0.2, 0.4, 0.0;
-//     data_rot3.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr(new pcl::PointCloud<pcl::PointNormal>(10,10)));
-//     pcl::transformPointCloud(*data_rot, *data_rot3[2], transform);
-//     transform.translation() << 0.2, -0.4, 0.0;
-//     data_rot3.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr(new pcl::PointCloud<pcl::PointNormal>(10,10)));
-//     pcl::transformPointCloud(*data_rot, *data_rot3[3], transform);
-//     */
-//   }
+    // // Rotate 180 degrees   (-ve angle for a transformation)
+    // transform.rotate (Eigen::AngleAxisf (M_PI/2, rotVec));// Rotate another 90 to get to 180
+    // // cout << "transform for rot 180 is:\n" << transform.matrix() << endl;
+    // transform.translation() << -0.4, 0.2, 0.0;
+    // data_rot3.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr(new pcl::PointCloud<pcl::PointNormal>(30,30)));
+    // pcl::transformPointCloud(*data_rot, *data_rot3[0], transform);
+    // transform.translation() << 0.4, 0.2, 0.0;
+    // data_rot3.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr(new pcl::PointCloud<pcl::PointNormal>(30,30)));
+    // pcl::transformPointCloud(*data_rot, *data_rot3[1], transform);
+    // transform.translation() << 0.2, 0.4, 0.0;
+    // data_rot3.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr(new pcl::PointCloud<pcl::PointNormal>(30,30)));
+    // pcl::transformPointCloud(*data_rot, *data_rot3[2], transform);
+    // transform.translation() << 0.2, -0.4, 0.0;
+    // data_rot3.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr(new pcl::PointCloud<pcl::PointNormal>(30,30)));
+    // pcl::transformPointCloud(*data_rot, *data_rot3[3], transform);
+    
+  }
 
-//   pcl::PointCloud<pcl::PointNormal>::Ptr data;
-// //   pcl::PointCloud<pcl::PointNormal>::Ptr data_rot;
-
-//   Matrix_Point3Df mesh;
-
-//   Object3D mapObj
+  pcl::PointCloud<pcl::PointNormal>::Ptr data;
+//   pcl::PointCloud<pcl::PointNormal>::Ptr data_rot;
 
 
-//   // Vectors of point clouds 
-//   std::vector<pcl::PointCloud<pcl::PointNormal>::Ptr, Eigen::aligned_allocator <pcl::PointCloud <pcl::PointNormal>::Ptr > > data_l;
-// //   std::vector<pcl::PointCloud<pcl::PointNormal>::Ptr, Eigen::aligned_allocator <pcl::PointCloud <pcl::PointNormal>::Ptr > > data_r;
-// //   std::vector<pcl::PointCloud<pcl::PointNormal>::Ptr, Eigen::aligned_allocator <pcl::PointCloud <pcl::PointNormal>::Ptr > > data_d;
-// //   std::vector<pcl::PointCloud<pcl::PointNormal>::Ptr, Eigen::aligned_allocator <pcl::PointCloud <pcl::PointNormal>::Ptr > > data_u;
-// //   std::vector<pcl::PointCloud<pcl::PointNormal>::Ptr, Eigen::aligned_allocator <pcl::PointCloud <pcl::PointNormal>::Ptr > > data_ol;
-// //   std::vector<pcl::PointCloud<pcl::PointNormal>::Ptr, Eigen::aligned_allocator <pcl::PointCloud <pcl::PointNormal>::Ptr > > data_m_ol;
-// //   // For rotation
-// //   std::vector<pcl::PointCloud<pcl::PointNormal>::Ptr, Eigen::aligned_allocator <pcl::PointCloud <pcl::PointNormal>::Ptr > > data_rot1;
-// //   std::vector<pcl::PointCloud<pcl::PointNormal>::Ptr, Eigen::aligned_allocator <pcl::PointCloud <pcl::PointNormal>::Ptr > > data_rot2;
-// //   std::vector<pcl::PointCloud<pcl::PointNormal>::Ptr, Eigen::aligned_allocator <pcl::PointCloud <pcl::PointNormal>::Ptr > > data_rot3;  
 
-//   // Class instatiation
-//   SplitSurface ss;
-//   Mapping3D mp;
+  // Vectors of point clouds 
+  std::vector<pcl::PointCloud<pcl::PointNormal>::Ptr, Eigen::aligned_allocator <pcl::PointCloud <pcl::PointNormal>::Ptr > > data_l;
+  std::vector<pcl::PointCloud<pcl::PointNormal>::Ptr, Eigen::aligned_allocator <pcl::PointCloud <pcl::PointNormal>::Ptr > > data_r;
+  std::vector<pcl::PointCloud<pcl::PointNormal>::Ptr, Eigen::aligned_allocator <pcl::PointCloud <pcl::PointNormal>::Ptr > > data_d;
+  std::vector<pcl::PointCloud<pcl::PointNormal>::Ptr, Eigen::aligned_allocator <pcl::PointCloud <pcl::PointNormal>::Ptr > > data_u;
+  std::vector<pcl::PointCloud<pcl::PointNormal>::Ptr, Eigen::aligned_allocator <pcl::PointCloud <pcl::PointNormal>::Ptr > > data_ol;
+  std::vector<pcl::PointCloud<pcl::PointNormal>::Ptr, Eigen::aligned_allocator <pcl::PointCloud <pcl::PointNormal>::Ptr > > data_m_ol;
+//   // For rotation
+//   std::vector<pcl::PointCloud<pcl::PointNormal>::Ptr, Eigen::aligned_allocator <pcl::PointCloud <pcl::PointNormal>::Ptr > > data_rot1;
+//   std::vector<pcl::PointCloud<pcl::PointNormal>::Ptr, Eigen::aligned_allocator <pcl::PointCloud <pcl::PointNormal>::Ptr > > data_rot2;
+//   std::vector<pcl::PointCloud<pcl::PointNormal>::Ptr, Eigen::aligned_allocator <pcl::PointCloud <pcl::PointNormal>::Ptr > > data_rot3;  
 
-// };
+  // Class instatiation
+  SplitSurface ss;
+  Mapping3D mp;
+  Object3D obj;
 
-// TEST_F (updateSurfaceTest, testLeft){
+};
 
-//     mp.updateObject(mapObj, data, data_l[0]);
-// }
+TEST_F (updateSurfaceTest, testLeft){
+
+    Eigen::Array<float, 1, 8> expectRes(1,8);
+
+    for (int i = 0; i < 3; i++){
+        cout << "Data point for data_l is: " << data_l[i]->at(0,0) << endl;
+
+        mp.updateObject(0, data_l[i]);
+
+        // Test dimensions of output
+        EXPECT_EQ(15,mp.objectMap[0].ctrlPnts().rows());
+        
+        // EXPECT_EQ(2*n_ctrl - deg,srfOut.ctrlPnts().cols());
+
+        // Test Corner points 
+        // EXPECT_EQ(HPoint3Df(-0.4,0.2,0.0,1.0),mp.objectMap[0](0.0,0.0));
+        // EXPECT_EQ(HPoint3Df(-0.4,1.2,0.0,1.0),mp.objectMap[0](1.0,0.0));
+        // EXPECT_EQ(HPoint3Df(1.0,0.0,0.0,1.0),mp.objectMap[0](0.0,1.0));
+        // EXPECT_EQ(HPoint3Df(1.0,1.0,0.0,1.0),mp.objectMap[0](1.0,1.0));
+        switch (i){
+            case 0 : 
+                expectRes << -0.4, -0.4, 1.0, 1.0, 0.2, 1.2, 0.0, 1.0;
+                break;
+            case 1 : 
+                expectRes << -0.4, -0.4, 1.0, 1.0, -0.2, 0.8, 0.0, 1.0;
+                break;
+            case 2 : 
+                expectRes << -0.4, -0.4, 1.0, 1.0, 0.0, 1.0, 0.0, 1.0;
+                break;
+        }
+
+        EXPECT_FLOAT_EQ(expectRes[0],mp.objectMap[0](0.0,0.0).x());
+        EXPECT_FLOAT_EQ(expectRes[1],mp.objectMap[0](1.0,0.0).x());
+        EXPECT_FLOAT_EQ(expectRes[2],mp.objectMap[0](0.0,1.0).x());
+        EXPECT_FLOAT_EQ(expectRes[3],mp.objectMap[0](1.0,1.0).x());
+
+        EXPECT_FLOAT_EQ(expectRes[4],mp.objectMap[0](0.0,0.0).y());
+        EXPECT_FLOAT_EQ(expectRes[5],mp.objectMap[0](1.0,0.0).y());
+        EXPECT_FLOAT_EQ(expectRes[6],mp.objectMap[0](0.0,1.0).y());
+        EXPECT_FLOAT_EQ(expectRes[7],mp.objectMap[0](1.0,1.0).y());
+
+        // Reset object
+        mp.updateObjectInMap(0, obj);
+
+        // mp.objectMap[0].writeVRML("updateTest.wrl",Color(255,100,255),50,80);
+    }
+}
+
+TEST_F (updateSurfaceTest, testRight){
+
+    Eigen::Array<float, 1, 8> expectRes(1,8);
+
+    for (int i = 0; i < 3; i++){
+        cout << "Data point for data_l is: " << data_r[i]->at(0,0) << endl;
+
+        mp.updateObject(0, data_r[i]);
+
+        // Test dimensions of output
+        EXPECT_EQ(15,mp.objectMap[0].ctrlPnts().rows());
+        
+        // EXPECT_EQ(2*n_ctrl - deg,srfOut.ctrlPnts().cols());
+
+        // Test Corner points 
+        switch (i){
+            case 0 : 
+                expectRes << 0.0, 0.0, 1.4, 1.4, 0.0, 1.0, 0.2, 1.2;
+                break;
+            case 1 : 
+                expectRes << 0.0, 0.0, 1.4, 1.4, 0.0, 1.0, -0.2, 0.8;
+                break;
+            case 2 : 
+                expectRes << 0.0, 0.0, 1.4, 1.4, 0.0, 1.0, 0.0, 1.0;
+                break;
+        }
+
+        EXPECT_FLOAT_EQ(expectRes[0],mp.objectMap[0](0.0,0.0).x());
+        EXPECT_FLOAT_EQ(expectRes[1],mp.objectMap[0](1.0,0.0).x());
+        EXPECT_FLOAT_EQ(expectRes[2],mp.objectMap[0](0.0,1.0).x());
+        EXPECT_FLOAT_EQ(expectRes[3],mp.objectMap[0](1.0,1.0).x());
+
+        EXPECT_FLOAT_EQ(expectRes[4],mp.objectMap[0](0.0,0.0).y());
+        EXPECT_FLOAT_EQ(expectRes[5],mp.objectMap[0](1.0,0.0).y());
+        EXPECT_FLOAT_EQ(expectRes[6],mp.objectMap[0](0.0,1.0).y());
+        EXPECT_FLOAT_EQ(expectRes[7],mp.objectMap[0](1.0,1.0).y());
+
+        // if (i == 1 ){
+        //     mp.objectMap[0].writeVRML("updateTestR.wrl",Color(255,100,255),50,80);
+        // }
+
+        // Reset object
+        mp.updateObjectInMap(0, obj);
+
+        // mp.objectMap[0].writeVRML("updateTest.wrl",Color(255,100,255),50,80);
+    }
+}
+
+TEST_F (updateSurfaceTest, testDown){
+
+    Eigen::Array<float, 1, 8> expectRes(1,8);
+
+    for (int i = 0; i < 3; i++){
+        cout << "Data point for data_l is: " << data_d[i]->at(0,0) << endl;
+
+        mp.updateObject(0, data_d[i]);
+
+        // Test dimensions of output
+        EXPECT_EQ(15,mp.objectMap[0].ctrlPnts().cols());
+        
+        // EXPECT_EQ(2*n_ctrl - deg,srfOut.ctrlPnts().cols());
+
+        // Test Corner points 
+        // EXPECT_EQ(HPoint3Df(-0.4,0.2,0.0,1.0),mp.objectMap[0](0.0,0.0));
+        // EXPECT_EQ(HPoint3Df(-0.4,1.2,0.0,1.0),mp.objectMap[0](1.0,0.0));
+        // EXPECT_EQ(HPoint3Df(1.0,0.0,0.0,1.0),mp.objectMap[0](0.0,1.0));
+        // EXPECT_EQ(HPoint3Df(1.0,1.0,0.0,1.0),mp.objectMap[0](1.0,1.0));
+        switch (i){
+            case 0 : 
+                expectRes << 0.2, 0.0, 1.2, 1.0, -0.4, 1.0, -0.4, 1.0;
+                break;
+            case 1 : 
+                expectRes << -0.2, 0.0, 0.8, 1.0, -0.4, 1.0, -0.4, 1.0;
+                break;
+            case 2 : 
+                expectRes << 0.0, 0.0, 1.0, 1.0, -0.4, 1.0, -0.4, 1.0;
+                break;
+        }
+
+        EXPECT_FLOAT_EQ(expectRes[0],mp.objectMap[0](0.0,0.0).x());
+        EXPECT_FLOAT_EQ(expectRes[1],mp.objectMap[0](1.0,0.0).x());
+        EXPECT_FLOAT_EQ(expectRes[2],mp.objectMap[0](0.0,1.0).x());
+        EXPECT_FLOAT_EQ(expectRes[3],mp.objectMap[0](1.0,1.0).x());
+
+        EXPECT_FLOAT_EQ(expectRes[4],mp.objectMap[0](0.0,0.0).y());
+        EXPECT_FLOAT_EQ(expectRes[5],mp.objectMap[0](1.0,0.0).y());
+        EXPECT_FLOAT_EQ(expectRes[6],mp.objectMap[0](0.0,1.0).y());
+        EXPECT_FLOAT_EQ(expectRes[7],mp.objectMap[0](1.0,1.0).y());
+
+        // if (i == 1 ){
+        //     mp.objectMap[0].writeVRML("updateTestd.wrl",Color(255,100,255),50,80);
+        // }
+
+        // Reset object
+        mp.updateObjectInMap(0, obj);
+
+    }
+}
+
+TEST_F (updateSurfaceTest, testUp){
+
+    Eigen::Array<float, 1, 8> expectRes(1,8);
+
+    for (int i = 0; i < 3; i++){
+        cout << "Data point for data_l is: " << data_u[i]->at(0,0) << endl;
+
+        mp.updateObject(0, data_u[i]);
+
+        // Test dimensions of output
+        EXPECT_EQ(15,mp.objectMap[0].ctrlPnts().cols());
+        
+        // EXPECT_EQ(2*n_ctrl - deg,srfOut.ctrlPnts().cols());
+
+        // Test Corner points 
+        // EXPECT_EQ(HPoint3Df(-0.4,0.2,0.0,1.0),mp.objectMap[0](0.0,0.0));
+        // EXPECT_EQ(HPoint3Df(-0.4,1.2,0.0,1.0),mp.objectMap[0](1.0,0.0));
+        // EXPECT_EQ(HPoint3Df(1.0,0.0,0.0,1.0),mp.objectMap[0](0.0,1.0));
+        // EXPECT_EQ(HPoint3Df(1.0,1.0,0.0,1.0),mp.objectMap[0](1.0,1.0));
+        switch (i){
+            case 0 : 
+                expectRes << 0.0, 0.2, 1.0, 1.2, 0.0, 1.4, 0.0, 1.4;
+                break;
+            case 1 : 
+                expectRes << 0.0, -0.2, 1.0, 0.8, 0.0, 1.4, 0.0, 1.4;
+                break;
+            case 2 : 
+                expectRes << 0.0, 0.0, 1.0, 1.0, 0.0, 1.4, 0.0, 1.4;
+                break;
+        }
+
+        EXPECT_FLOAT_EQ(expectRes[0],mp.objectMap[0](0.0,0.0).x());
+        EXPECT_FLOAT_EQ(expectRes[1],mp.objectMap[0](1.0,0.0).x());
+        EXPECT_FLOAT_EQ(expectRes[2],mp.objectMap[0](0.0,1.0).x());
+        EXPECT_FLOAT_EQ(expectRes[3],mp.objectMap[0](1.0,1.0).x());
+
+        EXPECT_FLOAT_EQ(expectRes[4],mp.objectMap[0](0.0,0.0).y());
+        EXPECT_FLOAT_EQ(expectRes[5],mp.objectMap[0](1.0,0.0).y());
+        EXPECT_FLOAT_EQ(expectRes[6],mp.objectMap[0](0.0,1.0).y());
+        EXPECT_FLOAT_EQ(expectRes[7],mp.objectMap[0](1.0,1.0).y());
+
+        if (i == 1 ){
+            mp.objectMap[0].writeVRML("updateTestU.wrl",Color(255,100,255),50,80);
+        }
+        
+
+        // Reset object
+        mp.updateObjectInMap(0, obj);
+    }
+}
 
 
 } // namespace

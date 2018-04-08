@@ -12,9 +12,10 @@ using namespace PLib ;
   \date 23 March 2018
 */
 Mapping3D::Mapping3D():
-    n_ctrl_default(7), order{3,3}, number_downsample_points(45), overlap_d_frac(0.6), 
+    nCtrlDefault{15,15}, order{3,3},
     searchThresh(7), numRowsDesired(45), numColsDesired(45),
-    maxNanAllowed(10), removeNanBuffer(0), numberOfMetrics(7)
+    maxNanAllowed(10), removeNanBuffer(0), numberOfMetrics(7), msSurf(45), mtSurf(45),
+    knotInsertionFlag(true), numInsert(3), deltaKnotInsert(1e-2)
 {
   searchThresh[0] = 0.75;
   searchThresh[1] = 0.75;
@@ -24,13 +25,65 @@ Mapping3D::Mapping3D():
   }
 }
 
-
-
 //-------------------------------------------------------------------
 // Methods...
 //-------------------------------------------------------------------
 
 //-------------------------------------------------------------------
+// ------------- HGHER LEVEL FUNCTIONALITY  -----------------------------
+//-------------------------------------------------------------------
+
+int Mapping3D::processScan(pcl::PointCloud<pcl::PointNormal>::Ptr cloud, Eigen::Affine3f transform){
+
+  // Initialise data
+  // clouds
+  pcl::PointCloud<pcl::PointNormal>::Ptr cloudReduced (new pcl::PointCloud<pcl::PointNormal>(numRowsDesired, numRowsDesired));
+  pcl::PointCloud<pcl::PointNormal>::Ptr cloudTransformed (new pcl::PointCloud<pcl::PointNormal>(numRowsDesired, numRowsDesired));
+  // Search parameters
+  std::vector<float> searchMetrics;
+  int objID; 
+
+  // cout << "cloud in at (0,0): " << cloud->at(0,0) << endl;
+
+  // Process Scan 1
+  meshFromScan(cloudReduced, cloud);
+
+  // cout << "cloudReduced at (0,0): " << cloudReduced->at(0,0) << endl;
+
+  cout << "transform is: " << transform.matrix() << endl;
+
+  // Transform
+  pcl::transformPointCloud(*cloudReduced, *cloudTransformed, transform);
+
+  // cout << "cloud transformed at (0,0): " << cloudTransformed->at(0,0) << endl;
+
+  // Compute Metrics
+  searchMetrics = computeSearchMetrics(cloudTransformed);
+
+  // cout << "After compute metrics, cloud transformed at (0,0): " << cloudTransformed->at(0,0) << endl;
+
+  // Data Association
+  objID = dataAssociation(searchMetrics);
+
+  // Add new object if there is no match
+  if (objID == -1){
+    // New object
+    addObject(cloudTransformed, searchMetrics);
+    return 2; // 2 indicates a new object has been added
+  }
+
+  // Update object
+  updateObject(objID, cloudTransformed); 
+
+
+  return 1; // Object updated
+}
+
+
+//-------------------------------------------------------------------
+// ------------- SURFACE JOINING  -----------------------------
+//-------------------------------------------------------------------
+
 /*! 
   \brief  join two nurbs curve, prioritising the first curves
 
@@ -175,8 +228,6 @@ NurbsCurvef Mapping3D::joinCurves(NurbsCurvef& crv1, NurbsCurvef& crv2, bool new
 
 }
 
-
-//-------------------------------------------------------------------
 /*! 
   \brief  join two nurbs surfaces prioritising the first surface
 
@@ -240,6 +291,8 @@ NurbsSurface<float,3> Mapping3D::joinSurfaces(NurbsSurfacef& srf1, NurbsSurfacef
         // Input checks
         if (n_ctrlCheck2 != srf1.ctrlPnts().rows()){
           cout << "Error!: Need to have matched numbers of control points along the join direction\nReturning an empty surface" << endl;
+          cout << "Srf1 dimensions are: (" << srf1.ctrlPnts().rows() << ", " << srf1.ctrlPnts().cols() << ")\n";
+          cout << "Srf2 dimensions are: (" << srf2.ctrlPnts().rows() << ", " << srf2.ctrlPnts().cols() << ")\n";
           srfOut = new NurbsSurfacef();
           return *srfOut;
         }
@@ -422,7 +475,6 @@ NurbsSurface<float,3> Mapping3D::joinSurfaces(NurbsSurfacef& srf1, NurbsSurfacef
 
 }
 
-//-------------------------------------------------------------------
 /*! 
   \brief  join two nurbs surfaces prioritising the first surface - as Object3D types
 
@@ -441,6 +493,8 @@ NurbsSurface<float,3> Mapping3D::joinSurfaces(NurbsSurfacef& srf1, NurbsSurfacef
 */
 Object3D Mapping3D::joinSurfaces(Object3D& srf1, Object3D& srf2, std::string extendDirection){
 
+    cout << "In join surfaces" << endl;
+
     int deg = srf1.degreeU();// assume the same degree in each direction
     int row_not_col;
     int n_ctrl1;
@@ -449,6 +503,7 @@ Object3D Mapping3D::joinSurfaces(Object3D& srf1, Object3D& srf2, std::string ext
     bool newBeforeOld;
     bool flipKnotParam;
     Vector_FLOAT knots1;
+    Vector_FLOAT knotsKeep;
     NurbsCurvef crv1;
     NurbsCurvef crv2;
     NurbsCurvef crvOut;
@@ -459,6 +514,8 @@ Object3D Mapping3D::joinSurfaces(Object3D& srf1, Object3D& srf2, std::string ext
     Vector_FLOAT knotsOut;
 
     Object3D* srfOut;
+
+    cout << "Starting join surfaces" << endl;
 
     if (srf1.degreeU() != srf2.degreeU() || srf1.degreeV() != srf2.degreeV()){
           cout << "Error: need matching degrees for join direction. Exiting with empty surface" << endl;
@@ -477,6 +534,8 @@ Object3D Mapping3D::joinSurfaces(Object3D& srf1, Object3D& srf2, std::string ext
         n_ctrlCheck2 = srf2.ctrlPnts().cols();  
     }
 
+    cout << "Determine srf 2 extend configuration" << endl;
+
     // Different cases for rows or columns for srf1
     if (extendDirection[0] == 'L' || extendDirection[0] == 'R'){
         // -----------------------------------------------------------------
@@ -485,18 +544,25 @@ Object3D Mapping3D::joinSurfaces(Object3D& srf1, Object3D& srf2, std::string ext
         // Input checks
         if (n_ctrlCheck2 != srf1.ctrlPnts().rows()){
           cout << "Error!: Need to have matched numbers of control points along the join direction\nReturning an empty surface" << endl;
+          cout << "Srf1 dimensions are: (" << srf1.ctrlPnts().rows() << ", " << srf1.ctrlPnts().cols() << ")\n";
+          cout << "Srf2 dimensions are: (" << srf2.ctrlPnts().rows() << ", " << srf2.ctrlPnts().cols() << ")\n";
           srfOut = new Object3D();
           return *srfOut;
         }
 
         n_ctrl1 = srf1.ctrlPnts().cols();
 
-        // Init
-        ctrlOut.resize(n_ctrl1,n_ctrl1 + n_ctrl2 - deg);
-        knotsOut.resize(n_ctrl1 + n_ctrl2 + 1);
+        cout << "n_ctrl1: " << n_ctrl1 << endl;;
 
-        
+        // Init
+        ctrlOut.resize(srf1.ctrlPnts().rows(),n_ctrl1 + n_ctrl2 - deg);
+        knotsOut.resize(n_ctrl1 + n_ctrl2 + 1);
+              
         knots1 = srf1.knotV();        
+        knotsKeep = srf1.knotU();
+
+        cout << "knots1: " << knots1 << endl;
+        cout << "knotsKeep: " << knotsKeep << endl;
 
         // Determine order of combination
         if (extendDirection[0] == 'L'){
@@ -519,11 +585,13 @@ Object3D Mapping3D::joinSurfaces(Object3D& srf1, Object3D& srf2, std::string ext
             }
 
         }
+        cout << "Determined order and flipping" << endl;
 
         // Loop for each row of control points 
-        for (int i = 0; i < n_ctrl1; i++){
+        for (int i = 0; i < srf1.ctrlPnts().rows(); i++){
             ctrlVec1 = getMatRow(srf1.ctrlPnts(),i);
             crv1.reset(ctrlVec1,knots1,deg);
+            // cout << "reset crv1" << endl;
 
             if (row_not_col){
                 // Use rows
@@ -553,8 +621,13 @@ Object3D Mapping3D::joinSurfaces(Object3D& srf1, Object3D& srf2, std::string ext
                 crv2.reset(ctrlVec2,srf2.knotU(),deg);
             }
 
+            // cout << "Control vec 2 is: " << ctrlVec2 << endl;
+            // cout << "curve 2 (0) is: " << crv2(0) << endl;
+
             // Join the curves
             crvOut = joinCurves(crv1,crv2,newBeforeOld,flipKnotParam);
+            
+            // cout << "curve out (0) is: " << crvOut(0) << endl;
 
             insertMatRow(ctrlOut,crvOut.ctrlPnts(),i);
 
@@ -563,11 +636,14 @@ Object3D Mapping3D::joinSurfaces(Object3D& srf1, Object3D& srf2, std::string ext
 
         // Average knot vector
         for (int i = 0; i < knotsOut.size(); i++){
-            knotsOut[i] /= n_ctrl1;
+            knotsOut[i] /= srf1.ctrlPnts().rows();
         }
         
         // create surface
-        srfOut = new Object3D(deg,deg,knots1,knotsOut,ctrlOut);
+        cout << "Creating surface" << endl;
+        cout << "knots u: " << knotsKeep << " of length: " << knotsKeep.rows() << "\nKnots V: " << knotsOut << " of length: " << knotsOut.rows() << endl;
+        cout << "Control points dimensions are: (" << ctrlOut.rows() << ", " << ctrlOut.cols() << ")\n";
+        srfOut = new Object3D(deg,deg,knotsKeep,knotsOut,ctrlOut);
         
     }else{
         // -----------------------------------------------------------------
@@ -576,6 +652,8 @@ Object3D Mapping3D::joinSurfaces(Object3D& srf1, Object3D& srf2, std::string ext
         // Input checks
         if (n_ctrlCheck2 != srf1.ctrlPnts().cols()){
           cout << "Error!: Need to have matched numbers of control points along the join direction\nReturning an empty surface" << endl;
+          cout << "Srf1 dimensions are: (" << srf1.ctrlPnts().rows() << ", " << srf1.ctrlPnts().cols() << ")\n";
+          cout << "Srf2 dimensions are: (" << srf2.ctrlPnts().rows() << ", " << srf2.ctrlPnts().cols() << ")\n";
           srfOut = new Object3D();
           return *srfOut;
         }
@@ -583,10 +661,14 @@ Object3D Mapping3D::joinSurfaces(Object3D& srf1, Object3D& srf2, std::string ext
         n_ctrl1 = srf1.ctrlPnts().rows();
 
         // Init
-        ctrlOut.resize(n_ctrl1 + n_ctrl2 - deg, n_ctrl1);
+        ctrlOut.resize(n_ctrl1 + n_ctrl2 - deg, srf1.ctrlPnts().cols());
         knotsOut.resize(n_ctrl1 + n_ctrl2 + 1);
 
-        knots1 = srf1.knotU();        
+        knots1 = srf1.knotU(); 
+        knotsKeep = srf1.knotV();
+
+        cout << "knots1: " << knots1 << endl;
+        cout << "knotsKeep: " << knotsKeep << endl;       
 
         // Determine order of combination
         if (extendDirection[0] == 'D'){
@@ -611,7 +693,7 @@ Object3D Mapping3D::joinSurfaces(Object3D& srf1, Object3D& srf2, std::string ext
         }
 
         // Loop for each column of control points 
-        for (int j = 0; j < n_ctrl1; j++){
+        for (int j = 0; j < srf1.ctrlPnts().cols(); j++){
             ctrlVec1 = getMatCol(srf1.ctrlPnts(),j,false);
             crv1.reset(ctrlVec1,knots1,deg);
 
@@ -654,11 +736,14 @@ Object3D Mapping3D::joinSurfaces(Object3D& srf1, Object3D& srf2, std::string ext
 
         // Average knot vector
         for (int i = 0; i < knotsOut.size(); i++){
-            knotsOut[i] /= n_ctrl1;
+            knotsOut[i] /= srf1.ctrlPnts().cols();
         }
         
         // create surface
-        srfOut = new Object3D(deg,deg,knotsOut,knots1,ctrlOut);
+        cout << "Creating surface" << endl;
+        cout << "knots V: " << knotsKeep << " of length: " << knotsKeep.rows() << "\nKnots U: " << knotsOut << " of length: " << knotsOut.rows() << endl;
+        cout << "Control points dimensions are: (" << ctrlOut.rows() << ", " << ctrlOut.cols() << ")\n";
+        srfOut = new Object3D(deg,deg,knotsOut,knotsKeep,ctrlOut);
 
     }
     
@@ -667,6 +752,17 @@ Object3D Mapping3D::joinSurfaces(Object3D& srf1, Object3D& srf2, std::string ext
 
 }
 
+/*! 
+  \brief  Compute the number of control points required for an extension of a surface
+
+  \param extendDirection string to indicate how the surfaces are to be joined
+  Options are L, R, U, D. Is a string of two values, one for srf1 and one for srf2
+  \param data             the data on the new extension
+  \param srf              The surface being extended
+
+  \author Benjamin Morrell
+  \date 28 March 2018
+*/
 std::vector<int> Mapping3D::computeNumberOfControlPoints(std::string extendDirection, Matrix_Point3Df& data, Object3D& srf){
   // TDBM - later - just input the object ID and take the object from the map
   
@@ -730,6 +826,8 @@ std::vector<int> Mapping3D::computeNumberOfControlPoints(std::string extendDirec
   return nCtrlNew;
 
 }
+
+
 
 //-------------------------------------------------------------------
 // ------------- Scan Processing  -----------------------------
@@ -1193,14 +1291,37 @@ void Mapping3D::regionAverage(pcl::PointCloud<pcl::PointNormal>::Ptr cloud, int 
 //-------------------------------------------------------------------
 // ------------- UPDATE OBJECT  -----------------------------
 //-------------------------------------------------------------------
+/*! 
+  \brief  Adds an object to the map
+
+  \param cloud          the point cloud for the new object, in the global frame
+  \param searchMetrics  the metrics describing the new object
+  
+  \author Benjamin Morrell
+  \date 4 April 2018
+*/
 void Mapping3D::addObject(pcl::PointCloud<pcl::PointNormal>::Ptr cloud, std::vector<float> searchMetrics){
 
+  // cout << "In addObject, cloud at (0,0) is: " << cloud->at(0,0) << endl;
   // Convert data to nurbs data
   Matrix_Point3Df mesh = nurbsDataFromPointCloud(cloud);
 
-  // Add NURBS Object (using default settings)
-  objectMap.push_back(Object3D(mesh));
+  // cout << "Mesh from cloud point (0,0) is: " << mesh(0,0) << endl;
+  // cout << "Mesh from cloud point (5,5) is: " << mesh(5,5) << endl;
 
+  // Compute number of control points (TDBM  - imrpove this)
+  int nCtrl1 = std::min((int)cloud->height/2,nCtrlDefault[0]);
+  int nCtrl2 = std::min((int)cloud->width/2,nCtrlDefault[1]);
+  cout << "Number of control points computed is: (" << nCtrl1 << ", " << nCtrl2 << ")\n";
+  Object3D obj(mesh, 3, 3, nCtrl1, nCtrl2);
+
+  // cout << "object point (0,0) " << obj(0.0,0.0) << endl;
+  // cout << "object point (0.4,0.4) " << obj(0.4,0.4) << endl;
+
+  // Add NURBS Object (using default settings)
+  objectMap.push_back(obj);
+
+  // TDBM - consider whether to do this or not... NOTE that this changes from data association
   searchMetrics[0] = objectMap[objectMap.size()-1].getCentre().x();
   searchMetrics[1] = objectMap[objectMap.size()-1].getCentre().y();
   searchMetrics[2] = objectMap[objectMap.size()-1].getCentre().z();
@@ -1211,54 +1332,268 @@ void Mapping3D::addObject(pcl::PointCloud<pcl::PointNormal>::Ptr cloud, std::vec
   // Add search metrics
   objectMetrics.push_back(searchMetrics);
 
+  cout << "New object added with ID: " << objectMap.size()-1 << " and with metrics: ";
+  for (int i = 0; i < numberOfMetrics; i++){cout << searchMetrics[i] << ", ";}cout << endl;
+
 }
 
-void Mapping3D::updateObject(Object3D& mapObj, pcl::PointCloud<pcl::PointNormal>::Ptr mapObjPC, pcl::PointCloud<pcl::PointNormal>::Ptr obsObjPC){
-  // TDBM - function to get point cloud from NURBS
-  // TDBM just input an ID and get the data from the object map
+
+/*! 
+  \brief  Updates an object in the map
+
+  \param objID  id of the object to update
+  \param obj    Object3D parameters to replace those in the map
+  
+  \author Benjamin Morrell
+  \date 4 April 2018
+*/
+void Mapping3D::updateObjectInMap(int objID, Object3D& obj){
+
+  if (objID > objectMap.size()-1){
+    cout << "Error: input ID larger than object map. Not updating\n\n" << endl;
+    return;
+  }
+
+  // replace object in objectMap
+  objectMap[objID] = obj;
+
+  // Compute new metrics
+  std::vector<float> searchMetrics = computeSearchMetrics(obj);
+
+  // Update metrics
+  objectMetrics[objID] = searchMetrics;
+
+  cout << "Object " << objID << " updated with metrics: ";
+  for (int i = 0; i < numberOfMetrics; i++){cout << searchMetrics[i] << ", ";}cout << endl;
+
+}
+
+/*! 
+  \brief  Updates an object in the map with a new observation
+
+  \param objID    id of the object to update
+  \param obsObjPC point cloud of the new observataion 
+  
+  \author Benjamin Morrell
+  \date 4 April 2018
+*/
+void Mapping3D::updateObject(int objID, pcl::PointCloud<pcl::PointNormal>::Ptr obsObjPC){
+  
+  // Get point cloud from NURBS object
+  pcl::PointCloud<pcl::PointNormal>::Ptr mapObjPC(new pcl::PointCloud<pcl::PointNormal>(mtSurf, msSurf, pcl::PointNormal()));
+  pointCloudFromObject3D(objID, msSurf, mtSurf, mapObjPC);
+
+  // cout << "Point cloud from object at (0,0) is: " << mapObjPC->at(0,0) << endl;
+  // cout << "Point cloud from observation at (0,0) is: " << obsObjPC->at(0,0) << endl;
   
   // Split new surface observation
   SplitSurface ss;
-
   ss.splitNewSurfaceObservation(mapObjPC, obsObjPC);
-
   cout << "Extend Direction is: " << ss.extendDirection << endl;
+
+  if (ss.extendDirection[0] == 'N' || ss.extendDirection[1] == 'N'){
+    cout << "\nNo extension of surface needed (not enough new data)\n" << endl;
+    return;
+  }
 
   // Get matrix from new data
   Matrix_Point3Df mesh = nurbsDataFromPointCloud(obsObjPC, ss.newDataIndices);
-
   cout << "Mesh2 size is (" << mesh.rows() << ", " << mesh.cols() << ")\n";
 
-  std::vector<int> nCtrlNew = computeNumberOfControlPoints(ss.extendDirection, mesh, mapObj);
-
+  // Get the number of control points
+  std::vector<int> nCtrlNew = computeNumberOfControlPoints(ss.extendDirection, mesh, objectMap[objID]);
   cout << "new control points: " << nCtrlNew[0] << ", " << nCtrlNew[1] << endl;
+
+  if (nCtrlNew[0] <= order[0] || nCtrlNew[1] <= order[1]){
+    cout << "\nNot enough control points, no extension\n" << endl;
+    return;
+  }
 
   // Create Object for new surface? (nknots = deg + nctrl + 1)
   Object3D obj(mesh, order[0], order[1], nCtrlNew[0], nCtrlNew[1]);
+  
+  // cout << "object of new mesh has data at (0,0): " << obj.pointAt(0.0,0.0) << endl;  
+  // cout << "object of new mesh has data at (1.0,1.0): " << obj.pointAt(1.0,1.0) << endl;
+
+  // Knot insertion
+  if (knotInsertionFlag){
+    cout << "inserting knots" << endl;
+    knotInsertionPreMerge(obj, ss.extendDirection);
+  }
+
 
   // Join Surfaces
-  Object3D objJoin = joinSurfaces(mapObj,obj,ss.extendDirection);
+  cout << "joining surfaces" << endl;
+  Object3D objJoin = joinSurfaces(objectMap[objID],obj,ss.extendDirection);
 
   cout << "Point (0.3,0.3) on obj3: " << objJoin.pointAt(0.3,0.3) << endl;
 
-  objJoin.writeVRML("mesh3Test.wrl",Color(255,100,255),50,80);
+  // Update the map
+  updateObjectInMap(objID, objJoin);
+  
+}
 
+/*! 
+  \brief  inserts knots into a surface in preparation for merging with another surface
+
+  \param      obj           the Object3D to insert knots for
+  \param[in]  exendDirection The direction surfaces are joining
+  
+  \author Benjamin Morrell
+  \date 5 April 2018
+*/
+void Mapping3D::knotInsertionPreMerge(Object3D& obj, std::string extendDirection){
+
+  // From global settings
+  // float deltaKnotInsert = 1e-4;
+  // int numInsert = 3;
+
+  Vector_FLOAT knotsInsert(numInsert);
+
+  int nCtrlS = obj.ctrlPnts().rows();
+  int nCtrlT = obj.ctrlPnts().cols();
+
+  float startVal;
+  float endVal;
+  bool insertUFlag;
+
+  switch (extendDirection[1]){
+    case 'L' :
+      // Add knots in the t direction near the right end (end of parameters)
+      startVal = obj.knotV(nCtrlT-1) + deltaKnotInsert;
+      endVal = obj.knotV(nCtrlT) - deltaKnotInsert;
+      insertUFlag = false;
+      break;
+    case 'R' : 
+      // Add knots in the t direction near the left end (start of parameters)
+      startVal = obj.knotV(obj.degreeV()) + deltaKnotInsert;
+      endVal = obj.knotV(obj.degreeV()) + 1 - deltaKnotInsert;
+      insertUFlag = false;
+      break;
+    case 'D' :
+      // Add knots in the s direction near the upper end (end of parameters)
+      startVal = obj.knotU(nCtrlS-1) + deltaKnotInsert;
+      endVal = obj.knotU(nCtrlS) - deltaKnotInsert;
+      insertUFlag = true;
+      break;
+    case 'U' : 
+      // Add knots in the s direction near the lower end (start of parameters)
+      startVal = obj.knotU(obj.degreeU()) + deltaKnotInsert;
+      endVal = obj.knotU(obj.degreeU() + 1) - deltaKnotInsert;
+      insertUFlag = true;
+      break;
+  }
+
+  // Fill knot vector
+  float step = (endVal - startVal)/((float)numInsert-1);
+
+  for (int i = 0; i < numInsert; i++){
+    knotsInsert[i] = startVal + step * i;
+  }
+
+  
+
+  // Do knot insertion
+  if (insertUFlag){
+    cout << "knots pre-insertion are: " << obj.knotU() << endl;
+    cout << "Inserting knots in U: " << knotsInsert << endl;
+    obj.refineKnotU(knotsInsert);
+  }else{
+    cout << "knots pre-insertion are: " << obj.knotV() << endl;
+    cout << "Inserting knots in V: " << knotsInsert << endl;
+    obj.refineKnotV(knotsInsert);
+  }
 }
 
 //-------------------------------------------------------------------
 // ------------- DATA ASSOCIATION  -----------------------------
 //-------------------------------------------------------------------
 
-//-------------------------------------------------------------------
 /*! 
-  \brief  Converts from point cloud to NURBS Matrix
+  \brief  Computes search metrics from an Object3D object
+
+  \param[in]  obj           the Object3D to compute the metrics for
+  \param[out] searchMetrics the list of metrics for data association searches
+  
+  \author Benjamin Morrell
+  \date 4 April 2018
+*/
+std::vector<float> Mapping3D::computeSearchMetrics(Object3D& obj){
+  
+  std::vector<float> searchMetrics(numberOfMetrics);
+
+  // Centre metrics - take from object
+  searchMetrics[0] = obj.getCentre().x();
+  searchMetrics[1] = obj.getCentre().y();
+  searchMetrics[2] = obj.getCentre().z();
+
+  // Size
+  searchMetrics[3] = obj.getObjSize();
+
+  // Color
+  searchMetrics[4] = obj.getColor().x();
+  searchMetrics[5] = obj.getColor().y();
+  searchMetrics[6] = obj.getColor().z();
+
+  return searchMetrics;
+}
+
+/*! 
+  \brief  Computes search metrics from a pcl point cloud
+
+  \param[in]  cloud         the pcl point cloud to compute the metrics for
+  \param[out] searchMetrics the list of metrics for data association searches
+  
+  \author Benjamin Morrell
+  \date 4 April 2018
+*/
+std::vector<float> Mapping3D::computeSearchMetrics(pcl::PointCloud<pcl::PointNormal>::Ptr cloud){
+  
+  // cout << "In ComputeSearchMetrics\nPC(0,0) is: " << cloud->at(0,0) << endl;
+
+  // init
+  std::vector<float> searchMetrics(numberOfMetrics);
+
+  // Get Centroid
+  Eigen::Vector4f centroid; // Last component is 1 to allow use of a 4x4 transformation matrix
+  pcl::compute3DCentroid(*cloud,centroid); 
+
+  // Compute size (maximum x, y, z dimension) TDBM make this a better measure
+  pcl::PointNormal minP;
+  pcl::PointNormal maxP;
+  pcl::getMinMax3D(*cloud, minP, maxP);
+
+  // cout << "after centroid and minmax, PC(0,0) is: " << cloud->at(0,0) << endl;
+
+  float objSize = std::max(maxP.x - minP.x,std::max(maxP.y - minP.y,maxP.z - minP.z));
+
+  // Centre metrics
+  searchMetrics[0] = centroid.x();
+  searchMetrics[1] = centroid.y();
+  searchMetrics[2] = centroid.z();
+
+  // Size
+  searchMetrics[3] = objSize;
+
+  // Color
+  searchMetrics[4] = 0.0;
+  searchMetrics[5] = 0.0;
+  searchMetrics[6] = 0.0;
+
+  return searchMetrics;
+}
+
+/*! 
+  \brief  Use input search metrics to find a matching object in the objectMap
+
+  \param searchMetrics vector of metrics to be searched for
 
   uses: objectMetrics
         numberOfMetrics
         searchThresh
   
   \author Benjamin Morrell
-  \date 3 April 2018
+  \date 4 April 2018
 */
 int Mapping3D::dataAssociation(std::vector<float> searchMetrics){
 
@@ -1270,15 +1605,20 @@ int Mapping3D::dataAssociation(std::vector<float> searchMetrics){
 
   // std::vector<float> searchThresh;
 
-  int objID;
+  int objID = -1;
   float dist;
+
+  if (objectMap.size() == 0){
+    // No objects in the map
+    return objID;
+  }
 
   // Distances array
   Eigen::Array<float, 1, Eigen::Dynamic> distances(1,numberOfMetrics);
   distances.setZero(numberOfMetrics);
 
-  Eigen::Array<bool, 1, Eigen::Dynamic> activeObjects(1,numberOfMetrics);
-  activeObjects.setOnes(numberOfMetrics);
+  Eigen::Array<bool, 1, Eigen::Dynamic> activeObjects(1,objectMap.size());
+  activeObjects.setOnes(objectMap.size());
 
   // Search through each metric
   for (int j = 0; j < numberOfMetrics; j++){
@@ -1404,7 +1744,7 @@ Matrix_Point3Df Mapping3D::nurbsDataFromPointCloud(pcl::PointCloud<pcl::PointNor
   \author Benjamin Morrell
   \date 3 April 2018
 */
-Matrix_Point3Df Mapping3D::nurbsDataFromPointCloud(pcl::PointCloud<pcl::PointNormal>::Ptr cloud, Eigen::Array<int, 2, 2> dataIndices){
+Matrix_Point3Df Mapping3D::nurbsDataFromPointCloud(pcl::PointCloud<pcl::PointNormal>::Ptr cloud, Eigen::Array<int, 2, 2>& dataIndices){
 
   // Size of output matrix
   int ms = dataIndices(1,0) - dataIndices(0,0) + 1;
@@ -1438,21 +1778,47 @@ Matrix_Point3Df Mapping3D::nurbsDataFromPointCloud(pcl::PointCloud<pcl::PointNor
   \author Benjamin Morrell
   \date 3 April 2018
 */
-pcl::PointCloud<pcl::PointNormal> Mapping3D::pointCloudFromNurbsData(Matrix_Point3Df data){
+void Mapping3D::pointCloudFromNurbsData(Matrix_Point3Df& data, pcl::PointCloud<pcl::PointNormal>::Ptr cloud){
 
-  pcl::PointCloud<pcl::PointNormal> cloud(data.cols(),data.rows(),pcl::PointNormal());
+  // pcl::PointCloud<pcl::PointNormal>::Ptr cloud(new pcl::PointCloud<pcl::PointNormal>(data.cols(),data.rows(),pcl::PointNormal()));
 
   for (int i = 0; i < data.rows(); i ++){
     for (int j = 0; j < data.cols(); j++){
-      cloud.at(j,i).x = data(i,j).x(); // at(col,row)
-      cloud.at(j,i).y = data(i,j).y(); // at(col,row)
-      cloud.at(j,i).z = data(i,j).z(); // at(col,row)
+      cloud->at(j,i).x = data(i,j).x(); // at(col,row)
+      cloud->at(j,i).y = data(i,j).y(); // at(col,row)
+      cloud->at(j,i).z = data(i,j).z(); // at(col,row)
     }
   }
-
-  return cloud;// TDBM think of how to do this more efficiently with pointers - depends on how it is used...
 }
 
+/*! 
+  \brief  Converts from NURBS Object to pcl Point Cloud
+
+  \param objID  the id of the object in the map to get the data from
+  \param ms     the number of points to create in the s parametric direction
+  \param mt     the number of points to create in the t parametric direction
+  
+  \author Benjamin Morrell
+  \date 4 April 2018
+*/
+void Mapping3D::pointCloudFromObject3D(int objID, int ms, int mt, pcl::PointCloud<pcl::PointNormal>::Ptr cloud){
+
+  // Get the data points
+  Matrix_Point3Df data = objectMap[objID].getSurfacePoints(ms, mt); 
+
+  cout << "Size of data in pointCloudFromObject3D: (" << data.rows() << ", " << data.cols() << ")\n";
+
+  cout << "Data (0,0) = " << data(0,0) << endl;
+
+  // Copy the data
+  for (int i = 0; i < data.rows(); i ++){
+    for (int j = 0; j < data.cols(); j++){
+      cloud->at(j,i).x = data(i,j).x(); // at(col,row)
+      cloud->at(j,i).y = data(i,j).y(); // at(col,row)
+      cloud->at(j,i).z = data(i,j).z(); // at(col,row)
+    }
+  }
+}
 
 
 //-------------------------------------------------------------------
@@ -1466,8 +1832,8 @@ pcl::PointCloud<pcl::PointNormal> Mapping3D::pointCloudFromNurbsData(Matrix_Poin
   \date 28 March 2018
 */
 Vector_HPoint3Df Mapping3D::getMatRow(Matrix_HPoint3Df data,int row_id){
-  
-  int n_ctrl = data.rows();
+  // cout << "in getMatRow" << endl;
+  int n_ctrl = data.cols();
   
   Vector_HPoint3Df ctrlRow(n_ctrl);
   
@@ -1475,6 +1841,7 @@ Vector_HPoint3Df Mapping3D::getMatRow(Matrix_HPoint3Df data,int row_id){
     ctrlRow[j] = data(row_id,j);
   }
 
+  // cout << "end of getMatRow. CtrlRow = " << ctrlRow << endl;
   return ctrlRow;
 }
 

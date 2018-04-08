@@ -10,6 +10,8 @@
 // #include <pcl/io/pcd_io.h>
 #include <pcl/point_types.h>
 #include <pcl/point_cloud.h>
+#include <pcl/common/common.h>
+#include <pcl/common/transforms.h>
 
 
 
@@ -18,14 +20,14 @@ using namespace PLib ;
 class Mapping3D {
 
 private:
-    int n_ctrl_default;
-    int order[2]; // Work out how to do int vectors...
-    int number_downsample_points;
-
-    float overlap_d_frac;
+    
+    int order[2]; 
 
     std::vector<float> searchThresh;
 
+    bool knotInsertionFlag;
+    int numInsert;
+    float deltaKnotInsert;
     
     int numberOfMetrics;
 
@@ -40,6 +42,9 @@ public:
     // Or use Eigen - for handling matrices
     // Eigen::MatrixXd 
     // PLib uses Eigen anyway
+
+    // Higher level operations
+    int processScan(pcl::PointCloud<pcl::PointNormal>::Ptr cloud, Eigen::Affine3f transform);
 
     // Surface extension functions
     NurbsCurvef joinCurves(NurbsCurvef& crv1, NurbsCurvef& crv2, bool newBeforeOld = false, bool flipKnotParam = false);
@@ -59,18 +64,22 @@ public:
 
     // Object Update
     void addObject(pcl::PointCloud<pcl::PointNormal>::Ptr cloud, std::vector<float> searchMetrics);
-    void updateObject(Object3D& mapObj, pcl::PointCloud<pcl::PointNormal>::Ptr mapObjPC, pcl::PointCloud<pcl::PointNormal>::Ptr obsObjPC);
+    void updateObjectInMap(int objID, Object3D& obj);
+    void updateObject(int objID, pcl::PointCloud<pcl::PointNormal>::Ptr obsObjPC);
+    void knotInsertionPreMerge(Object3D& obj, std::string extendDirection);
 
 
     // Data association
+    std::vector<float> computeSearchMetrics(Object3D& obj);
+    std::vector<float> computeSearchMetrics(pcl::PointCloud<pcl::PointNormal>::Ptr cloud);
     int dataAssociation(std::vector<float> searchMetrics);
 
-    
     // Convenience functions
     Matrix_Point3Df nurbsDataFromPointCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud);
     Matrix_Point3Df nurbsDataFromPointCloud(pcl::PointCloud<pcl::PointNormal>::Ptr cloud);
-    Matrix_Point3Df nurbsDataFromPointCloud(pcl::PointCloud<pcl::PointNormal>::Ptr cloud, Eigen::Array<int, 2, 2> dataIndices);
-    pcl::PointCloud<pcl::PointNormal> pointCloudFromNurbsData(Matrix_Point3Df data);
+    Matrix_Point3Df nurbsDataFromPointCloud(pcl::PointCloud<pcl::PointNormal>::Ptr cloud, Eigen::Array<int, 2, 2>& dataIndices);
+    void pointCloudFromNurbsData(Matrix_Point3Df& data, pcl::PointCloud<pcl::PointNormal>::Ptr cloud);
+    void pointCloudFromObject3D(int objID, int ms, int mt, pcl::PointCloud<pcl::PointNormal>::Ptr cloud);
     Vector_HPoint3Df getMatRow(Matrix_HPoint3Df, int);
     Vector_HPoint3Df getMatCol(Matrix_HPoint3Df, int, bool);
     void insertMatRow(Matrix_HPoint3Df&,Vector_HPoint3Df, int);
@@ -81,6 +90,10 @@ public:
     int numColsDesired;
     int maxNanAllowed;
     int removeNanBuffer;
+    int nCtrlDefault[2];
+
+    int msSurf;
+    int mtSurf;
 
     std::vector<Object3D> objectMap;
     // Eigen::Array<float,Eigen::Dynamic, Eigen::Dynamic> objectMetrics;

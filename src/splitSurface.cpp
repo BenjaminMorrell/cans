@@ -5,7 +5,7 @@ using namespace PLib ;
 
 
 
-SplitSurface::SplitSurface(): correspondences_(new pcl::Correspondences), nExtraNew(0), maxDistThreshMultiplier(0.3)
+SplitSurface::SplitSurface(): correspondences_(new pcl::Correspondences), nExtraNew(0), maxDistThreshMultiplier(0.6)
 {//corr_filtPtr(new pcl::Correspondences),
   // TDBM May have to set size of dynamic arrays
 

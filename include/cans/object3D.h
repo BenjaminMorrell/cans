@@ -49,6 +49,8 @@ class Object3D : public NurbsSurfacef {
     void computeSizeFromData(const Matrix_Point3Df& Q);
     void computeSizeFromControlPoints();
 
+    Matrix_Point3Df getSurfacePoints(int ms = 45, int mt = 45);
+
     Point3Df& getCentre();
     Point3Df& getColor();
     float getObjSize();

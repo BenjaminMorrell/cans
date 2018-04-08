@@ -55,7 +55,7 @@ void downsampleCol(Eigen::Array<bool, 1, Eigen::Dynamic>& colFlags, int numColsD
 }
 
 
-void regionAverage(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, int i, int j){
+void regionAverage(pcl::PointCloud<pcl::PointNormal>::Ptr cloud, int i, int j){
 
   pcl::PointXYZ average(0.0,0.0,0.0);
 
@@ -67,13 +67,22 @@ void regionAverage(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, int i, int j){
       if (i > 1){
         if (pcl::isFinite(cloud->at(j,i-2))){
           // Step with same delta as neighbours
-          average.getArray3fMap() += 2*cloud->at(j,i-1).getArray3fMap() - cloud->at(j,i-2).getArray3fMap();
+          // average.getArray3fMap() += 2*cloud->at(j,i-1).getArray3fMap() - cloud->at(j,i-2).getArray3fMap();
+          average.x += 2*cloud->at(j,i-1).x - cloud->at(j,i-2).x;
+          average.y += 2*cloud->at(j,i-1).y - cloud->at(j,i-2).y;
+          average.z += 2*cloud->at(j,i-1).z - cloud->at(j,i-2).z;
         }else{
-          average.getArray3fMap() += cloud->at(j,i-1).getArray3fMap();
+          // average.getArray3fMap() += cloud->at(j,i-1).getArray3fMap();
+          average.x += cloud->at(j,i-1).x;
+          average.y += cloud->at(j,i-1).y;
+          average.z += cloud->at(j,i-1).z;
         }
 
       }else{
-        average.getArray3fMap() += cloud->at(j,i-1).getArray3fMap();
+        // average.getArray3fMap() += cloud->at(j,i-1).getArray3fMap();
+        average.x += cloud->at(j,i-1).x;
+        average.y += cloud->at(j,i-1).y;
+        average.z += cloud->at(j,i-1).z;        
       }
       add_count ++;
     }    
@@ -84,12 +93,22 @@ void regionAverage(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, int i, int j){
     if (pcl::isFinite(cloud->at(j,i+1))){
       if (i < cloud->height-2){
         if (pcl::isFinite(cloud->at(j,i+2))){
-          average.getArray3fMap() += 2*cloud->at(j,i+1).getArray3fMap() - cloud->at(j,i+2).getArray3fMap();    
+          // Step with same delta as neighbours
+          // average.getArray3fMap() += 2*cloud->at(j,i+1).getArray3fMap() - cloud->at(j,i+2).getArray3fMap();   
+          average.x += 2*cloud->at(j,i+1).x - cloud->at(j,i+2).x;
+          average.y += 2*cloud->at(j,i+1).y - cloud->at(j,i+2).y;
+          average.z += 2*cloud->at(j,i+1).z - cloud->at(j,i+2).z; 
         }else{
-          average.getArray3fMap() += cloud->at(j,i+1).getArray3fMap();
+          // average.getArray3fMap() += cloud->at(j,i+1).getArray3fMap();
+          average.x += cloud->at(j,i+1).x;
+          average.y += cloud->at(j,i+1).y;
+          average.z += cloud->at(j,i+1).z;
         }
       }else{
-        average.getArray3fMap() += cloud->at(j,i+1).getArray3fMap();
+        // average.getArray3fMap() += cloud->at(j,i+1).getArray3fMap();
+        average.x += cloud->at(j,i+1).x;
+        average.y += cloud->at(j,i+1).y;
+        average.z += cloud->at(j,i+1).z;
       }
       add_count ++;
     }    
@@ -100,12 +119,22 @@ void regionAverage(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, int i, int j){
     if (pcl::isFinite(cloud->at(j-1,i))){
       if (j > 1){
         if (pcl::isFinite(cloud->at(j-2,i))){
-          average.getArray3fMap() += 2*cloud->at(j-1,i).getArray3fMap() - cloud->at(j-2,i).getArray3fMap();
+          // Step with same delta as neighbours
+          // average.getArray3fMap() += 2*cloud->at(j-1,i).getArray3fMap() - cloud->at(j-2,i).getArray3fMap();
+          average.x += 2*cloud->at(j-1,i).x - cloud->at(j-2,i).x;
+          average.y += 2*cloud->at(j-1,i).y - cloud->at(j-2,i).y;
+          average.z += 2*cloud->at(j-1,i).z - cloud->at(j-2,i).z;
         }else{
-          average.getArray3fMap() += cloud->at(j-1,i).getArray3fMap();
+          // average.getArray3fMap() += cloud->at(j-1,i).getArray3fMap();
+          average.x += cloud->at(j-1,i).x;
+          average.y += cloud->at(j-1,i).y;
+          average.z += cloud->at(j-1,i).z;
         }
       }else{
-        average.getArray3fMap() += cloud->at(j-1,i).getArray3fMap();
+        // average.getArray3fMap() += cloud->at(j-1,i).getArray3fMap();
+        average.x += cloud->at(j-1,i).x;
+        average.y += cloud->at(j-1,i).y;
+        average.z += cloud->at(j-1,i).z;
       }
       add_count ++;
     }    
@@ -116,12 +145,22 @@ void regionAverage(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, int i, int j){
     if (pcl::isFinite(cloud->at(j+1,i))){
       if (j < cloud->width-2){
         if (pcl::isFinite(cloud->at(j+2,i))){
-          average.getArray3fMap() += 2*cloud->at(j+1,i).getArray3fMap() - cloud->at(j+2,i).getArray3fMap();
+          // Step with same delta as neighbours
+          // average.getArray3fMap() += 2*cloud->at(j+1,i).getArray3fMap() - cloud->at(j+2,i).getArray3fMap();
+          average.x += 2*cloud->at(j+1,i).x - cloud->at(j+2,i).x;
+          average.y += 2*cloud->at(j+1,i).y - cloud->at(j+2,i).y;
+          average.z += 2*cloud->at(j+1,i).z - cloud->at(j+2,i).z;
         }else{
-          average.getArray3fMap() += cloud->at(j+1,i).getArray3fMap();
+          // average.getArray3fMap() += cloud->at(j+1,i).getArray3fMap();
+          average.x += cloud->at(j+1,i).x;
+          average.y += cloud->at(j+1,i).y;
+          average.z += cloud->at(j+1,i).z;  
         }
       }else{
-        average.getArray3fMap() += cloud->at(j+1,i).getArray3fMap();
+        // average.getArray3fMap() += cloud->at(j+1,i).getArray3fMap();
+        average.x += cloud->at(j+1,i).x;
+        average.y += cloud->at(j+1,i).y;
+        average.z += cloud->at(j+1,i).z;        
       }
       add_count ++;
     }    
@@ -131,11 +170,13 @@ void regionAverage(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, int i, int j){
   average.getArray3fMap() /= (float)add_count;
 
   //update cloud
-  cloud->at(j,i) = average;
+  cloud->at(j,i).x = average.x;
+  cloud->at(j,i).y = average.y;
+  cloud->at(j,i).z = average.z;
 
 }
 
-void averageOutNans(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, Eigen::Array<int,2,Eigen::Dynamic> nanIndices){
+void averageOutNans(pcl::PointCloud<pcl::PointNormal>::Ptr cloud, Eigen::Array<int,2,Eigen::Dynamic> nanIndices){
   cout << "Number of cols: " << nanIndices.cols() << endl;
   for (int i = 0; i < nanIndices.cols(); i++){
     if (nanIndices(0,i) == -1){
@@ -210,7 +251,7 @@ bool removeColsNan(Eigen::Array<bool, Eigen::Dynamic, Eigen::Dynamic>& nanArray,
   }
 }
 
-void getNanMatrixFromPointCloud(Eigen::Array<bool, Eigen::Dynamic, Eigen::Dynamic>& nanArray, pcl::PointCloud<pcl::PointXYZ>::Ptr cloud){
+void getNanMatrixFromPointCloud(Eigen::Array<bool, Eigen::Dynamic, Eigen::Dynamic>& nanArray, pcl::PointCloud<pcl::PointNormal>::Ptr cloud){
 
   // Expect nanArray to be all false to 
 
@@ -232,9 +273,9 @@ void getNanMatrixFromPointCloud(Eigen::Array<bool, Eigen::Dynamic, Eigen::Dynami
 
 
 void pclTest(){
-  // pcl::PointCloud<pcl::PointXYZ>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZ>);
+  // pcl::PointCloud<pcl::PointNormal>::Ptr cloud(new pcl::PointCloud<pcl::PointNormal>);
   pcl::PCLPointCloud2::Ptr cloud_blob (new pcl::PCLPointCloud2);
-  pcl::PointCloud<pcl::PointXYZ>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZ>);
+  pcl::PointCloud<pcl::PointNormal>::Ptr cloud (new pcl::PointCloud<pcl::PointNormal>);
 
   // Fill in the cloud data
   pcl::PCDReader reader;
@@ -266,7 +307,7 @@ void pclTest(){
   cloud->at(0,0).x = NAN;
   cout << "Accessing coordinates (0,0).x: " << cloud->at(0,0).x << endl;
 
-  cloud->at(1,1) = pcl::PointXYZ(1.0,6.0,9.0);
+  cloud->at(1,1).x = 2.3;
   cout << "Accessing coordinates (1,1): " << cloud->at(1,1) << endl;
 
   regionAverage(cloud, 0, 0);
@@ -442,9 +483,9 @@ void pclTest(){
 }
 
 void downsampMeshFromScan(){
-  // pcl::PointCloud<pcl::PointXYZ>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZ>);
+  // pcl::PointCloud<pcl::PointNormal>::Ptr cloud(new pcl::PointCloud<pcl::PointNormal>);
   pcl::PCLPointCloud2::Ptr cloud_blob (new pcl::PCLPointCloud2);
-  pcl::PointCloud<pcl::PointXYZ>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZ>);
+  pcl::PointCloud<pcl::PointNormal>::Ptr cloud (new pcl::PointCloud<pcl::PointNormal>);
 
   // Fill in the cloud data
   pcl::PCDReader reader;
@@ -476,7 +517,7 @@ void downsampMeshFromScan(){
   Eigen::Array<bool, Eigen::Dynamic, 1> rowFlags(cloud->height, 1); rowFlags.setOnes(cloud->height, 1);
   Eigen::Array<bool, 1, Eigen::Dynamic> colFlags(1, cloud->width); colFlags.setOnes(1, cloud->width);
   // PointCloud (uint32_t width_, uint32_t height_, const PointT& value_ = PointT ())
-  pcl::PointCloud<pcl::PointXYZ>::Ptr cloudOut (new pcl::PointCloud<pcl::PointXYZ>(numColsDesired,numRowsDesired,pcl::PointXYZ(0.0,0.0,0.0)));
+  pcl::PointCloud<pcl::PointNormal>::Ptr cloudOut (new pcl::PointCloud<pcl::PointNormal>(numColsDesired,numRowsDesired,pcl::PointNormal()));
 
   cout << "Size of rowFlags: " << rowFlags.rows() << endl;
   cout << "Size of colFlags: " << colFlags.cols() << endl;
@@ -560,7 +601,7 @@ void downsampMeshFromScan(){
 
   // Write the downsampled version to disk
   pcl::PCDWriter writer;
-  writer.write<pcl::PointXYZ> ("blender_downsampled.pcd", *cloudOut, false);
+  writer.write<pcl::PointNormal> ("blender_downsampled.pcd", *cloudOut, false);
 
   Mapping3D mp;
 

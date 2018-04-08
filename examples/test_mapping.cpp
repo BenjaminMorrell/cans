@@ -1,5 +1,7 @@
 #include <ros/ros.h>
 #include <iostream>
+#include <fstream>
+#include <iomanip>
 
 #include <nurbsS.h>
 #include <nurbs.h>
@@ -104,8 +106,8 @@ void testMappingWorkflow(int argc, char** argv){
 
   pcl::PCLPointCloud2::Ptr cloud_blob (new pcl::PCLPointCloud2);
   pcl::PCLPointCloud2::Ptr cloud_blob2 (new pcl::PCLPointCloud2);
-  pcl::PointCloud<pcl::PointXYZ>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZ>); 
-  pcl::PointCloud<pcl::PointXYZ>::Ptr cloud2 (new pcl::PointCloud<pcl::PointXYZ>);
+  pcl::PointCloud<pcl::PointNormal>::Ptr cloud (new pcl::PointCloud<pcl::PointNormal>); 
+  pcl::PointCloud<pcl::PointNormal>::Ptr cloud2 (new pcl::PointCloud<pcl::PointNormal>);
 
  
  
@@ -177,7 +179,7 @@ void testMappingWorkflow(int argc, char** argv){
 
   // obj3.writeVRML("mesh3Test.wrl",Color(255,100,255),50,80);
 
-  mp.updateObject(obj, cloudReduced, cloudReduced2);
+  // mp.updateObject(obj, cloudReduced, cloudReduced2);
 
 }
 
@@ -189,8 +191,8 @@ void testDataAssociation(int argc, char ** argv){
 
   pcl::PCLPointCloud2::Ptr cloud_blob (new pcl::PCLPointCloud2);
   pcl::PCLPointCloud2::Ptr cloud_blob2 (new pcl::PCLPointCloud2);
-  pcl::PointCloud<pcl::PointXYZ>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZ>); 
-  pcl::PointCloud<pcl::PointXYZ>::Ptr cloud2 (new pcl::PointCloud<pcl::PointXYZ>);
+  pcl::PointCloud<pcl::PointNormal>::Ptr cloud (new pcl::PointCloud<pcl::PointNormal>); 
+  pcl::PointCloud<pcl::PointNormal>::Ptr cloud2 (new pcl::PointCloud<pcl::PointNormal>);
 
  
  
@@ -258,6 +260,36 @@ void testDataAssociation(int argc, char ** argv){
 
   mp.dataAssociation(mp.objectMetrics[0]);
 
+  std::vector<float> searchMetrics = mp.computeSearchMetrics(cloudReduced);
+
+  cout << "search metrics are:\n";
+  for (int i = 0; i < 7; i ++){cout << searchMetrics[i] << "\t";}cout << endl;
+
+  id = mp.dataAssociation(searchMetrics);
+
+  cout << "Cloud compute metrics search gives: " << id << endl;
+
+  id = mp.dataAssociation(searchMetrics);
+
+  cout << "Cloud compute metrics search gives (should be 0): " << id << endl;
+
+  // Test with object
+  // Get Mesh in format for NURBS
+  Matrix_Point3Df mesh = mp.nurbsDataFromPointCloud(cloudReduced2);
+
+  // Add object
+  Object3D obj(mesh);
+
+  // Compute metrics
+  searchMetrics = mp.computeSearchMetrics(obj);
+
+  id = mp.dataAssociation(searchMetrics);
+
+  cout << "search metrics are:\n";
+  for (int i = 0; i < 7; i ++){cout << searchMetrics[i] << "\t";}cout << endl;
+
+  cout << "Cloud compute metrics search gives (should be 1): " << id << endl;
+
 
   // std::vector<std::vector<float> > bla;
 
@@ -284,6 +316,208 @@ void testDataAssociation(int argc, char ** argv){
 }
 
 
+
+
+// void processInputPCs(int argc, char ** argv, pcl::PointCloud<pcl::PointNormal>::Ptr cloud, pcl::PointCloud<pcl::PointNormal>::Ptr cloud2){
+  
+  
+//   cout << "Loaded clouds" << endl;
+
+// }
+
+void testHighLevelFunctions(int argc, char ** argv){
+
+  if (argc < 3){
+    cout << "Incorrect input: need to input filepaths to two point clouds" << endl;
+    return;
+  }
+  
+  pcl::PCLPointCloud2::Ptr cloud_blob (new pcl::PCLPointCloud2);
+  pcl::PCLPointCloud2::Ptr cloud_blob2 (new pcl::PCLPointCloud2);
+  pcl::PointCloud<pcl::PointNormal>::Ptr cloud (new pcl::PointCloud<pcl::PointNormal>); 
+  pcl::PointCloud<pcl::PointNormal>::Ptr cloud2 (new pcl::PointCloud<pcl::PointNormal>);
+   
+  // Fill in the cloud data
+  pcl::PCDReader reader;
+  reader.read (argv[1], *cloud_blob);
+  reader.read (argv[2], *cloud_blob2);
+  
+  // Convert to the templated PointCloud (PointCoud<T> to PointCloud2)
+  pcl::fromPCLPointCloud2 (*cloud_blob, *cloud); 
+  pcl::fromPCLPointCloud2 (*cloud_blob2, *cloud2); 
+
+  
+
+  // processInputPCs(argc, argv, cloud, cloud2);
+
+    // Create objects
+  // Init Mapping class
+  Mapping3D mp;
+  mp.numRowsDesired = 45;
+  mp.numColsDesired = 45;
+  mp.maxNanAllowed = 10;
+  
+  // Transform
+  Eigen::Affine3f transform = Eigen::Affine3f::Identity();
+  // transform.translation() << atof(argv[2]), atof(argv[3]), atof(argv[4]);
+    
+  // // Rotation
+  // // Rot vec
+  // Eigen::Vector3f rotVec(atof(argv[6]),atof(argv[7]),atof(argv[8]));
+  // rotVec.normalize();
+
+  // transform.rotate (Eigen::AngleAxisf (atof(argv[5]), rotVec));
+
+  int res = mp.processScan(cloud,transform);
+
+  // Test if the object exists
+  cout << "Point (0,0) on object 1 is: " << mp.objectMap[0].pointAt(0.0,0.0) << endl;
+  cout << "Point (0.4,0.4) on object 1 is: " << mp.objectMap[0].pointAt(0.4,0.4) << endl;
+
+  cout << "Object 0 knotU: " << mp.objectMap[0].knotU() << endl;
+
+  // Second scan
+  res = mp.processScan(cloud2, transform);
+
+  cout << "res from process scan is: " << res << endl;
+
+
+  
+}
+
+Eigen::Array<float,6,10> readPathTextFile(char * filename){
+
+  std::ifstream file;
+  std::string line;
+
+  Eigen::Array<float,6,10> state(6,10);
+
+  float f1, f2, f3, f4, f5, f6, f7;
+  char* s1[10], s2[7], s3[6], s4[2], s5[2], s6[2], s7[3], s8[3], s9[3];
+
+  FILE * pFile;
+
+  pFile = fopen (filename, "r");
+
+  for (int i = 0; i < 10; i++){
+    fscanf(pFile, "%s%f%s%s%s%f%s%f%s%f%s%f%s%f%s%f", &s1, &f1, &s2, &s3, &s4, &f2, &s5, &f3, &s6, &f4, &s7, &f5, &s8, &f6, &s9, &f7);
+
+    // cout << f1 << ", " << f2 << ", " << f3 << ", " << f4 << ", " << f5 << endl;
+    // cout << s1 << endl;
+    // cout << s2 << endl;
+    // cout << s3 << endl;
+    // cout << s4 << endl;
+    // cout << s5 << endl;
+    // cout << s6 << endl;
+    // cout << s7 << endl;
+    // cout << s8 << endl;
+    // cout << s9 << endl;
+    state(0,i) = f2;
+    state(1,i) = f3;
+    state(2,i) = f4;
+    state(3,i) = f5;
+    state(4,i) = f6;
+    state(5,i) = f7;
+    
+  }
+  
+
+  // cout << f1 << ", " << f2 << ", " << f3 << ", " << f4 << ", " << f5 << endl;
+
+  fclose(pFile);
+
+  cout << state << endl;
+
+  return state;
+
+
+}
+
+void testBlenderSequence(int argc, char ** argv){
+  
+  int numberOfScans = 1;
+  std::string filename;
+  std::string filestem = "/home/bjm/Dropbox/PhD_Code/Data/3D_Scans/Blensor/Scan01/BlobScan_Data000";
+  std::string outFilename;
+  std::string outFilestem = "blob_scan_res";
+  int res;
+  Eigen::Affine3f transform = Eigen::Affine3f::Identity();
+  // Eigen::Matrix3f rotMat;
+
+  cout << "In blender sequence test " << endl;
+
+  // Load state
+  Eigen::Array<float,6,10> state = readPathTextFile("/home/bjm/Dropbox/PhD_Code/Data/3D_Scans/Blensor/Scan01/BlobScan_Path.txt");
+  cout << "State is:\n" << state << endl;
+
+  // Init Mapping class
+  Mapping3D mp;
+  mp.numRowsDesired = 95;
+  mp.numColsDesired = 95;
+  mp.maxNanAllowed = 10;
+  mp.removeNanBuffer = 3;
+  mp.nCtrlDefault[0] = 30;
+  mp.nCtrlDefault[1] = 30;
+
+  pcl::PCDReader reader;
+
+  if (argc > 1){  
+    numberOfScans = atoi(argv[1]);
+  }
+
+  pcl::PCLPointCloud2::Ptr cloud_blob (new pcl::PCLPointCloud2);
+  pcl::PointCloud<pcl::PointNormal>::Ptr cloud (new pcl::PointCloud<pcl::PointNormal>); 
+
+  for (int i = 0; i < numberOfScans; i++){
+    cout << "Processing Scan " << i << endl;
+
+    // Get filename:
+    if (i < 9){
+      filename = filestem + "0" + static_cast<ostringstream*>( &(ostringstream() << (i+1)) )->str() + ".pcd";
+      cout << "filename is : " << filename;
+    }
+
+    // Read Scan
+    reader.read (filename, *cloud_blob);
+    cout << "scan read" << endl;
+
+    // Convert to PCL cloud
+    pcl::fromPCLPointCloud2 (*cloud_blob, *cloud); 
+
+    // cout << "Cloud blob transform is: " << cloud_blob->sensor_origin_ << "\n" << cloud_blob->sensor_orientation_ << endl;
+
+    // Fill transform
+    transform = Eigen::Affine3f::Identity();
+
+    // Translation
+    transform(0,3) = state(0,i);
+    transform(1,3) = state(1,i);
+    transform(2,3) = state(2,i);
+    
+    cout << "transform is " << transform.matrix() << endl;
+
+    // 3, 2, 1 Euler transformation
+    transform.rotate (Eigen::AngleAxisf(state(5,i),Eigen::Vector3f::UnitZ()));
+    transform.rotate (Eigen::AngleAxisf(state(4,i),Eigen::Vector3f::UnitY()));
+    transform.rotate (Eigen::AngleAxisf(state(3,i),Eigen::Vector3f::UnitX()));
+
+    cout << "transform is " << transform.matrix() << endl;
+
+    // Process Scan
+    res = mp.processScan(cloud,transform);
+
+    // Save Scan
+    outFilename = outFilestem + static_cast<ostringstream*>( &(ostringstream() << (i+1)) )->str() + ".wrl";
+    mp.objectMap[0].writeVRML(outFilename.c_str(),Color(255,100,255),50,80);  
+
+
+  }
+
+
+
+}
+
+
 int
 main (int argc, char** argv)
 {
@@ -296,7 +530,13 @@ main (int argc, char** argv)
 
   // testMappingWorkflow(argc, argv);
 
-  testDataAssociation(argc,argv);
+  // testDataAssociation(argc,argv);
+
+  // testHighLevelFunctions(argc, argv);
+
+  testBlenderSequence(argc, argv);
+
+  // readPathTextFile("/home/bjm/Dropbox/PhD_Code/Data/3D_Scans/Blensor/Scan01/BlobScan_Path.txt");
 
   // Spin
 //   ros::spin ();

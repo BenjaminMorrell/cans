@@ -10,6 +10,7 @@ using namespace PLib ;
 */
 
 Object3D::Object3D():
+  NurbsSurfacef(),
   centre(0,0,0), 
   color(0,0,0),
   objSize(0.0),
@@ -26,12 +27,12 @@ Object3D::Object3D():
 */
 
 Object3D::Object3D(const Object3D & obj):
+  NurbsSurfacef(obj),
   centre(obj.centre), 
   color(obj.color),
   objSize(obj.objSize),
   GISTexture(obj.GISTexture),
-  GISRoughness(obj.GISRoughness),
-  NurbsSurfacef(obj)
+  GISRoughness(obj.GISRoughness)
 {}
 
 
@@ -148,12 +149,12 @@ Object3D::~Object3D(){
   \date 23 March 2018
 */
 void Object3D::operator = (const Object3D& obj){
+  NurbsSurfacef::operator = (obj);
   centre = obj.centre; 
   color = obj.color;
   objSize = obj.objSize;
   GISTexture = obj.GISTexture;
   GISRoughness = obj.GISRoughness;
-  NurbsSurfacef::operator = (obj);
 }
 
 
@@ -343,6 +344,79 @@ float Object3D::getObjSize(){
   // do I need to do this->centre?
   return objSize;
 }
+
+//-------------------------------------------------------------------
+/*! 
+  \brief  Get data from point cloud
+
+  \param ms number of points in s parametric direction
+  \param mt number of points in t parametric direction
+
+  \author Benjamin Morrell
+  \date 23 March 2018
+*/
+Matrix_Point3Df Object3D::getSurfacePoints(int ms, int mt){
+
+  Matrix_Point3Df data(ms,mt);
+
+  // cout << "ms is " << ms << ", mt is " << mt << ", size of data is (" << data.rows() << ", " << data.cols() << ")\n";
+
+  // Create parameter vectors
+  Vector_FLOAT paramsS(ms);
+  float val(0.0001);
+  float step = (1.0-val)/ms;
+
+  for (int k = 0; k < ms; k++){
+    paramsS[k] = val;
+    val += step;
+  }
+
+  Vector_FLOAT paramsT(mt);
+  val = 0.0001;
+  step = (1.0-val)/mt;
+
+  for (int k = 0; k < mt; k++){
+    paramsT[k] = val;
+    val += step;
+  }
+
+  cout << "params are: " << paramsS << "\n\n" << paramsT << endl;
+
+  // Fill matrix
+  for (int i = 0; i < ms; i++){
+    for (int j = 0; j < mt; j++){
+      // Point cloud with normals... 
+      data(i,j).x() = this->pointAt(paramsS[i],paramsT[j]).x();
+      data(i,j).y() = this->pointAt(paramsS[i],paramsT[j]).y();
+      data(i,j).z() = this->pointAt(paramsS[i],paramsT[j]).z();
+      // cout << "Data from NURBS object is: " << data(i,j).x() << endl;
+    }
+  }
+  return data;
+}
+
+// //-------------------------------------------------------------------
+// /*! 
+//   \brief  Get data from point cloud
+
+//   \author Benjamin Morrell
+//   \date 23 March 2018
+// */
+// pcl::PointCloud<pcl::PointNormal>::Ptr Object3D::getSurfacePointCloud(int ms = 45, int mt = 45){
+//   pcl::PointCloud<pcl::PointNormal>::Ptr new_cloud( new pcl::PointCloud<pcl::PointNormal>(ms,mt,PointNormal()));
+//   for (int i = 0; i< ms; i++){
+//     for (int j = 0; j < mt; j++){
+//       // Point cloud with normals... 
+//       new_cloud_n->at(j,i).x = this->pointAt(params[i],params[j]).x();
+//       new_cloud_n->at(j,i).y = this->pointAt(params[i],params[j]).y();
+//       new_cloud_n->at(j,i).z = this->pointAt(params[i],params[j]).z();
+
+//       new_cloud_n->at(j,i).normal_x = this->normal(params[i],params[j]).x();
+//       new_cloud_n->at(j,i).normal_y = this->normal(params[i],params[j]).y();
+//       new_cloud_n->at(j,i).normal_z = this->normal(params[i],params[j]).z();
+//     }
+//   }
+// }
 
 
 
