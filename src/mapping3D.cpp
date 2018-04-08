@@ -17,9 +17,9 @@ Mapping3D::Mapping3D():
     maxNanAllowed(10), removeNanBuffer(0), numberOfMetrics(7), msSurf(45), mtSurf(45),
     knotInsertionFlag(true), numInsert(3), deltaKnotInsert(1e-2)
 {
-  searchThresh[0] = 0.75;
-  searchThresh[1] = 0.75;
-  searchThresh[2] = 0.75;
+  searchThresh[0] = 7.75;
+  searchThresh[1] = 7.75;
+  searchThresh[2] = 7.75;
   for (int i = 3; i < 7; i++){
     searchThresh[i] = 0.0;  
   }
@@ -871,7 +871,7 @@ void Mapping3D::meshFromScan(pcl::PointCloud<pcl::PointNormal>::Ptr cloudOut, pc
       nansPresent = removeColsNan(nanArray, colFlags);
       if (nansPresent){
         // Check dimensions 
-        cout << "Nans removed: Row count: " << rowFlags.count() << "\nCol Count: " << colFlags.count() << endl;
+        // cout << "Nans removed: Row count: " << rowFlags.count() << "\nCol Count: " << colFlags.count() << endl;
         if (rowFlags.count() <= this->numRowsDesired || colFlags.count() <= this->numColsDesired){
           exitFlag = true;
           cout << "Exiting because dimensions are too small" << endl;
@@ -930,7 +930,7 @@ void Mapping3D::meshFromScan(pcl::PointCloud<pcl::PointNormal>::Ptr cloudOut, pc
 
   cout << "Finished copying data across" << endl;
 
-  cout << "NanIndices are: " << nanIndices << endl;
+  // cout << "NanIndices are: " << nanIndices << endl;
 
   // Average Nans
   bool noNans = false;
@@ -987,7 +987,7 @@ bool Mapping3D::removeRowsNan(Eigen::Array<bool, Eigen::Dynamic, Eigen::Dynamic>
   // Maximum number of Nans in a row
   int maxNan = rowNan.maxCoeff();
 
-  cout << "Max NaN count: " << maxNan << "\tmax allowed is: " << this->maxNanAllowed << endl;
+  // cout << "Max NaN count: " << maxNan << "\tmax allowed is: " << this->maxNanAllowed << endl;
 
   // If the maximum number Nans is above the set limit
   if (maxNan > this->maxNanAllowed){
@@ -1027,7 +1027,7 @@ bool Mapping3D::removeColsNan(Eigen::Array<bool, Eigen::Dynamic, Eigen::Dynamic>
   // Maximum number of Nans in a col
   int maxNan = colNan.maxCoeff();
 
-  cout << "Max NaN count: " << maxNan << "\tmax allowed is: " << this->maxNanAllowed << endl;
+  // cout << "Max NaN count: " << maxNan << "\tmax allowed is: " << this->maxNanAllowed << endl;
 
   // If the maximum number Nans is above the set limit
   if (maxNan > this->maxNanAllowed){
