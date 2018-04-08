@@ -110,6 +110,7 @@ add_executable(split_test examples/testingSplitSurface.cpp src/splitSurface.cpp)
 add_executable(cloud_publish examples/rosScanPublish.cpp)
 add_executable(tf_publish examples/tfPubTest.cpp)
 add_executable(cans_ros examples/rosInterfaceNURBSTest.cpp src/mapping3D.cpp src/object3D.cpp src/splitSurface.cpp)
+add_executable(unreal_cans examples/rosUnrealInterface.cpp src/mapping3D.cpp src/object3D.cpp src/splitSurface.cpp)
 
 
 # add_definitions( -DMAGICKCORE_QUANTUM_DEPTH=16 )
@@ -135,6 +136,7 @@ target_link_libraries(split_test ${catkin_LIBRARIES} ${NURBS3_LIBRARIES})
 target_link_libraries(cloud_publish ${catkin_LIBRARIES} ${NURBS3_LIBRARIES}) 
 target_link_libraries(tf_publish ${catkin_LIBRARIES} ${NURBS3_LIBRARIES}) 
 target_link_libraries(cans_ros ${catkin_LIBRARIES} ${NURBS3_LIBRARIES}) 
+target_link_libraries(unreal_cans ${catkin_LIBRARIES} ${NURBS3_LIBRARIES}) 
 
 #############
 ## Install ##
