@@ -7,7 +7,7 @@
 #include <nurbsS.h>
 #include <cmath>
 // PCL specific includes
-// #include <pcl/io/pcd_io.h>
+#include <pcl/io/pcd_io.h>
 #include <pcl/point_types.h>
 #include <pcl/point_cloud.h>
 #include <pcl/common/common.h>
@@ -85,6 +85,9 @@ public:
     void insertMatRow(Matrix_HPoint3Df&,Vector_HPoint3Df, int);
     void insertMatCol(Matrix_HPoint3Df&,Vector_HPoint3Df, int, bool);
 
+    // Output functions
+    void writeObjectPCDFile(const char* filename, const int objID, int ms = -1, int mt = -1);
+
 
     int numRowsDesired;
     int numColsDesired;
@@ -94,6 +97,8 @@ public:
 
     int msSurf;
     int mtSurf;
+
+    int newRowColBuffer; // The allowed number of overlap points in a row or column
 
     std::vector<Object3D> objectMap;
     // Eigen::Array<float,Eigen::Dynamic, Eigen::Dynamic> objectMetrics;

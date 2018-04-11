@@ -14,8 +14,8 @@ using namespace PLib ;
 Mapping3D::Mapping3D():
     nCtrlDefault{15,15}, order{3,3},
     searchThresh(7), numRowsDesired(45), numColsDesired(45),
-    maxNanAllowed(10), removeNanBuffer(0), numberOfMetrics(7), msSurf(45), mtSurf(45),
-    knotInsertionFlag(true), numInsert(3), deltaKnotInsert(1e-2)
+    maxNanAllowed(10), removeNanBuffer(0), numberOfMetrics(7), msSurf(125), mtSurf(125),
+    knotInsertionFlag(true), numInsert(3), deltaKnotInsert(1e-2), newRowColBuffer(0)
 {
   searchThresh[0] = 0.75;
   searchThresh[1] = 0.75;
@@ -103,6 +103,10 @@ NurbsCurvef Mapping3D::joinCurves(NurbsCurvef& crv1, NurbsCurvef& crv2, bool new
     int n_ctrl2 = crv2.ctrlPnts().size();
     int n_ctrl_out = n_ctrl1 + n_ctrl2 - deg;
     int n_knot_out = n_ctrl1 + n_ctrl2 + 1;
+
+    float factor1 = (float)n_ctrl1/(float)(n_ctrl1 + n_ctrl2);
+    float factor2 = (float)n_ctrl2/(float)(n_ctrl1 + n_ctrl2);
+    
 
     // cout << "In Join Curves:\nKnots out: " << n_knot_out << "\tCtrl out: " << n_ctrl_out << endl;
 
@@ -1385,9 +1389,17 @@ void Mapping3D::updateObject(int objID, pcl::PointCloud<pcl::PointNormal>::Ptr o
 
   // cout << "Point cloud from object at (0,0) is: " << mapObjPC->at(0,0) << endl;
   // cout << "Point cloud from observation at (0,0) is: " << obsObjPC->at(0,0) << endl;
+  // Save point clouds to Matlab
+  // Write the downsampled version to disk
+  pcl::PCDWriter writer;
+  writer.write<pcl::PointNormal> ("observation.pcd", *obsObjPC, false);
+  writer.write<pcl::PointNormal> ("map_data.pcd", *mapObjPC, false);
+
   
   // Split new surface observation
   SplitSurface ss;
+  ss.newRowColBuffer = newRowColBuffer; // number of allowed overlap points in a row/column
+
   ss.splitNewSurfaceObservation(mapObjPC, obsObjPC);
   cout << "Extend Direction is: " << ss.extendDirection << endl;
 
@@ -1467,7 +1479,7 @@ void Mapping3D::knotInsertionPreMerge(Object3D& obj, std::string extendDirection
     case 'R' : 
       // Add knots in the t direction near the left end (start of parameters)
       startVal = obj.knotV(obj.degreeV()) + deltaKnotInsert;
-      endVal = obj.knotV(obj.degreeV()) + 1 - deltaKnotInsert;
+      endVal = obj.knotV(obj.degreeV()+ 1) - deltaKnotInsert;
       insertUFlag = false;
       break;
     case 'D' :
@@ -1917,4 +1929,34 @@ void Mapping3D::insertMatCol(Matrix_HPoint3Df& data,Vector_HPoint3Df col, int co
       }
   }
 
+}
+
+//-------------------------------------------------------------------
+// ------------- OUTPUT FUNCTIONS -----------------------------
+//-------------------------------------------------------------------
+
+//-------------------------------------------------------------------
+/*! 
+  \brief  Writes object point cloud to file
+  
+  \author Benjamin Morrell
+  \date 3 April 2018
+*/
+void Mapping3D::writeObjectPCDFile(const char* filename, const int objID, int ms, int mt){
+
+  // Load defaults if no input (ms, mt  = -1 )
+  if (ms < 0){
+    ms = msSurf;
+  }
+  if (mt < 0) {
+    mt = mtSurf;
+  }
+
+  // Get point cloud from NURBS object
+  pcl::PointCloud<pcl::PointNormal>::Ptr mapObjPC(new pcl::PointCloud<pcl::PointNormal>(mt, ms, pcl::PointNormal()));
+  pointCloudFromObject3D(objID, msSurf, mtSurf, mapObjPC);
+
+  
+  pcl::PCDWriter writer;
+  writer.write<pcl::PointNormal> (filename, *mapObjPC, false);
 }

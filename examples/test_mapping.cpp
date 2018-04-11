@@ -439,7 +439,7 @@ void testBlenderSequence(int argc, char ** argv){
   std::string filename;
   std::string filestem = "/home/bjm/Dropbox/PhD_Code/Data/3D_Scans/Blensor/Scan01/BlobScan_Data000";
   std::string outFilename;
-  std::string outFilestem = "blob_scan_res";
+  std::string outFilestem = "blob_scan_res_new_";
   int res;
   Eigen::Affine3f transform = Eigen::Affine3f::Identity();
   // Eigen::Matrix3f rotMat;
@@ -459,6 +459,8 @@ void testBlenderSequence(int argc, char ** argv){
   mp.nCtrlDefault[0] = 30;
   mp.nCtrlDefault[1] = 30;
 
+  mp.newRowColBuffer = 20; // How many non new points in a row or column are permissible
+
   pcl::PCDReader reader;
 
   if (argc > 1){  
@@ -470,10 +472,14 @@ void testBlenderSequence(int argc, char ** argv){
 
   for (int i = 0; i < numberOfScans; i++){
     cout << "Processing Scan " << i << endl;
+    cout << "State x is: " << state(0,i) << endl;
 
     // Get filename:
     if (i < 9){
       filename = filestem + "0" + static_cast<ostringstream*>( &(ostringstream() << (i+1)) )->str() + ".pcd";
+      cout << "filename is : " << filename;
+    }else{
+      filename = filestem + static_cast<ostringstream*>( &(ostringstream() << (i+1)) )->str() + ".pcd";
       cout << "filename is : " << filename;
     }
 
@@ -513,7 +519,8 @@ void testBlenderSequence(int argc, char ** argv){
 
   }
 
-
+  // Write result to pcd
+  mp.writeObjectPCDFile("endResultBlob.pcd", 0, 125, 125);
 
 }
 

@@ -5,7 +5,8 @@ using namespace PLib ;
 
 
 
-SplitSurface::SplitSurface(): correspondences_(new pcl::Correspondences), nExtraNew(0), maxDistThreshMultiplier(0.6)
+SplitSurface::SplitSurface(): correspondences_(new pcl::Correspondences), nExtraNew(0), maxDistThreshMultiplier(0.6),
+  newRowColBuffer(0)
 {//corr_filtPtr(new pcl::Correspondences),
   // TDBM May have to set size of dynamic arrays
 
@@ -86,14 +87,24 @@ void SplitSurface::findNonOverlappingData(){
   nest.compute(*mapCloud);
 
   // Estimate correspondences
-  pcl::registration::CorrespondenceEstimationNormalShooting<pcl::PointNormal, pcl::PointNormal, pcl::PointNormal> corrEst;
-  corrEst.setInputSource (obsCloud);// Gets a corresponding point for every point in the Source
-  corrEst.setSourceNormals (obsCloud);
-  corrEst.setInputTarget (mapCloud); // Target for the source to find corresponding points in
-  // Test the first 10 correspondences for each point in source, and return the best
-  corrEst.setKSearch (10);
+  bool doNormalShooting = true;
+
+  if (doNormalShooting){
+    pcl::registration::CorrespondenceEstimationNormalShooting<pcl::PointNormal, pcl::PointNormal, pcl::PointNormal> corrEst;
+    corrEst.setInputSource (obsCloud);// Gets a corresponding point for every point in the Source
+    corrEst.setSourceNormals (obsCloud);
+    corrEst.setInputTarget (mapCloud); // Target for the source to find corresponding points in
+    // Test the first 10 correspondences for each point in source, and return the best
+    corrEst.setKSearch (10);
+    corrEst.determineCorrespondences (*correspondences_);
+  } else{
+    pcl::registration::CorrespondenceEstimation<pcl::PointNormal, pcl::PointNormal, pcl::PointNormal> corrEst;
+    corrEst.setInputSource (obsCloud);// Gets a corresponding point for every point in the Source
+    corrEst.setInputTarget (mapCloud);
+    corrEst.determineCorrespondences (*correspondences_);
+  }
+
   
-  corrEst.determineCorrespondences (*correspondences_);
 
   // Correspondence rejection
   // pcl::Correspondences& corr_filt = *corr_filtPtr;
@@ -142,7 +153,7 @@ void SplitSurface::findNonOverlappingData(){
 float SplitSurface::computeDistanceThreshold(){
 
   Eigen::Vector3f delta;
-  float meanDelta = 0;
+  float meanDelta = 0.0;
   int pointCount = 0;
 
   // Take one row and get the mean distance between points
@@ -227,17 +238,19 @@ void SplitSurface::getNewDataExtendDirection(){
 
     // Use the distance from the correspondences, L, R, D, U 
     std::vector<int> idTest(4,0);
+
     // Test the mid point of each edge
     idTest[0] = mt*ms/2;  // Left
     idTest[1] = mt*ms/2 + mt-1; // Right
-    idTest[2] = mt*(ms-1) + mt/2; // Down
-    idTest[3] = mt/2; // Up
+    idTest[2] = mt/2; // Down
+    idTest[3] = mt*(ms-1) + mt/2; // Up
 
-    float maxD = 0;
+    float maxD = -1.0;
     int maxID = -1;
 
     // Get the distance from the first correspondence search
-    for (int i = 1; i < 4; i++){
+    for (int i = 0; i < 4; i++){
+      cout << "distance check for edge " << i << " is " << corr[idTest[i]].distance << endl;
       if (corr[idTest[i]].distance > maxD){
         // Set to the max if the max is exceeded
         maxD = corr[idTest[i]].distance;
@@ -246,7 +259,9 @@ void SplitSurface::getNewDataExtendDirection(){
     }
 
     // Take the ID that is the maximum distance away
-    extendID = idTest[maxID];
+    extendID = maxID;
+
+    cout << "maximum distance chose is: " << maxD << ", with ID: " << maxID << endl;
     
   }else{
     cout << "one maximum " << endl;
@@ -347,7 +362,7 @@ void SplitSurface::getEndNewRowCounts(){
 
    for (int i = 0; i < numberOfRows; i++){
     if (startFlag){
-      if (newPointsRows[i] == pointsInRow){
+      if (newPointsRows[i] >= pointsInRow - newRowColBuffer){
         // Completely new row
         // Add to count for Down
         nRowColCount[2]++;
@@ -357,7 +372,7 @@ void SplitSurface::getEndNewRowCounts(){
     }
 
     if (endFlag){
-      if (newPointsRows[numberOfRows - 1 - i] == pointsInRow){
+      if (newPointsRows[numberOfRows - 1 - i] >= pointsInRow - newRowColBuffer){
         // completely new row at end
         // Add to count for Up
         nRowColCount[3]++;
@@ -390,7 +405,7 @@ void SplitSurface::getEndNewColCounts(){
   
   for (int i = 0; i < numberOfCols; i++){
     if (startFlag){
-      if (newPointsCols[i] == pointsInCol){
+      if (newPointsCols[i] >= pointsInCol - newRowColBuffer){
         // Completely new Col
         // Add to count for Left
         nRowColCount[0]++;
@@ -400,7 +415,7 @@ void SplitSurface::getEndNewColCounts(){
     }
 
     if (endFlag){
-      if (newPointsCols[numberOfCols - 1 - i] == pointsInCol){
+      if (newPointsCols[numberOfCols - 1 - i] >= pointsInCol - newRowColBuffer){
         // completely new Col at end
         // Add to count for Right
         nRowColCount[1]++;

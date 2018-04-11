@@ -1738,7 +1738,7 @@ TEST_F (scanProcessFunctionsTest, addObjectTest){
 
 class updateSurfaceTest : public ::testing::Test {
  protected:
-  updateSurfaceTest() : data(new pcl::PointCloud<pcl::PointNormal>(30,30))//, data_rot(new pcl::PointCloud<pcl::PointNormal>(10,10)) 
+  updateSurfaceTest() : data(new pcl::PointCloud<pcl::PointNormal>(30,30)), data_rot(new pcl::PointCloud<pcl::PointNormal>(30,30)) 
   {
     
     int n_points = 30;
@@ -1752,9 +1752,9 @@ class updateSurfaceTest : public ::testing::Test {
             data->at(j,i).y = (float)i/(n_points-1);
             data->at(j,i).z = 0.0f;
 
-            // data_rot->at(j,i).x = (float)j/(n_points-1) - 0.5;
-            // data_rot->at(j,i).y = (float)i/(n_points-1) - 0.5;
-            // data_rot->at(j,i).z = 0.0f;
+            data_rot->at(j,i).x = (float)j/(n_points-1) - 0.5;
+            data_rot->at(j,i).y = (float)i/(n_points-1) - 0.5;
+            data_rot->at(j,i).z = 0.0f;
         } 
     }
 
@@ -1840,62 +1840,74 @@ class updateSurfaceTest : public ::testing::Test {
     data_m_ol.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr(new pcl::PointCloud<pcl::PointNormal>(30,30)));
     pcl::transformPointCloud(*data, *data_m_ol[2], transform);  
 
-    // // Rotations
-    // Eigen::Vector3f rotVec(0.0, 0.0, 1); // Rotations about the z axis
+    // All new
+    transform.scale(2.0f);// Scale back to 1.0
+    transform.translation() << 1.5, 0.2, 0.0;
+    data_all_new.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr(new pcl::PointCloud<pcl::PointNormal>(30,30)));
+    pcl::transformPointCloud(*data, *data_all_new[0], transform);
+    transform.translation() << 0.2, 1.5, 0.0;
+    data_all_new.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr(new pcl::PointCloud<pcl::PointNormal>(30,30)));
+    pcl::transformPointCloud(*data, *data_all_new[1], transform);
+    transform.translation() << 1.5, 2.2, 0.0;
+    data_all_new.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr(new pcl::PointCloud<pcl::PointNormal>(30,30)));
+    pcl::transformPointCloud(*data, *data_all_new[2], transform);  
+
+    // Rotations
+    Eigen::Vector3f rotVec(0.0, 0.0, 1); // Rotations about the z axis
     // transform.scale(2.0f);// no scaling
 
-    // // Rotate 90 degrees (-ve angle for a transformation)
-    // transform.rotate (Eigen::AngleAxisf (-M_PI/2.0f, rotVec));
-    // // cout << "transform for rot 90 is:\n" << transform.matrix() << endl;
-    // transform.translation() << -0.4, 0.2, 0.0;
-    // data_rot1.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr(new pcl::PointCloud<pcl::PointNormal>(30,30)));
-    // pcl::transformPointCloud(*data_rot, *data_rot1[0], transform);
-    // transform.translation() << 0.4, 0.2, 0.0;
-    // data_rot1.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr(new pcl::PointCloud<pcl::PointNormal>(30,30)));
-    // pcl::transformPointCloud(*data_rot, *data_rot1[1], transform);
-    // transform.translation() << 0.2, 0.4, 0.0;
-    // data_rot1.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr(new pcl::PointCloud<pcl::PointNormal>(30,30)));
-    // pcl::transformPointCloud(*data_rot, *data_rot1[2], transform);
-    // transform.translation() << 0.2, -0.4, 0.0;
-    // data_rot1.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr(new pcl::PointCloud<pcl::PointNormal>(30,30)));
-    // pcl::transformPointCloud(*data_rot, *data_rot1[3], transform);
+    // Rotate 90 degrees (-ve angle for a transformation)
+    transform.rotate (Eigen::AngleAxisf (-M_PI/2.0f, rotVec));
+    // cout << "transform for rot 90 is:\n" << transform.matrix() << endl;
+    transform.translation() << -0.4, 0.2, 0.0;
+    data_rot1.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr(new pcl::PointCloud<pcl::PointNormal>(30,30)));
+    pcl::transformPointCloud(*data_rot, *data_rot1[0], transform);
+    transform.translation() << 0.4, 0.2, 0.0;
+    data_rot1.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr(new pcl::PointCloud<pcl::PointNormal>(30,30)));
+    pcl::transformPointCloud(*data_rot, *data_rot1[1], transform);
+    transform.translation() << 0.2, 0.4, 0.0;
+    data_rot1.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr(new pcl::PointCloud<pcl::PointNormal>(30,30)));
+    pcl::transformPointCloud(*data_rot, *data_rot1[2], transform);
+    transform.translation() << 0.2, -0.4, 0.0;
+    data_rot1.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr(new pcl::PointCloud<pcl::PointNormal>(30,30)));
+    pcl::transformPointCloud(*data_rot, *data_rot1[3], transform);
     
-    // // Rotate 90 degrees   (-ve angle for a transformation)
-    // transform.rotate (Eigen::AngleAxisf (M_PI, rotVec));// Rotate 180 from 90
-    // // cout << "transform for rot -90 is:\n" << transform.matrix() << endl;
-    // transform.translation() << -0.4, 0.2, 0.0;
-    // data_rot2.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr(new pcl::PointCloud<pcl::PointNormal>(30,30)));
-    // pcl::transformPointCloud(*data_rot, *data_rot2[0], transform);
-    // transform.translation() << 0.4, 0.2, 0.0;
-    // data_rot2.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr(new pcl::PointCloud<pcl::PointNormal>(30,30)));
-    // pcl::transformPointCloud(*data_rot, *data_rot2[1], transform);
-    // transform.translation() << 0.2, 0.4, 0.0;
-    // data_rot2.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr(new pcl::PointCloud<pcl::PointNormal>(30,30)));
-    // pcl::transformPointCloud(*data_rot, *data_rot2[2], transform);
-    // transform.translation() << 0.2, -0.4, 0.0;
-    // data_rot2.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr(new pcl::PointCloud<pcl::PointNormal>(30,30)));
-    // pcl::transformPointCloud(*data_rot, *data_rot2[3], transform);
+    // Rotate 90 degrees   (-ve angle for a transformation)
+    transform.rotate (Eigen::AngleAxisf (M_PI, rotVec));// Rotate 180 from 90
+    // cout << "transform for rot -90 is:\n" << transform.matrix() << endl;
+    transform.translation() << -0.4, 0.2, 0.0;
+    data_rot2.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr(new pcl::PointCloud<pcl::PointNormal>(30,30)));
+    pcl::transformPointCloud(*data_rot, *data_rot2[0], transform);
+    transform.translation() << 0.4, 0.2, 0.0;
+    data_rot2.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr(new pcl::PointCloud<pcl::PointNormal>(30,30)));
+    pcl::transformPointCloud(*data_rot, *data_rot2[1], transform);
+    transform.translation() << 0.2, 0.4, 0.0;
+    data_rot2.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr(new pcl::PointCloud<pcl::PointNormal>(30,30)));
+    pcl::transformPointCloud(*data_rot, *data_rot2[2], transform);
+    transform.translation() << 0.2, -0.4, 0.0;
+    data_rot2.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr(new pcl::PointCloud<pcl::PointNormal>(30,30)));
+    pcl::transformPointCloud(*data_rot, *data_rot2[3], transform);
 
-    // // Rotate 180 degrees   (-ve angle for a transformation)
-    // transform.rotate (Eigen::AngleAxisf (M_PI/2, rotVec));// Rotate another 90 to get to 180
-    // // cout << "transform for rot 180 is:\n" << transform.matrix() << endl;
-    // transform.translation() << -0.4, 0.2, 0.0;
-    // data_rot3.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr(new pcl::PointCloud<pcl::PointNormal>(30,30)));
-    // pcl::transformPointCloud(*data_rot, *data_rot3[0], transform);
-    // transform.translation() << 0.4, 0.2, 0.0;
-    // data_rot3.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr(new pcl::PointCloud<pcl::PointNormal>(30,30)));
-    // pcl::transformPointCloud(*data_rot, *data_rot3[1], transform);
-    // transform.translation() << 0.2, 0.4, 0.0;
-    // data_rot3.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr(new pcl::PointCloud<pcl::PointNormal>(30,30)));
-    // pcl::transformPointCloud(*data_rot, *data_rot3[2], transform);
-    // transform.translation() << 0.2, -0.4, 0.0;
-    // data_rot3.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr(new pcl::PointCloud<pcl::PointNormal>(30,30)));
-    // pcl::transformPointCloud(*data_rot, *data_rot3[3], transform);
+    // Rotate 180 degrees   (-ve angle for a transformation)
+    transform.rotate (Eigen::AngleAxisf (M_PI/2, rotVec));// Rotate another 90 to get to 180
+    // cout << "transform for rot 180 is:\n" << transform.matrix() << endl;
+    transform.translation() << -0.4, 0.2, 0.0;
+    data_rot3.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr(new pcl::PointCloud<pcl::PointNormal>(30,30)));
+    pcl::transformPointCloud(*data_rot, *data_rot3[0], transform);
+    transform.translation() << 0.4, 0.2, 0.0;
+    data_rot3.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr(new pcl::PointCloud<pcl::PointNormal>(30,30)));
+    pcl::transformPointCloud(*data_rot, *data_rot3[1], transform);
+    transform.translation() << 0.2, 0.4, 0.0;
+    data_rot3.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr(new pcl::PointCloud<pcl::PointNormal>(30,30)));
+    pcl::transformPointCloud(*data_rot, *data_rot3[2], transform);
+    transform.translation() << 0.2, -0.4, 0.0;
+    data_rot3.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr(new pcl::PointCloud<pcl::PointNormal>(30,30)));
+    pcl::transformPointCloud(*data_rot, *data_rot3[3], transform);
     
   }
 
   pcl::PointCloud<pcl::PointNormal>::Ptr data;
-//   pcl::PointCloud<pcl::PointNormal>::Ptr data_rot;
+  pcl::PointCloud<pcl::PointNormal>::Ptr data_rot;
 
 
 
@@ -1906,15 +1918,17 @@ class updateSurfaceTest : public ::testing::Test {
   std::vector<pcl::PointCloud<pcl::PointNormal>::Ptr, Eigen::aligned_allocator <pcl::PointCloud <pcl::PointNormal>::Ptr > > data_u;
   std::vector<pcl::PointCloud<pcl::PointNormal>::Ptr, Eigen::aligned_allocator <pcl::PointCloud <pcl::PointNormal>::Ptr > > data_ol;
   std::vector<pcl::PointCloud<pcl::PointNormal>::Ptr, Eigen::aligned_allocator <pcl::PointCloud <pcl::PointNormal>::Ptr > > data_m_ol;
+  std::vector<pcl::PointCloud<pcl::PointNormal>::Ptr, Eigen::aligned_allocator <pcl::PointCloud <pcl::PointNormal>::Ptr > > data_all_new;
 //   // For rotation
-//   std::vector<pcl::PointCloud<pcl::PointNormal>::Ptr, Eigen::aligned_allocator <pcl::PointCloud <pcl::PointNormal>::Ptr > > data_rot1;
-//   std::vector<pcl::PointCloud<pcl::PointNormal>::Ptr, Eigen::aligned_allocator <pcl::PointCloud <pcl::PointNormal>::Ptr > > data_rot2;
-//   std::vector<pcl::PointCloud<pcl::PointNormal>::Ptr, Eigen::aligned_allocator <pcl::PointCloud <pcl::PointNormal>::Ptr > > data_rot3;  
+  std::vector<pcl::PointCloud<pcl::PointNormal>::Ptr, Eigen::aligned_allocator <pcl::PointCloud <pcl::PointNormal>::Ptr > > data_rot1;
+  std::vector<pcl::PointCloud<pcl::PointNormal>::Ptr, Eigen::aligned_allocator <pcl::PointCloud <pcl::PointNormal>::Ptr > > data_rot2;
+  std::vector<pcl::PointCloud<pcl::PointNormal>::Ptr, Eigen::aligned_allocator <pcl::PointCloud <pcl::PointNormal>::Ptr > > data_rot3;  
 
   // Class instatiation
   SplitSurface ss;
   Mapping3D mp;
   Object3D obj;
+  Object3D obj_rot;
 
 };
 
@@ -1971,7 +1985,7 @@ TEST_F (updateSurfaceTest, testRight){
     Eigen::Array<float, 1, 8> expectRes(1,8);
 
     for (int i = 0; i < 3; i++){
-        cout << "Data point for data_l is: " << data_r[i]->at(0,0) << endl;
+        cout << "Data point for data_r is: " << data_r[i]->at(0,0) << endl;
 
         mp.updateObject(0, data_r[i]);
 
@@ -2019,7 +2033,7 @@ TEST_F (updateSurfaceTest, testDown){
     Eigen::Array<float, 1, 8> expectRes(1,8);
 
     for (int i = 0; i < 3; i++){
-        cout << "Data point for data_l is: " << data_d[i]->at(0,0) << endl;
+        cout << "Data point for data_d is: " << data_d[i]->at(0,0) << endl;
 
         mp.updateObject(0, data_d[i]);
 
@@ -2070,7 +2084,7 @@ TEST_F (updateSurfaceTest, testUp){
     Eigen::Array<float, 1, 8> expectRes(1,8);
 
     for (int i = 0; i < 3; i++){
-        cout << "Data point for data_l is: " << data_u[i]->at(0,0) << endl;
+        cout << "Data point for data_u is: " << data_u[i]->at(0,0) << endl;
 
         mp.updateObject(0, data_u[i]);
 
@@ -2116,6 +2130,305 @@ TEST_F (updateSurfaceTest, testUp){
     }
 }
 
+TEST_F (updateSurfaceTest, testOverlap){
+
+    Eigen::Array<float, 1, 8> expectRes(1,8);
+
+    for (int i = 0; i < 3; i++){
+        cout << "Data point for data_ol is: " << data_ol[i]->at(0,0) << endl;
+
+        mp.updateObject(0, data_ol[i]);
+
+        // Test dimensions of output
+        EXPECT_EQ(15,mp.objectMap[0].ctrlPnts().cols());
+        EXPECT_EQ(15,mp.objectMap[0].ctrlPnts().rows());
+        
+
+        expectRes << 0.0, 0.0, 1.0, 1.0, 0.0, 1.0, 0.0, 1.0;
+
+        EXPECT_FLOAT_EQ(expectRes[0],mp.objectMap[0](0.0,0.0).x());
+        EXPECT_FLOAT_EQ(expectRes[1],mp.objectMap[0](1.0,0.0).x());
+        EXPECT_FLOAT_EQ(expectRes[2],mp.objectMap[0](0.0,1.0).x());
+        EXPECT_FLOAT_EQ(expectRes[3],mp.objectMap[0](1.0,1.0).x());
+
+        EXPECT_FLOAT_EQ(expectRes[4],mp.objectMap[0](0.0,0.0).y());
+        EXPECT_FLOAT_EQ(expectRes[5],mp.objectMap[0](1.0,0.0).y());
+        EXPECT_FLOAT_EQ(expectRes[6],mp.objectMap[0](0.0,1.0).y());
+        EXPECT_FLOAT_EQ(expectRes[7],mp.objectMap[0](1.0,1.0).y());
+
+
+        // Reset object
+        mp.updateObjectInMap(0, obj);
+    }
+}
+
+TEST_F (updateSurfaceTest, testMostlyOverlap){
+
+    Eigen::Array<float, 1, 8> expectRes(1,8);
+
+    for (int i = 0; i < 3; i++){
+        cout << "Data point for data_m_ol is: " << data_m_ol[i]->at(0,0) << endl;
+
+        mp.updateObject(0, data_m_ol[i]);
+
+        // Test dimensions of output
+        EXPECT_EQ(15,mp.objectMap[0].ctrlPnts().cols());
+        EXPECT_EQ(15,mp.objectMap[0].ctrlPnts().rows());
+        
+
+        expectRes << 0.0, 0.0, 1.0, 1.0, 0.0, 1.0, 0.0, 1.0;
+
+        EXPECT_FLOAT_EQ(expectRes[0],mp.objectMap[0](0.0,0.0).x());
+        EXPECT_FLOAT_EQ(expectRes[1],mp.objectMap[0](1.0,0.0).x());
+        EXPECT_FLOAT_EQ(expectRes[2],mp.objectMap[0](0.0,1.0).x());
+        EXPECT_FLOAT_EQ(expectRes[3],mp.objectMap[0](1.0,1.0).x());
+
+        EXPECT_FLOAT_EQ(expectRes[4],mp.objectMap[0](0.0,0.0).y());
+        EXPECT_FLOAT_EQ(expectRes[5],mp.objectMap[0](1.0,0.0).y());
+        EXPECT_FLOAT_EQ(expectRes[6],mp.objectMap[0](0.0,1.0).y());
+        EXPECT_FLOAT_EQ(expectRes[7],mp.objectMap[0](1.0,1.0).y());
+
+
+        // Reset object
+        mp.updateObjectInMap(0, obj);
+    }
+}
+
+TEST_F (updateSurfaceTest, testAllNew){
+
+    Eigen::Array<float, 1, 8> expectRes(1,8);
+
+    for (int i = 0; i < 3; i++){
+        cout << "Data point for data_all_new is: " << data_all_new[i]->at(0,0) << endl;
+
+        mp.updateObject(0, data_all_new[i]);
+
+        
+        
+        switch (i){
+            case 0 : 
+                expectRes << 0.0, 0.0, 2.5, 2.5, 0.0, 1.0, 0.2, 1.2;
+                // Test dimensions of output
+                EXPECT_EQ(30,mp.objectMap[0].ctrlPnts().cols());
+                EXPECT_EQ(15,mp.objectMap[0].ctrlPnts().rows());
+                break;
+            case 1 : 
+                expectRes << 0.0, 0.2, 1.0, 1.2, 0.0, 2.5, 0.0, 2.5;
+                // Test dimensions of output
+                EXPECT_EQ(15,mp.objectMap[0].ctrlPnts().cols());
+                EXPECT_EQ(30,mp.objectMap[0].ctrlPnts().rows());
+                break;
+            case 2 : 
+                expectRes << 0.0, 1.5, 1.0, 2.5, 0.0, 3.2, 0.0, 3.2;
+                // Test dimensions of output
+                EXPECT_EQ(15,mp.objectMap[0].ctrlPnts().cols());
+                EXPECT_EQ(30,mp.objectMap[0].ctrlPnts().rows());
+                break;
+        }
+
+        EXPECT_FLOAT_EQ(expectRes[0],mp.objectMap[0](0.0,0.0).x());
+        EXPECT_FLOAT_EQ(expectRes[1],mp.objectMap[0](1.0,0.0).x());
+        EXPECT_FLOAT_EQ(expectRes[2],mp.objectMap[0](0.0,1.0).x());
+        EXPECT_FLOAT_EQ(expectRes[3],mp.objectMap[0](1.0,1.0).x());
+
+        EXPECT_FLOAT_EQ(expectRes[4],mp.objectMap[0](0.0,0.0).y());
+        EXPECT_FLOAT_EQ(expectRes[5],mp.objectMap[0](1.0,0.0).y());
+        EXPECT_FLOAT_EQ(expectRes[6],mp.objectMap[0](0.0,1.0).y());
+        EXPECT_FLOAT_EQ(expectRes[7],mp.objectMap[0](1.0,1.0).y());
+
+
+        // Reset object
+        mp.updateObjectInMap(0, obj);
+    }
+}
+
+TEST_F (updateSurfaceTest, testRotatePlus90){
+
+    Eigen::Array<float, 1, 8> expectRes(1,8);
+
+    // Compute Metrics
+    std::vector<float> searchMetrics = mp.computeSearchMetrics(data_rot);
+
+    mp.objectMap.erase(mp.objectMap.begin());
+    mp.objectMetrics.erase(mp.objectMetrics.begin());
+
+    // Add object to map
+    mp.addObject(data_rot, searchMetrics);
+
+    obj_rot = mp.objectMap[0];
+
+    for (int i = 0; i < 4; i++){
+        cout << "Data point for data_rot1 is: " << data_rot1[i]->at(0,0) << endl;
+
+        
+
+        mp.updateObject(0, data_rot1[i]);
+
+        // Test dimensions of output
+        
+        
+        // EXPECT_EQ(2*n_ctrl - deg,srfOut.ctrlPnts().cols());
+
+
+        switch (i){
+            case 0 : 
+                // LD
+                EXPECT_EQ(15,mp.objectMap[0].ctrlPnts().rows());
+                expectRes << -0.9, -0.9, 0.5, 0.5, -0.3, 0.7, -0.5, 0.5;
+                break;
+            case 1 : 
+                // RU
+                EXPECT_EQ(15,mp.objectMap[0].ctrlPnts().rows());
+                expectRes << -0.5, -0.5, 0.9, 0.9, -0.5, 0.5, -0.3, 0.7;
+                break;
+            case 2 : 
+                // UL
+                EXPECT_EQ(15,mp.objectMap[0].ctrlPnts().cols());
+                expectRes << -0.5, -0.3, 0.5, 0.7, -0.5, 0.9, -0.5, 0.9;
+                break;
+            case 3 : 
+                // DR
+                EXPECT_EQ(15,mp.objectMap[0].ctrlPnts().cols());
+                expectRes << -0.3, -0.5, 0.7, 0.5, -0.9, 0.5, -0.9, 0.5;
+                break;
+        }
+
+        EXPECT_FLOAT_EQ(expectRes[0],mp.objectMap[0](0.0,0.0).x());
+        EXPECT_FLOAT_EQ(expectRes[1],mp.objectMap[0](1.0,0.0).x());
+        EXPECT_FLOAT_EQ(expectRes[2],mp.objectMap[0](0.0,1.0).x());
+        EXPECT_FLOAT_EQ(expectRes[3],mp.objectMap[0](1.0,1.0).x());
+
+        EXPECT_FLOAT_EQ(expectRes[4],mp.objectMap[0](0.0,0.0).y());
+        EXPECT_FLOAT_EQ(expectRes[5],mp.objectMap[0](1.0,0.0).y());
+        EXPECT_FLOAT_EQ(expectRes[6],mp.objectMap[0](0.0,1.0).y());
+        EXPECT_FLOAT_EQ(expectRes[7],mp.objectMap[0](1.0,1.0).y());
+       
+        mp.updateObjectInMap(0, obj_rot);
+        
+    }
+}
+
+TEST_F (updateSurfaceTest, testRotateMinus90){
+
+    Eigen::Array<float, 1, 8> expectRes(1,8);
+
+    // Compute Metrics
+    std::vector<float> searchMetrics = mp.computeSearchMetrics(data_rot);
+
+    mp.objectMap.erase(mp.objectMap.begin());
+    mp.objectMetrics.erase(mp.objectMetrics.begin());
+
+    // Add object to map
+    mp.addObject(data_rot, searchMetrics);
+
+    obj_rot = mp.objectMap[0];
+
+    for (int i = 0; i < 4; i++){
+        cout << "Data point for data_rot2 is: " << data_rot2[i]->at(0,0) << endl;
+
+        mp.updateObject(0, data_rot2[i]);
+
+        // Test dimensions of output
+
+        switch (i){
+            case 0 : 
+                // LD
+                EXPECT_EQ(15,mp.objectMap[0].ctrlPnts().rows());
+                expectRes << -0.9, -0.9, 0.5, 0.5, -0.3, 0.7, -0.5, 0.5;
+                break;
+            case 1 : 
+                // RU
+                EXPECT_EQ(15,mp.objectMap[0].ctrlPnts().rows());
+                expectRes << -0.5, -0.5, 0.9, 0.9, -0.5, 0.5, -0.3, 0.7;
+                break;
+            case 2 : 
+                // UL
+                EXPECT_EQ(15,mp.objectMap[0].ctrlPnts().cols());
+                expectRes << -0.5, -0.3, 0.5, 0.7, -0.5, 0.9, -0.5, 0.9;
+                break;
+            case 3 : 
+                // DR
+                EXPECT_EQ(15,mp.objectMap[0].ctrlPnts().cols());
+                expectRes << -0.3, -0.5, 0.7, 0.5, -0.9, 0.5, -0.9, 0.5;
+                break;
+        }
+
+        EXPECT_FLOAT_EQ(expectRes[0],mp.objectMap[0](0.0,0.0).x());
+        EXPECT_FLOAT_EQ(expectRes[1],mp.objectMap[0](1.0,0.0).x());
+        EXPECT_FLOAT_EQ(expectRes[2],mp.objectMap[0](0.0,1.0).x());
+        EXPECT_FLOAT_EQ(expectRes[3],mp.objectMap[0](1.0,1.0).x());
+
+        EXPECT_FLOAT_EQ(expectRes[4],mp.objectMap[0](0.0,0.0).y());
+        EXPECT_FLOAT_EQ(expectRes[5],mp.objectMap[0](1.0,0.0).y());
+        EXPECT_FLOAT_EQ(expectRes[6],mp.objectMap[0](0.0,1.0).y());
+        EXPECT_FLOAT_EQ(expectRes[7],mp.objectMap[0](1.0,1.0).y());
+       
+
+        // Reset object
+        mp.updateObjectInMap(0, obj_rot);
+    }
+}
+
+TEST_F (updateSurfaceTest, testRotate180){
+
+    Eigen::Array<float, 1, 8> expectRes(1,8);
+
+    // Compute Metrics
+    std::vector<float> searchMetrics = mp.computeSearchMetrics(data_rot);
+
+    mp.objectMap.erase(mp.objectMap.begin());
+    mp.objectMetrics.erase(mp.objectMetrics.begin());
+
+    // Add object to map
+    mp.addObject(data_rot, searchMetrics);
+
+    obj_rot = mp.objectMap[0];
+
+    for (int i = 0; i < 4; i++){
+        cout << "Data point for data_rot3 is: " << data_rot3[i]->at(0,0) << endl;
+
+        mp.updateObject(0, data_rot3[i]);
+
+        // Test dimensions of output
+
+        switch (i){
+            case 0 : 
+                // LD
+                EXPECT_EQ(15,mp.objectMap[0].ctrlPnts().rows());
+                expectRes << -0.9, -0.9, 0.5, 0.5, -0.3, 0.7, -0.5, 0.5;
+                break;
+            case 1 : 
+                // RU
+                EXPECT_EQ(15,mp.objectMap[0].ctrlPnts().rows());
+                expectRes << -0.5, -0.5, 0.9, 0.9, -0.5, 0.5, -0.3, 0.7;
+                break;
+            case 2 : 
+                // UL
+                EXPECT_EQ(15,mp.objectMap[0].ctrlPnts().cols());
+                expectRes << -0.5, -0.3, 0.5, 0.7, -0.5, 0.9, -0.5, 0.9;
+                break;
+            case 3 : 
+                // DR
+                EXPECT_EQ(15,mp.objectMap[0].ctrlPnts().cols());
+                expectRes << -0.3, -0.5, 0.7, 0.5, -0.9, 0.5, -0.9, 0.5;
+                break;
+        }
+
+        EXPECT_FLOAT_EQ(expectRes[0],mp.objectMap[0](0.0,0.0).x());
+        EXPECT_FLOAT_EQ(expectRes[1],mp.objectMap[0](1.0,0.0).x());
+        EXPECT_FLOAT_EQ(expectRes[2],mp.objectMap[0](0.0,1.0).x());
+        EXPECT_FLOAT_EQ(expectRes[3],mp.objectMap[0](1.0,1.0).x());
+
+        EXPECT_FLOAT_EQ(expectRes[4],mp.objectMap[0](0.0,0.0).y());
+        EXPECT_FLOAT_EQ(expectRes[5],mp.objectMap[0](1.0,0.0).y());
+        EXPECT_FLOAT_EQ(expectRes[6],mp.objectMap[0](0.0,1.0).y());
+        EXPECT_FLOAT_EQ(expectRes[7],mp.objectMap[0](1.0,1.0).y());
+       
+
+        // Reset object
+        mp.updateObjectInMap(0, obj_rot);
+    }
+}
 
 } // namespace
 

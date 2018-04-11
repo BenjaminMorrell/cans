@@ -13,6 +13,7 @@
 #include <pcl/registration/icp.h>
 #include <pcl/registration/sample_consensus_prerejective.h>
 #include <pcl/registration/correspondence_estimation_normal_shooting.h>
+#include <pcl/registration/correspondence_estimation.h>
 #include <pcl/registration/correspondence_rejection_distance.h>
 
 
@@ -65,6 +66,7 @@ class SplitSurface {
     Eigen::Array<int, 1, 4> nRowColCount;
 
     int nExtraNew; // Number of new rows or columns to take
+    int newRowColBuffer; // The allowed number of overlap points in a row or column
 
     pcl::PointCloud<pcl::PointNormal>::Ptr mapCloud;
     pcl::PointCloud<pcl::PointNormal>::Ptr obsCloud;
