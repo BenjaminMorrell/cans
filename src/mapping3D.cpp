@@ -106,7 +106,9 @@ NurbsCurvef Mapping3D::joinCurves(NurbsCurvef& crv1, NurbsCurvef& crv2, bool new
 
     float factor1 = (float)n_ctrl1/(float)(n_ctrl1 + n_ctrl2);
     float factor2 = (float)n_ctrl2/(float)(n_ctrl1 + n_ctrl2);
-    
+
+    cout << "In join curves, factor 1 is: " << factor1 << ", factor2 is: " << factor2 << endl;
+
 
     // cout << "In Join Curves:\nKnots out: " << n_knot_out << "\tCtrl out: " << n_ctrl_out << endl;
 
@@ -126,11 +128,11 @@ NurbsCurvef Mapping3D::joinCurves(NurbsCurvef& crv1, NurbsCurvef& crv2, bool new
             for (i = 0; i < n_knot_out; i++){
                 if (i < n_ctrl2){
                     // Take curve 2 knots from the end until the first zero
-                    knots_out[i] = (1 - crv2.knot()[n_ctrl2 + deg - i])/2.0;
+                    knots_out[i] = (1 - crv2.knot()[n_ctrl2 + deg - i])*factor2;
                 }else{
                     // Take curve 1 knots
                     j = deg + i - n_ctrl2;
-                    knots_out[i] = crv1.knot()[j]/2.0 + 0.5;
+                    knots_out[i] = crv1.knot()[j]*factor1 + factor2;
                 }
             }
             // Control points
@@ -150,11 +152,11 @@ NurbsCurvef Mapping3D::joinCurves(NurbsCurvef& crv1, NurbsCurvef& crv2, bool new
             for (i = 0; i < n_knot_out; i++){
                 if (i < n_ctrl2 ){
                     // Take curve 2 knots from the start up to the last non-one term
-                    knots_out[i] = crv2.knot()[i]/2.0;
+                    knots_out[i] = crv2.knot()[i]*factor2;
                 }else{
                     // Take curve 1 knots from the last zero term
                     j = deg + i - (n_ctrl2);
-                    knots_out[i] = crv1.knot()[j]/2.0 + 0.5;
+                    knots_out[i] = crv1.knot()[j]*factor1 + factor2;
                 }
             }
             // Control points
@@ -179,11 +181,11 @@ NurbsCurvef Mapping3D::joinCurves(NurbsCurvef& crv1, NurbsCurvef& crv2, bool new
             for (i = 0; i < n_knot_out; i++){
                 if (i < n_ctrl1 + 1){
                     // Take curve 1 knots from the start
-                    knots_out[i] = crv1.knot()[i]/2.0;
+                    knots_out[i] = crv1.knot()[i]*factor1;
                 }else{
                     // Take curve 2 knots in reverse from the first non-one term
                     j = i - (n_ctrl1+1);
-                    knots_out[i] = (1 - crv2.knot()[n_ctrl2 - 1 - j])/2.0 + 0.5;
+                    knots_out[i] = (1 - crv2.knot()[n_ctrl2 - 1 - j])*factor2 + factor1;
                 }
             }
             // Control points
@@ -203,11 +205,11 @@ NurbsCurvef Mapping3D::joinCurves(NurbsCurvef& crv1, NurbsCurvef& crv2, bool new
             for (i = 0; i < n_knot_out; i++){
                 if (i < n_ctrl1 + 1){
                     // Take curve 1 knots from the start
-                    knots_out[i] = crv1.knot()[i]/2.0;
+                    knots_out[i] = crv1.knot()[i]*factor1;
                 }else{
                     // Take curve 2 knots from the first non-zero term
                     j = deg + 1 + i - (n_ctrl1+1);
-                    knots_out[i] = crv2.knot()[j]/2.0 + 0.5;
+                    knots_out[i] = crv2.knot()[j]*factor2 + factor1;
                 }
             }
             // Control points
@@ -1954,7 +1956,7 @@ void Mapping3D::writeObjectPCDFile(const char* filename, const int objID, int ms
 
   // Get point cloud from NURBS object
   pcl::PointCloud<pcl::PointNormal>::Ptr mapObjPC(new pcl::PointCloud<pcl::PointNormal>(mt, ms, pcl::PointNormal()));
-  pointCloudFromObject3D(objID, msSurf, mtSurf, mapObjPC);
+  pointCloudFromObject3D(objID, ms, mt, mapObjPC);
 
   
   pcl::PCDWriter writer;

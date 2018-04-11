@@ -519,6 +519,8 @@ void testBlenderSequence(int argc, char ** argv){
 
   }
 
+  cout << "\nSize of Object map is: " << mp.objectMap.size() << endl;
+  
   // Write result to pcd
   mp.writeObjectPCDFile("endResultBlob.pcd", 0, 125, 125);
 
