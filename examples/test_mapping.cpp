@@ -516,6 +516,8 @@ void testBlenderSequence(int argc, char ** argv){
     outFilename = outFilestem + static_cast<ostringstream*>( &(ostringstream() << (i+1)) )->str() + ".wrl";
     mp.objectMap[0].writeVRML(outFilename.c_str(),Color(255,100,255),50,80);  
 
+    
+
 
   }
 
@@ -524,6 +526,20 @@ void testBlenderSequence(int argc, char ** argv){
   // Write result to pcd
   mp.writeObjectPCDFile("endResultBlob.pcd", 0, 125, 125);
 
+
+  if (argc > 2){
+    mp.objectMap[0].write(argv[2]);    
+    cout << "Starting centre is: " << mp.objectMap[0].getCentre() << ", and centre: " << mp.objectMap[0].getObjSize() << endl;
+
+    Object3D obj;
+    obj.readObject3D(argv[2]);
+    // obj.read("testSaveObject");
+    // obj.computeSizeFromControlPoints();
+    // obj.computeCentreFromControlPoints(); // TODO - color
+
+    obj.writeVRML("savedObject.wrl",Color(255,100,255),50,80); 
+    cout << "Loaded object has centre: " << obj.getCentre() << ", color: " << obj.getColor() << ", size: " << obj.getObjSize() << endl;
+  }
 }
 
 

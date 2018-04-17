@@ -1,4 +1,5 @@
 #include <ros/ros.h>
+#include <iostream>
 
 //PCL includes
 #include <Eigen/Core>
@@ -7,17 +8,25 @@
 #include <pcl/common/time.h>
 
 #include <pcl/features/normal_3d_omp.h>
+#include <pcl/features/normal_3d.h>
 #include <pcl/features/fpfh_omp.h>
 
 #include <pcl/common/transforms.h>
 
 #include <pcl/io/pcd_io.h>
 #include <pcl/registration/icp.h>
+#include <pcl/registration/ia_ransac.h>
 #include <pcl/registration/sample_consensus_prerejective.h>
 #include <pcl/registration/correspondence_estimation_normal_shooting.h>
 #include <pcl/registration/correspondence_rejection_distance.h>
 #include <pcl/segmentation/sac_segmentation.h>
 #include <pcl/visualization/pcl_visualizer.h>
+
+#include "cans/mapping3D.h"
+#include "cans/object3D.h"
+#include "cans/splitSurface.h"
+
+using namespace std;
 
 typedef pcl::visualization::PointCloudColorHandlerCustom<pcl::PointNormal> ColorHandlerT; // Visualisation?
 
@@ -41,7 +50,38 @@ typedef pcl::visualization::PointCloudColorHandlerCustom<pcl::PointNormal> Color
 //       return this->correspondences_;
 //     }
 // };
+Eigen::Array<float,6,10> readPathTextFile(char * filename){
 
+  std::ifstream file;
+  std::string line;
+
+  Eigen::Array<float,6,10> state(6,10);
+
+  float f1, f2, f3, f4, f5, f6, f7;
+  char* s1[10], s2[7], s3[6], s4[2], s5[2], s6[2], s7[3], s8[3], s9[3];
+
+  FILE * pFile;
+
+  pFile = fopen (filename, "r");
+
+  for (int i = 0; i < 10; i++){
+    fscanf(pFile, "%s%f%s%s%s%f%s%f%s%f%s%f%s%f%s%f", &s1, &f1, &s2, &s3, &s4, &f2, &s5, &f3, &s6, &f4, &s7, &f5, &s8, &f6, &s9, &f7);
+
+    state(0,i) = f2;
+    state(1,i) = f3;
+    state(2,i) = f4;
+    state(3,i) = f5;
+    state(4,i) = f6;
+    state(5,i) = f7;
+    
+  }
+  
+  fclose(pFile);
+
+  // cout << state << endl;
+
+  return state;
+}
 
 
 void alignScans(int argc, char** argv){
@@ -303,6 +343,395 @@ void computePointCorrespondences(int argc, char ** argv){
 }
 
 
+void getAlignedCorrespondences(int argc, char ** argv){
+  pcl::PCLPointCloud2::Ptr cloud_blob (new pcl::PCLPointCloud2);
+  pcl::PCLPointCloud2::Ptr cloud_blob2 (new pcl::PCLPointCloud2);
+  pcl::PointCloud<pcl::PointNormal>::Ptr cloud (new pcl::PointCloud<pcl::PointNormal>);
+  pcl::PointCloud<pcl::PointNormal>::Ptr cloud2 (new pcl::PointCloud<pcl::PointNormal>);
+  pcl::PointCloud<pcl::PointNormal>::Ptr cloud2_aligned (new pcl::PointCloud<pcl::PointNormal>);
+
+  pcl::PointCloud<pcl::FPFHSignature33>::Ptr cloud_features (new pcl::PointCloud<pcl::FPFHSignature33>);
+  pcl::PointCloud<pcl::FPFHSignature33>::Ptr cloud2_features (new pcl::PointCloud<pcl::FPFHSignature33>);
+
+
+  // Fill in the cloud data
+  pcl::PCDReader reader;
+  reader.read (argv[1], *cloud_blob);
+  reader.read (argv[2], *cloud_blob2);
+
+  // Convert to the templated PointCloud (PointCoud<T> to PointCloud2)
+  pcl::fromPCLPointCloud2 (*cloud_blob, *cloud); 
+  pcl::fromPCLPointCloud2 (*cloud_blob2, *cloud2); 
+
+  // Estimate normals
+  pcl::NormalEstimationOMP<pcl::PointNormal, pcl::PointNormal> nest;
+  nest.setRadiusSearch(0.025);
+  nest.setInputCloud(cloud);
+  nest.compute(*cloud);
+  nest.setInputCloud(cloud2);
+  nest.compute(*cloud2);
+
+  // Estimate features
+  pcl::FPFHEstimationOMP<pcl::PointNormal,pcl::PointNormal,pcl::FPFHSignature33> fest;
+  fest.setRadiusSearch(0.075);
+  fest.setInputCloud(cloud);
+  fest.setInputNormals(cloud);
+  fest.compute (*cloud_features);
+  fest.setInputCloud(cloud2);
+  fest.setInputNormals(cloud2);
+  fest.compute (*cloud2_features);
+
+  // Alignment
+  // SampleConsensusPrerejective_Exposed<pcl::PointNormal,pcl::PointNormal,pcl::FPFHSignature33> align;
+  pcl::SampleConsensusPrerejective<pcl::PointNormal,pcl::PointNormal,pcl::FPFHSignature33> align;
+  align.setInputSource(cloud2);
+  align.setSourceFeatures(cloud2_features);
+  align.setInputTarget(cloud);
+  align.setTargetFeatures(cloud_features);
+  //Settings
+  align.setMaximumIterations (50); // Number of RANSAC iterations
+  align.setNumberOfSamples (3); // Number of points to sample for generating/prerejecting a pose
+  align.setCorrespondenceRandomness (3); // Number of nearest features to use
+  align.setSimilarityThreshold (0.9f); // Polygonal edge length similarity threshold
+  align.setMaxCorrespondenceDistance (2.5f * 0.01f);// Inlier threshold
+  align.setInlierFraction (0.25f); // Required inlier fraction for accepting a pose hypothesis
+  //Perform alignement
+  {
+    pcl::ScopeTime t("Alignment");
+    align.align (*cloud2_aligned);
+  }
+
+  cout << "Completed alignment" << endl;
+  // Get correspondences
+  pcl::registration::CorrespondenceEstimationNormalShooting<pcl::PointNormal, pcl::PointNormal, pcl::PointNormal> corrEst;
+  corrEst.setInputSource (cloud2_aligned);// Gets a corresponding point for every point in the Source
+  corrEst.setSourceNormals (cloud2_aligned);
+  corrEst.setInputTarget (cloud); // Target for the source to find corresponding points in
+  // Test the first 10 correspondences for each point in source, and return the best
+  corrEst.setKSearch (10);
+  
+  pcl::CorrespondencesPtr all_correspondencesPtr (new pcl::Correspondences);
+  pcl::Correspondences& all_correspondences = *all_correspondencesPtr;
+  
+  cout << "Initialised correspondences" << endl;
+
+  // Determine all correspondences
+  corrEst.determineCorrespondences (*all_correspondencesPtr);
+
+  cout << " Correspondences determined " << endl;
+
+  cout << "Correspondence 1, index query: " << all_correspondences[0].index_query << endl;
+  cout << "Correspondence 1, match index: " << all_correspondences[0].index_match << endl;
+  cout << "Correspondence 1, distance: " << all_correspondences[0].distance << endl;
+  cout << "Correspondence 1, weight: " << all_correspondences[0].weight << endl;
+
+  cout << "Correspondence 190, index query: " << all_correspondences[190].index_query << endl;
+  cout << "Correspondence 190, match index: " << all_correspondences[190].index_match << endl;
+  cout << "Correspondence 190, distance: " << all_correspondences[190].distance << endl;
+  cout << "Correspondence 190, weight: " << all_correspondences[190].weight << endl;
+
+  // Correspondence rejection
+  pcl::CorrespondencesPtr corr_filtPtr (new pcl::Correspondences);
+  pcl::Correspondences& corr_filt = *corr_filtPtr;
+  pcl::registration::CorrespondenceRejectorDistance corrRej;
+  corrRej.setMaximumDistance( 0.01f); 
+  corrRej.setInputCorrespondences( all_correspondencesPtr);
+  corrRej.getCorrespondences( *corr_filtPtr);
+
+  cout << "Rejected correspondences" << endl;
+
+  cout << "Index " << corr_filt[190].index_query << " matches to index " << corr_filt[190].index_match << endl;
+  cout << "match weight: " << corr_filt[190].weight << "\nMatch distance: " << corr_filt[190].distance << endl;
+
+}
+
+Eigen::Matrix4f runAlignmentPreRejective(pcl::PointCloud<pcl::PointNormal>::Ptr cloud, pcl::PointCloud<pcl::PointNormal>::Ptr cloud2, int option){
+  pcl::PointCloud<pcl::FPFHSignature33>::Ptr cloud_features (new pcl::PointCloud<pcl::FPFHSignature33>);
+  pcl::PointCloud<pcl::FPFHSignature33>::Ptr cloud2_features (new pcl::PointCloud<pcl::FPFHSignature33>);
+  pcl::PointCloud<pcl::PointNormal>::Ptr cloud2_aligned (new pcl::PointCloud<pcl::PointNormal>);
+
+  cout << "inside runAlignmentPreRejective" << endl;
+
+  cloud->is_dense = false;
+  cloud2->is_dense = false;
+
+  std::cerr << "PointCloud1 dimensions, W: " << cloud->width << "\tH: " << cloud->height << "\t is dense? " << cloud->is_dense << std::endl;
+  std::cerr << "PointCloud2 dimensions, W: " << cloud2->width << "\tH: " << cloud2->height << "\t is dense? " << cloud2->is_dense << std::endl;
+
+  
+
+  // bool useicp = false;
+  // bool useiaransac = false;
+  // bool useprerejsac = true;
+
+  Eigen::Matrix4f transformOut;
+
+  pcl::search::KdTree<pcl::PointNormal>::Ptr search_method_(new pcl::search::KdTree<pcl::PointNormal>);
+  
+  if (option == 0){
+    cout << "Starting alignment" << endl;
+    pcl::IterativeClosestPoint<pcl::PointNormal, pcl::PointNormal> icp;
+    // Set the input source and target
+    icp.setInputSource (cloud2);
+    icp.setInputTarget (cloud);
+    // Set the max correspondence distance to 5cm (e.g., correspondences with higher distances will be ignored)
+    icp.setMaxCorrespondenceDistance (0.5);
+    // Set the maximum number of iterations (criterion 1)
+    icp.setMaximumIterations (500);
+    // Set the transformation epsilon (criterion 2)
+    icp.setTransformationEpsilon (1e-8);
+    // Set the euclidean distance difference epsilon (criterion 3)
+    icp.setEuclideanFitnessEpsilon (1);
+    
+    // Perform the alignment
+    icp.align (*cloud2_aligned);
+    
+    // Obtain the transformation that aligned cloud_source to cloud_source_registered
+    transformOut = icp.getFinalTransformation ();
+  }else{
+    
+    // Estimate normals
+    pcl::NormalEstimation<pcl::PointNormal, pcl::PointNormal> nest;
+    nest.setRadiusSearch(0.1);
+    // nest.setKSearch(7);
+    nest.setSearchMethod(search_method_);
+    nest.setInputCloud(cloud);
+    nest.compute(*cloud);
+    cout << "computed normals for cloud 1" << endl;
+    nest.setInputCloud(cloud2);
+    nest.compute(*cloud2);
+    cout << "computed normals for cloud 2" << endl;
+    // pcl::NormalEstimation<pcl::PointNormal, pcl::PointNormal> nest;
+    // nest.setRadiusSearch(0.01);
+    // nest.setKSearch(5);
+    // nest.setSearchMethod(pcl::search::KdTree<pcl::PointNormal>)
+    // nest.setInputSource(cloud);
+    // nest.compute(*cloud);
+    // cout << "computed normals for cloud 1" << endl;
+    // nest.setInputSource(cloud2);
+    // nest.compute(*cloud2);
+
+    cout << "Normals have been estimated" << endl;
+
+    // Estimate features
+    pcl::FPFHEstimationOMP<pcl::PointNormal,pcl::PointNormal,pcl::FPFHSignature33> fest;
+    fest.setRadiusSearch(0.1);
+    // fest.setKSearch(7);
+    fest.setInputCloud(cloud);
+    fest.setSearchMethod(search_method_);
+    fest.setInputNormals(cloud);
+    fest.compute (*cloud_features);
+    fest.setInputCloud(cloud2);
+    fest.setInputNormals(cloud2);
+    fest.compute (*cloud2_features);
+    cout << "Features have been computed" << endl;
+  
+
+    //Perform alignment 
+    if (option == 1){
+      pcl::SampleConsensusInitialAlignment<pcl::PointNormal,pcl::PointNormal,pcl::FPFHSignature33> align;
+      align.setInputSource(cloud2);
+      align.setSourceFeatures(cloud2_features);
+      align.setInputTarget(cloud);
+      align.setTargetFeatures(cloud_features);
+      //Settings
+      align.setMaximumIterations (500); // Number of RANSAC iterations (1000 is default)
+      align.setNumberOfSamples (3); // Number of points to sample for generating/prerejecting a pose (3 is default)
+      align.setCorrespondenceRandomness (20); // Number of nearest features to use (default is 10)
+      align.setMaxCorrespondenceDistance (0.1f);// Inlier threshold
+
+      align.align(*cloud2_aligned);
+
+      transformOut = align.getFinalTransformation ();
+
+      if (align.hasConverged()){
+        cout << " Successfully converged" << endl;
+      }else {
+        cout << "\n\tAlignment FAILED to converge\n" << endl;
+      }
+    }else if (option == 2){
+      // Alignment
+      // SampleConsensusPrerejective_Exposed<pcl::PointNormal,pcl::PointNormal,pcl::FPFHSignature33> align;
+      pcl::SampleConsensusPrerejective<pcl::PointNormal,pcl::PointNormal,pcl::FPFHSignature33> align;
+      align.setInputSource(cloud2);
+      align.setSourceFeatures(cloud2_features);
+      align.setInputTarget(cloud);
+      align.setTargetFeatures(cloud_features);
+      //Settings
+      align.setMaximumIterations (5000); // Number of RANSAC iterations
+      align.setNumberOfSamples (3); // Number of points to sample for generating/prerejecting a pose
+      align.setCorrespondenceRandomness (3); // Number of nearest features to use
+      align.setSimilarityThreshold (0.9f); // Polygonal edge length similarity threshold
+      align.setMaxCorrespondenceDistance (2.5f * 0.01f);// Inlier threshold
+      align.setInlierFraction (0.25f); // Required inlier fraction for accepting a pose hypothesis
+
+      align.align(*cloud2_aligned);
+
+      transformOut = align.getFinalTransformation ();
+
+      if (align.hasConverged()){
+        cout << " Successfully converged" << endl;
+      }else {
+        cout << "Alignment FAILED to converge" << endl;
+      }
+    }
+
+    
+
+  }
+
+
+
+  
+  // {
+  //   pcl::ScopeTime t("Alignment");
+  //   align.align (*cloud2_aligned);
+
+  // }
+
+  cout << "Completed alignment" << endl;
+
+  // Eigen::Matrix4f transformOut;
+
+  // transformOut = align.getFinalTransformation();
+
+  cout << "Transform matrix out is: " << transformOut << endl;
+
+  // Show alignment
+  pcl::visualization::PCLVisualizer visu("Alignment");
+  visu.addPointCloud (cloud, ColorHandlerT (cloud, 0.0, 255.0, 0.0), "cloud1");
+  visu.addPointCloud (cloud2_aligned, ColorHandlerT (cloud2_aligned, 0.0, 0.0, 255.0), "cloud2_aligned");
+  visu.addPointCloud (cloud2, ColorHandlerT (cloud2, 255.0, 0.0, 0.0), "cloud2");
+  visu.spin ();
+
+  return transformOut;
+}
+
+
+void testLocalizationSequence(int argc, char** argv){
+  // Input checks
+
+  // Init
+  int numberOfScans = 1;
+  std::string filename;
+  std::string filestem = "/home/bjm/Dropbox/PhD_Code/Data/3D_Scans/Blensor/Scan01/BlobScan_Data000";
+  Eigen::Affine3f transform = Eigen::Affine3f::Identity();
+  Eigen::Affine3f alignmentTransform = Eigen::Affine3f::Identity();
+
+  // Init mapping class
+  Mapping3D mp;
+  mp.numRowsDesired = 45;
+  mp.numColsDesired = 45;
+  mp.maxNanAllowed = 10;
+  mp.removeNanBuffer = 2;
+
+  int msSurf = 55;
+  int mtSurf = 155;
+
+  // Load the object
+  mp.addObjectFromFile("blob_object.obj");
+
+  // Load state
+  Eigen::Array<float,6,10> state = readPathTextFile("/home/bjm/Dropbox/PhD_Code/Data/3D_Scans/Blensor/Scan01/BlobScan_Path.txt");
+  cout << "State is:\n" << state << endl;
+  // Translation
+  transform(0,3) = state(0,0);
+  transform(1,3) = state(1,0);
+  transform(2,3) = state(2,0);
+    
+  // 3, 2, 1 Euler transformation
+  transform.rotate (Eigen::AngleAxisf(state(5,0),Eigen::Vector3f::UnitZ()));
+  transform.rotate (Eigen::AngleAxisf(state(4,0),Eigen::Vector3f::UnitY()));
+  transform.rotate (Eigen::AngleAxisf(state(3,0),Eigen::Vector3f::UnitX()));
+
+  cout << "transform is " << transform.matrix() << endl;
+
+  
+
+  // Setup to run sequence of scans 
+  pcl::PCDReader reader;
+
+  int option = 0;
+  if (argc > 1){  
+    numberOfScans = atoi(argv[1]);
+    if (argc > 2){
+      option = atoi(argv[2]);
+    }
+  }
+  
+
+  pcl::PCLPointCloud2::Ptr cloud_blob (new pcl::PCLPointCloud2);
+  pcl::PointCloud<pcl::PointNormal>::Ptr cloud (new pcl::PointCloud<pcl::PointNormal>); 
+  pcl::PointCloud<pcl::PointNormal>::Ptr cloudReduced (new pcl::PointCloud<pcl::PointNormal>(mp.numRowsDesired, mp.numColsDesired));
+  pcl::PointCloud<pcl::PointNormal>::Ptr cloudTransformed (new pcl::PointCloud<pcl::PointNormal>(mp.numRowsDesired, mp.numColsDesired));
+  pcl::PointCloud<pcl::PointNormal>::Ptr mapObjPC(new pcl::PointCloud<pcl::PointNormal>(mtSurf, msSurf, pcl::PointNormal()));
+  
+  // Generate point cloud from object
+  mp.pointCloudFromObject3D(0, msSurf, mtSurf, mapObjPC);
+
+  bool firstTwo = true;
+
+  Eigen::Vector3f rpy;
+
+  // Run sequence of scans 
+  for (int i = 0; i < numberOfScans; i++){
+    cout << "Processing Scan " << i << endl;
+
+    // Get filename:
+    if (i < 9){
+      filename = filestem + "0" + static_cast<ostringstream*>( &(ostringstream() << (i+1)) )->str() + ".pcd";
+      cout << "filename is : " << filename;
+    }else{
+      filename = filestem + static_cast<ostringstream*>( &(ostringstream() << (i+1)) )->str() + ".pcd";
+      cout << "filename is : " << filename;
+    }
+
+    // Read Scan
+    reader.read (filename, *cloud_blob);
+    cout << "scan read" << endl;
+
+    // Convert to PCL cloud
+    pcl::fromPCLPointCloud2 (*cloud_blob, *cloud); 
+    cout << "converted PC" << endl;
+    // Reduce
+    mp.meshFromScan(cloudReduced, cloud);
+    cout << "Reduced PC" << endl;
+
+    // Transform
+    pcl::transformPointCloud(*cloudReduced, *cloudTransformed, transform);
+
+    cout << "Transformed PC" << endl;
+
+    // Run alignment
+    
+    alignmentTransform.matrix() = runAlignmentPreRejective(mapObjPC, cloudTransformed,option);
+
+    // Update transform estimate - will need to check that this works
+    transform = alignmentTransform * transform ;// alignmentTransform.transpose()
+
+    cout << "State transform is " << transform.matrix() << endl;
+
+    // // Transform and check scan?
+    // if (i == 2 && firstTwo){
+    //   i = i - 1;
+    //   firstTwo = false;
+    // }
+    // transform.translation();
+    state(0,i) = transform.matrix()(0,3);
+    state(1,i) = transform.matrix()(1,3);
+    state(2,i) = transform.matrix()(2,3);
+
+    rpy = transform.rotation().eulerAngles(2, 1, 0); // Check ordering
+
+    state(3,i) = rpy(2);
+    state(4,i) = rpy(1);
+    state(5,i) = rpy(0);
+
+
+  }
+
+  cout << "output state is:\n" << state << endl;
+}
 
 
 int
@@ -312,11 +741,16 @@ main (int argc, char** argv)
   ros::init (argc, argv, "planar_seg_testing");
   ros::NodeHandle nh;
 
-  if (argc == 4){
-    computePointCorrespondences(argc, argv);
-  }else{
-    alignScans(argc, argv);
-  }
+  // getAlignedCorrespondences(argc, argv);
+
+  testLocalizationSequence(argc, argv);
+
+  // if (argc == 4){
+  //   computePointCorrespondences(argc, argv);
+    
+  // }else{
+  //   alignScans(argc, argv);
+  // }
   
  
   // Spin

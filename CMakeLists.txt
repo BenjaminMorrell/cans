@@ -102,11 +102,11 @@ include_directories(
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
 add_executable(test_mapping examples/test_mapping.cpp src/mapping3D.cpp src/object3D.cpp src/splitSurface.cpp)
-add_executable(crv_test examples/curveTesting.cpp src/mapping3D.cpp src/object3D.cpp src/splitSurface.cpp)
-add_executable(srf_test examples/surfaceJoining.cpp src/mapping3D.cpp src/object3D.cpp src/splitSurface.cpp)
-add_executable(pcl_test examples/pointCloudTesting.cpp src/mapping3D.cpp src/object3D.cpp src/splitSurface.cpp)
-add_executable(localize_test examples/localizationTesting.cpp)
-add_executable(split_test examples/testingSplitSurface.cpp src/splitSurface.cpp)
+# add_executable(crv_test examples/curveTesting.cpp src/mapping3D.cpp src/object3D.cpp src/splitSurface.cpp)
+# add_executable(srf_test examples/surfaceJoining.cpp src/mapping3D.cpp src/object3D.cpp src/splitSurface.cpp)
+# add_executable(pcl_test examples/pointCloudTesting.cpp src/mapping3D.cpp src/object3D.cpp src/splitSurface.cpp)
+add_executable(localize_test examples/localizationTesting.cpp src/mapping3D.cpp src/object3D.cpp src/splitSurface.cpp)
+# add_executable(split_test examples/testingSplitSurface.cpp src/splitSurface.cpp)
 add_executable(cloud_publish examples/rosScanPublish.cpp)
 add_executable(tf_publish examples/tfPubTest.cpp)
 add_executable(cans_ros examples/rosInterfaceNURBSTest.cpp src/mapping3D.cpp src/object3D.cpp src/splitSurface.cpp)
@@ -129,11 +129,11 @@ add_executable(unreal_cans_timer examples/rosUnrealTimer.cpp src/mapping3D.cpp s
 
 ## Specify libraries to link a library or executable target against
 target_link_libraries(test_mapping ${catkin_LIBRARIES} ${NURBS3_LIBRARIES}) 
-target_link_libraries(crv_test ${catkin_LIBRARIES} ${NURBS3_LIBRARIES}) 
-target_link_libraries(srf_test ${catkin_LIBRARIES} ${NURBS3_LIBRARIES}) 
-target_link_libraries(pcl_test ${catkin_LIBRARIES} ${NURBS3_LIBRARIES}) 
+# target_link_libraries(crv_test ${catkin_LIBRARIES} ${NURBS3_LIBRARIES}) 
+# target_link_libraries(srf_test ${catkin_LIBRARIES} ${NURBS3_LIBRARIES}) 
+# target_link_libraries(pcl_test ${catkin_LIBRARIES} ${NURBS3_LIBRARIES}) 
 target_link_libraries(localize_test ${catkin_LIBRARIES} ${NURBS3_LIBRARIES}) 
-target_link_libraries(split_test ${catkin_LIBRARIES} ${NURBS3_LIBRARIES}) 
+# target_link_libraries(split_test ${catkin_LIBRARIES} ${NURBS3_LIBRARIES}) 
 target_link_libraries(cloud_publish ${catkin_LIBRARIES} ${NURBS3_LIBRARIES}) 
 target_link_libraries(tf_publish ${catkin_LIBRARIES} ${NURBS3_LIBRARIES}) 
 target_link_libraries(cans_ros ${catkin_LIBRARIES} ${NURBS3_LIBRARIES}) 

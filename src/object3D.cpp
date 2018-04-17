@@ -305,6 +305,26 @@ void Object3D::computeSizeFromControlPoints(){
 
 }
 
+//-------------------------------------------------------------------
+/*! 
+  \brief  Load a nurbs and compute the centre etc. 
+
+  \warning color will be zeros - have not copied them
+
+  \author Benjamin Morrell
+  \date 17 April 2018
+*/
+void Object3D::readObject3D(const char* filename){
+  // Read the file
+  read(filename);
+
+  // Compute the centre 
+  computeCentreFromControlPoints();
+
+  // Compute the size
+  computeSizeFromControlPoints();
+
+}
 
 //-------------------------------------------------------------------
 /*! 

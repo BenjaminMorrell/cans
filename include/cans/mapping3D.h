@@ -61,9 +61,11 @@ public:
     void downsampleCol(Eigen::Array<bool, 1, Eigen::Dynamic>& colFlags);
     bool averageOutNans(pcl::PointCloud<pcl::PointNormal>::Ptr cloud, Eigen::Array<int,2,Eigen::Dynamic>& nanIndices);
     void regionAverage(pcl::PointCloud<pcl::PointNormal>::Ptr cloud, int i, int j);
+    void regionAverageSimple(pcl::PointCloud<pcl::PointNormal>::Ptr cloud, int i, int j);
 
     // Object Update
     void addObject(pcl::PointCloud<pcl::PointNormal>::Ptr cloud, std::vector<float> searchMetrics);
+    void addObjectFromFile(const char * filename);
     void updateObjectInMap(int objID, Object3D& obj);
     void updateObject(int objID, pcl::PointCloud<pcl::PointNormal>::Ptr obsObjPC);
     void knotInsertionPreMerge(Object3D& obj, std::string extendDirection);
@@ -87,6 +89,7 @@ public:
 
     // Output functions
     void writeObjectPCDFile(const char* filename, const int objID, int ms = -1, int mt = -1);
+
 
 
     int numRowsDesired;

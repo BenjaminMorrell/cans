@@ -68,6 +68,27 @@ TEST_F (object3DTest, DataConstructor){
     EXPECT_EQ(obj.pointAt(0.3,0.7),surf.pointAt(0.3,0.7));
 }
 
+TEST_F (object3DTest, readAndWrite){
+
+    // Create the object
+    Object3D obj(scan2);
+
+    // Write it to file
+    obj.write("test_filename.obj");
+
+    // Create a second object
+    Object3D obj2;
+
+    // Read it 
+    obj2.readObject3D("test_filename.obj");
+    
+    // Compare centres
+    EXPECT_NEAR(obj.getObjSize(),obj2.getObjSize(),0.1);
+    EXPECT_NEAR(obj.getCentre().x(),obj2.getCentre().x(),1.0);
+    EXPECT_NEAR(obj.getCentre().y(),obj2.getCentre().y(),1.0);
+    EXPECT_NEAR(obj.getCentre().z(),obj2.getCentre().z(),0.1);
+}
+
 // Getters
 TEST_F (object3DTest, getCentre){
     Object3D obj;

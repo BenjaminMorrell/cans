@@ -37,8 +37,8 @@ int Mapping3D::processScan(pcl::PointCloud<pcl::PointNormal>::Ptr cloud, Eigen::
 
   // Initialise data
   // clouds
-  pcl::PointCloud<pcl::PointNormal>::Ptr cloudReduced (new pcl::PointCloud<pcl::PointNormal>(numRowsDesired, numRowsDesired));
-  pcl::PointCloud<pcl::PointNormal>::Ptr cloudTransformed (new pcl::PointCloud<pcl::PointNormal>(numRowsDesired, numRowsDesired));
+  pcl::PointCloud<pcl::PointNormal>::Ptr cloudReduced (new pcl::PointCloud<pcl::PointNormal>(numRowsDesired, numColsDesired));
+  pcl::PointCloud<pcl::PointNormal>::Ptr cloudTransformed (new pcl::PointCloud<pcl::PointNormal>(numRowsDesired, numColsDesired));
   // Search parameters
   std::vector<float> searchMetrics;
   int objID; 
@@ -1144,7 +1144,7 @@ bool Mapping3D::averageOutNans(pcl::PointCloud<pcl::PointNormal>::Ptr cloud, Eig
       continue;
     }
     cout << "Before: " << cloud->at(nanIndices(1,i),nanIndices(0,i)) << endl;
-    regionAverage(cloud,nanIndices(0,i),nanIndices(1,i));
+    regionAverageSimple(cloud,nanIndices(0,i),nanIndices(1,i));
     cout << "After:  " << cloud->at(nanIndices(1,i),nanIndices(0,i)) << endl;
     if (!pcl::isFinite(cloud->at(nanIndices(1,i),nanIndices(0,i)) )){
       // Still nan, keep as flag
@@ -1154,6 +1154,8 @@ bool Mapping3D::averageOutNans(pcl::PointCloud<pcl::PointNormal>::Ptr cloud, Eig
       nanIndices(0,i) = nanIndices(1,i) = -2;
     }
   }
+
+  cout << "Nan's left?: " << noNans << endl;
 
   return noNans;
 
@@ -1294,6 +1296,78 @@ void Mapping3D::regionAverage(pcl::PointCloud<pcl::PointNormal>::Ptr cloud, int 
 
 }
 
+/*! 
+  \brief  Replaces a given point by averaginf from neighbouring points
+
+  \param cloud  pointer to cloud to process
+  \param i      row index of point to change
+  \param j      col index of point to change
+  
+  Will search +_ in i and j, then try to take the average of them
+  
+  \author Benjamin Morrell
+  \date 30 March 2018
+*/
+void Mapping3D::regionAverageSimple(pcl::PointCloud<pcl::PointNormal>::Ptr cloud, int i, int j){
+
+  pcl::PointXYZ average(0.0,0.0,0.0);
+
+  int add_count = 0; // to track how many values are averaged. 
+
+  // Back in i
+  if (i > 0){
+    if (pcl::isFinite(cloud->at(j,i-1))){
+      // average.getArray3fMap() += cloud->at(j,i-1).getArray3fMap();
+      average.x += cloud->at(j,i-1).x;
+      average.y += cloud->at(j,i-1).y;
+      average.z += cloud->at(j,i-1).z;        
+      add_count ++;
+    }    
+  }
+
+  // Forward in i
+  if (i < cloud->height-1){
+    if (pcl::isFinite(cloud->at(j,i+1))){
+        // average.getArray3fMap() += cloud->at(j,i+1).getArray3fMap();
+        average.x += cloud->at(j,i+1).x;
+        average.y += cloud->at(j,i+1).y;
+        average.z += cloud->at(j,i+1).z;
+      add_count ++;
+    }
+  }
+
+  // Back in j
+  if (j > 0){
+    if (pcl::isFinite(cloud->at(j-1,i))){
+      // average.getArray3fMap() += cloud->at(j-1,i).getArray3fMap();
+      average.x += cloud->at(j-1,i).x;
+      average.y += cloud->at(j-1,i).y;
+      average.z += cloud->at(j-1,i).z;
+      add_count ++;
+    }    
+  }
+
+  // Forward in j
+  if (j < cloud->width-1){
+    if (pcl::isFinite(cloud->at(j+1,i))){
+      // average.getArray3fMap() += cloud->at(j+1,i).getArray3fMap();
+      average.x += cloud->at(j+1,i).x;
+      average.y += cloud->at(j+1,i).y;
+      average.z += cloud->at(j+1,i).z;
+      add_count ++;
+    }
+  }
+
+  // Divide by count to get the average
+  average.getArray3fMap() /= (float)add_count;
+
+  //update cloud
+  cloud->at(j,i).x = average.x;
+  cloud->at(j,i).y = average.y;
+  cloud->at(j,i).z = average.z;
+
+}
+
 //-------------------------------------------------------------------
 // ------------- UPDATE OBJECT  -----------------------------
 //-------------------------------------------------------------------
@@ -1343,6 +1417,38 @@ void Mapping3D::addObject(pcl::PointCloud<pcl::PointNormal>::Ptr cloud, std::vec
 
 }
 
+/*! 
+  \brief  Adds an object from file 
+
+  \param objID  id of the object to update
+  \param obj    Object3D parameters to replace those in the map
+  
+  \author Benjamin Morrell
+  \date 4 April 2018
+*/
+void Mapping3D::addObjectFromFile(const char * filename){
+
+  // Checks if filename exists - TODO
+
+  // Load from filename
+  Object3D obj;
+
+  obj.readObject3D(filename);
+
+  // Add object in objectMap
+  objectMap.push_back(obj);
+
+  // Compute new metrics
+  std::vector<float> searchMetrics = computeSearchMetrics(obj);
+
+  // Add metrics
+  objectMetrics.push_back(searchMetrics);
+
+  cout << "New object added with ID: " << objectMap.size()-1 << " and with metrics: ";
+  for (int i = 0; i < numberOfMetrics; i++){cout << searchMetrics[i] << ", ";}cout << endl;
+
+}
+
 
 /*! 
   \brief  Updates an object in the map
@@ -1373,6 +1479,7 @@ void Mapping3D::updateObjectInMap(int objID, Object3D& obj){
   for (int i = 0; i < numberOfMetrics; i++){cout << searchMetrics[i] << ", ";}cout << endl;
 
 }
+
 
 /*! 
   \brief  Updates an object in the map with a new observation
