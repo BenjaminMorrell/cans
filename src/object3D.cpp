@@ -121,8 +121,8 @@ Object3D::Object3D(const Matrix_Point3Df& Q){
   \author Benjamin Morrell
   \date 23 March 2018
 */
-Object3D::Object3D(int pU, int pV, Vector_FLOAT& UVec, Vector_FLOAT& Vvec, Matrix_HPoint3Df& ctrlPnts) :
-  NurbsSurfacef(pU, pV, UVec, Vvec, ctrlPnts)
+Object3D::Object3D(int pU, int pV, Vector_FLOAT& Uvec, Vector_FLOAT& Vvec, Matrix_HPoint3Df& ctrlPnts) :
+  NurbsSurfacef(pU, pV, Uvec, Vvec, ctrlPnts)
 {
 
   // Compute the centre from the data (or the control points?)
@@ -135,8 +135,137 @@ Object3D::Object3D(int pU, int pV, Vector_FLOAT& UVec, Vector_FLOAT& Vvec, Matri
 
 }
 
+
+Object3D::Object3D(int pU, int pV, Eigen::Array<float,1,Eigen::Dynamic>& Uvec, Eigen::Array<float,1,Eigen::Dynamic>& Vvec, Eigen::Array<float,3,Eigen::Dynamic>& ctrlPnts, int nCtrlS, int nCtrlT):
+  NurbsSurfacef(),
+  centre(0,0,0), 
+  color(0,0,0),
+  objSize(0.0),
+  GISTexture(0.0),
+  GISRoughness(0.0)
+{
+
+  if (Uvec.size() != nCtrlS + pU + 1){
+    cout << "Error, knot vector and control point vector mis-match" << endl;
+    return;
+  }else if (Vvec.size() != nCtrlT + pV + 1) {
+    cout << "Error, knot vector and control point vector mis-match" << endl;
+    return;
+  }
+
+  this->resize(nCtrlS,nCtrlT, pU, pV);
+  
+  // Set up knots
+  int nKnots = Uvec.size();// or may have to do cols()
+
+  Vector_FLOAT UvecNURBS(nKnots);
+  Vector_FLOAT VvecNURBS(nKnots);
+
+  for (int i = 0; i < nKnots; i++){
+    UvecNURBS[i] = Uvec(i);
+    VvecNURBS[i] = Vvec(i);
+  }
+
+  // Set up Control points 
+  Matrix_HPoint3Df controlP(nCtrlS,nCtrlT);
+
+  int index = 0;
+  for (int i = 0; i < nCtrlS; i++){
+    for (int j = 0; j < nCtrlT; j ++){
+      controlP(i,j).x() = ctrlPnts(0,index);
+      controlP(i,j).y() = ctrlPnts(1,index);
+      controlP(i,j).z() = ctrlPnts(2,index);
+      controlP(i,j).w() = 1.0f;
+      index ++;
+    }
+  }
+
+  // Set values in the member variables:
+  degU = pU;
+  degV = pV;
+  U = UvecNURBS;
+  V = VvecNURBS;
+  P = controlP;
+  
+  // Compute the centre from the control points
+  computeCentreFromControlPoints(); // sets the centre variable
+
+  // Compute the size from the control points
+  computeSizeFromControlPoints(); // sets the object_size variable
+
+}
+
+//-------------------------------------------------------------------
+/*! 
+  \brief  destructor
+
+  \author Benjamin Morrell
+  \date 23 March 2018
+*/
 Object3D::~Object3D(){
   ;
+}
+
+//-------------------------------------------------------------------
+/*! 
+  \brief  Update the object - for use as a python bound object
+  
+  TDBM - this may not copy the nurbsSruface properties...
+
+  \author Benjamin Morrell
+  \date 23 March 2018
+*/
+void Object3D::updateObject3D(int pU, int pV, Eigen::Array<float,1,Eigen::Dynamic>& Uvec, Eigen::Array<float,1,Eigen::Dynamic>& Vvec, Eigen::Array<float,3,Eigen::Dynamic>& ctrlPnts, int nCtrlS, int nCtrlT)
+{
+
+  if (Uvec.size() != nCtrlS + pU + 1){
+    cout << "Error, knot vector and control point vector mis-match" << endl;
+    return;
+  }else if (Vvec.size() != nCtrlT + pV + 1) {
+    cout << "Error, knot vector and control point vector mis-match" << endl;
+    return;
+  }
+
+  this->resize(nCtrlS,nCtrlT, pU, pV);
+  
+  // Set up knots
+  int nKnots = Uvec.size();// or may have to do cols()
+
+  Vector_FLOAT UvecNURBS(nKnots);
+  Vector_FLOAT VvecNURBS(nKnots);
+
+  for (int i = 0; i < nKnots; i++){
+    UvecNURBS[i] = Uvec(i);
+    VvecNURBS[i] = Vvec(i);
+  }
+
+  // Set up Control points 
+  Matrix_HPoint3Df controlP(nCtrlS,nCtrlT);
+
+  int index = 0;
+  for (int i = 0; i < nCtrlS; i++){
+    for (int j = 0; j < nCtrlT; j ++){
+      controlP(i,j).x() = ctrlPnts(0,index);
+      controlP(i,j).y() = ctrlPnts(1,index);
+      controlP(i,j).z() = ctrlPnts(2,index);
+      controlP(i,j).w() = 1.0f;
+      index ++;
+    }
+  }
+
+  // Set values in the member variables:
+  degU = pU;
+  degV = pV;
+  U = UvecNURBS;
+  V = VvecNURBS;
+  P = controlP;
+  
+  // Compute the centre from the control points
+  computeCentreFromControlPoints(); // sets the centre variable
+
+  // Compute the size from the control points
+  computeSizeFromControlPoints(); // sets the object_size variable
+
 }
 
 //-------------------------------------------------------------------
@@ -367,7 +496,7 @@ float Object3D::getObjSize(){
 
 //-------------------------------------------------------------------
 /*! 
-  \brief  Get data from point cloud
+  \brief  Get data from NURBS surface
 
   \param ms number of points in s parametric direction
   \param mt number of points in t parametric direction
@@ -415,29 +544,260 @@ Matrix_Point3Df Object3D::getSurfacePoints(int ms, int mt){
   return data;
 }
 
-// //-------------------------------------------------------------------
-// /*! 
-//   \brief  Get data from point cloud
+//-------------------------------------------------------------------
+/*! 
+  \brief  Get point cloud from NURBS surface
 
-//   \author Benjamin Morrell
-//   \date 23 March 2018
-// */
-// pcl::PointCloud<pcl::PointNormal>::Ptr Object3D::getSurfacePointCloud(int ms = 45, int mt = 45){
-//   pcl::PointCloud<pcl::PointNormal>::Ptr new_cloud( new pcl::PointCloud<pcl::PointNormal>(ms,mt,PointNormal()));
-//   for (int i = 0; i< ms; i++){
-//     for (int j = 0; j < mt; j++){
-//       // Point cloud with normals... 
-//       new_cloud_n->at(j,i).x = this->pointAt(params[i],params[j]).x();
-//       new_cloud_n->at(j,i).y = this->pointAt(params[i],params[j]).y();
-//       new_cloud_n->at(j,i).z = this->pointAt(params[i],params[j]).z();
+  \author Benjamin Morrell
+  \date 19 April 2018
+*/
+void Object3D::getSurfacePointCloud( pcl::PointCloud<pcl::PointNormal>::Ptr cloud,int ms, int mt){
 
-//       new_cloud_n->at(j,i).normal_x = this->normal(params[i],params[j]).x();
-//       new_cloud_n->at(j,i).normal_y = this->normal(params[i],params[j]).y();
-//       new_cloud_n->at(j,i).normal_z = this->normal(params[i],params[j]).z();
-//     }
-//   }
-// }
+  // TODO - input check if NURBS Is empty TDBM
+  // Assume cloud is initialised at the correct size
+  // // Initialise cloud?
+  // pcl::PointCloud<pcl::PointNormal> new_cloud( new pcl::PointCloud<pcl::PointNormal>(ms,mt,PointNormal()));
+  if (cloud->height != ms || cloud->width != mt){
+    cout << "Error, need cloud to be correct dimensions in getSurfacePointCloud" << endl;
+    cout << "Cloud dimensions are, h: " << cloud->height << " w: " << cloud->width << endl;
+    return;
+  }
+
+  // Create parameter vectors
+  Vector_FLOAT paramsS(ms);
+  float val(0.0001);
+  float step = (1.0-val)/ms;
+
+  for (int k = 0; k < ms; k++){
+    paramsS[k] = val;
+    val += step;
+  }
+
+  Vector_FLOAT paramsT(mt);
+  val = 0.0001;
+  step = (1.0-val)/mt;
+
+  for (int k = 0; k < mt; k++){
+    paramsT[k] = val;
+    val += step;
+  }
+
+  // Fill the point cloud
+  
+  for (int i = 0; i< ms; i++){
+    for (int j = 0; j < mt; j++){
+      // Point cloud with normals... 
+      cloud->at(j,i).x = this->pointAt(paramsS[i],paramsT[j]).x();
+      cloud->at(j,i).y = this->pointAt(paramsS[i],paramsT[j]).y();
+      cloud->at(j,i).z = this->pointAt(paramsS[i],paramsT[j]).z();
+
+      cloud->at(j,i).normal_x = this->normal(paramsS[i],paramsT[j]).x();
+      cloud->at(j,i).normal_y = this->normal(paramsS[i],paramsT[j]).y();
+      cloud->at(j,i).normal_z = this->normal(paramsS[i],paramsT[j]).z();
+    }
+  }
+}
 
 
+//-------------------------------------------------------------------
+/*! 
+  \brief  Get signed distance from the point to the surface
+
+  \param[in]  query      the points to get the distances for
+  \param[out]            the distance to the point
+  \param      ms         The number of points to produce from the surface in the s direction
+  \param      mt         The number of points to produce from the surface in the t direction
 
 
+  \author Benjamin Morrell
+  \date 19 April 2018
+*/
+float Object3D::getDistanceFromPointToSurface(Eigen::Vector3f& query, int ms, int mt){
+  // TODO - input check if NURBS Is empty TDBM
+
+  // // Settings for points to get. TDBM set this smartly
+  // int ms = 25;
+  // int mt = 25;
+
+  // Get point cloud from NURBS
+  // Initialise point cloud
+  pcl::PointCloud<pcl::PointNormal>::Ptr cloud( new pcl::PointCloud<pcl::PointNormal>(mt,ms,pcl::PointNormal()));
+
+  // Fill point cloud from NURBS
+  getSurfacePointCloud(cloud, ms, mt);
+
+  // Create point cloud from input point
+  pcl::PointCloud<pcl::PointNormal>::Ptr query_cloud( new pcl::PointCloud<pcl::PointNormal>(1,1,pcl::PointNormal()));
+
+  query_cloud->at(0).x = query(0);
+  query_cloud->at(0).y = query(1);
+  query_cloud->at(0).z = query(2);
+
+  // Set up correspondences
+  pcl::registration::CorrespondenceEstimation<pcl::PointNormal, pcl::PointNormal> corrEst;
+  corrEst.setInputSource (query_cloud);// Gets a corresponding point for every point in the Source
+  corrEst.setInputTarget (cloud); // Target for the source to find corresponding points in
+  
+  pcl::CorrespondencesPtr all_correspondencesPtr (new pcl::Correspondences);
+  pcl::Correspondences& all_correspondences = *all_correspondencesPtr;
+  
+  cout << "Initialised correspondences" << endl;
+
+  // Determine all correspondences
+  corrEst.determineCorrespondences (*all_correspondencesPtr);
+
+  cout << "Correspondences determined " << endl;
+
+  cout << "Correspondence index query: " << all_correspondences[0].index_query << endl;
+  cout << "Correspondence match index: " << all_correspondences[0].index_match << endl;
+  cout << "Correspondence distance: " << all_correspondences[0].distance << endl;
+  cout << "Correspondence weight: " << all_correspondences[0].weight << endl;
+
+  // Determine the sign
+  // Get the point of the match and the normal at that point
+  Eigen::Vector3f matchPoint;
+  Eigen::Vector3f matchNormal;
+  matchPoint(0) = cloud->at(all_correspondences[0].index_match).x;
+  matchPoint(1) = cloud->at(all_correspondences[0].index_match).y;
+  matchPoint(2) = cloud->at(all_correspondences[0].index_match).z;
+  matchNormal(0) = -cloud->at(all_correspondences[0].index_match).normal_x;
+  matchNormal(1) = -cloud->at(all_correspondences[0].index_match).normal_y;
+  matchNormal(2) = -cloud->at(all_correspondences[0].index_match).normal_z;
+
+  cout << "Normal is: " << matchNormal << endl;
+
+  // Get the vector from the surface to the test point 
+  Eigen::Vector3f delta = query - matchPoint;
+
+  // Get the dot product - negative if the point is inside the surface (a dot b) = |a||b|cos(theta). |theta| > 90 deg means it is inside surface - results in a negative dot product
+  float dotProd = query.dot(matchNormal);
+  cout << "Dot product result is: " << dotProd << endl;
+
+  // TDBM buffer on signed check?
+  if (dotProd < 0){
+    // Point inside object
+    cout << "Signed distance is: " << all_correspondences[0].distance*-1.0 << endl;
+    return all_correspondences[0].distance*-1.0;
+  }else{
+    // Point Outside object
+    cout << "Signed distance is: " << all_correspondences[0].distance << endl;
+    return all_correspondences[0].distance;
+  }
+
+}
+
+
+//-------------------------------------------------------------------
+/*! 
+  \brief  Get signed distance from a set of the points to the surface
+
+  \param[in]  query      the points to get the distances for
+  \param[out] distances  the distances output 
+  \param      ms         The number of points to produce from the surface in the s direction
+  \param      mt         The number of points to produce from the surface in the t direction
+
+  \author Benjamin Morrell
+  \date 19 April 2018
+*/
+Eigen::Array<float,1,Eigen::Dynamic> Object3D::getBatchDistanceFromPointsToSurface(Eigen::Array<float,3,Eigen::Dynamic>& query, int ms, int mt){
+  // TODO - input check if NURBS Is empty TDBM
+
+  Eigen::Array<float,1,Eigen::Dynamic> distances(1,query.cols());
+
+  // if (query.cols() != distances.cols()){
+  //   cout << "Error: distances input needs to be same size as query" << endl;
+  //   return;
+  // }
+
+  // // Settings for points to get. TDBM set this smartly
+  // int ms = 25;
+  // int mt = 25;
+
+  // Get point cloud from NURBS
+  // Initialise point cloud
+  pcl::PointCloud<pcl::PointNormal>::Ptr cloud( new pcl::PointCloud<pcl::PointNormal>(mt,ms,pcl::PointNormal()));
+
+  // Fill point cloud from NURBS
+  getSurfacePointCloud(cloud, ms, mt);
+
+  // Create point cloud from input point
+  int nDataPoints = query.cols();
+  pcl::PointCloud<pcl::PointNormal>::Ptr query_cloud( new pcl::PointCloud<pcl::PointNormal>(1,nDataPoints,pcl::PointNormal()));
+
+  cout << "Query has " << nDataPoints << " data points." << endl;
+
+  for (int j = 0; j < nDataPoints; j++){
+    query_cloud->at(j).x = query(0,j);
+    query_cloud->at(j).y = query(1,j);
+    query_cloud->at(j).z = query(2,j);
+  }
+  
+  // Set up correspondences
+  pcl::registration::CorrespondenceEstimation<pcl::PointNormal, pcl::PointNormal> corrEst;
+  corrEst.setInputSource (query_cloud);// Gets a corresponding point for every point in the Source
+  corrEst.setInputTarget (cloud); // Target for the source to find corresponding points in
+  
+  pcl::CorrespondencesPtr all_correspondencesPtr (new pcl::Correspondences);
+  pcl::Correspondences& all_correspondences = *all_correspondencesPtr;
+  
+  // cout << "Initialised correspondences" << endl;
+
+  // Determine all correspondences
+  corrEst.determineCorrespondences (*all_correspondencesPtr);
+
+  // cout << "Correspondences determined " << endl;
+
+  // cout << "Correspondence 0 index query: " << all_correspondences[0].index_query << endl;
+  // cout << "Correspondence 0 match index: " << all_correspondences[0].index_match << endl;
+  // cout << "Correspondence 0 distance: " << all_correspondences[0].distance << endl;
+  // cout << "Correspondence 0 weight: " << all_correspondences[0].weight << endl;
+
+  //------------------------
+  // Determine the sign
+  // init
+  Eigen::Vector3f matchPoint;
+  Eigen::Vector3f matchNormal;
+  Eigen::Vector3f delta;
+  Eigen::Vector3f queryVec;
+  float dotProd;
+
+  // Loop for each data point
+  for (int j = 0; j < nDataPoints; j++){
+
+    // Form the query vector
+    queryVec(0) = query(0,all_correspondences[j].index_query);
+    queryVec(1) = query(1,all_correspondences[j].index_query);
+    queryVec(2) = query(2,all_correspondences[j].index_query);
+
+    // Get the point of the match and the normal at that point
+    matchPoint(0) = cloud->at(all_correspondences[j].index_match).x;
+    matchPoint(1) = cloud->at(all_correspondences[j].index_match).y;
+    matchPoint(2) = cloud->at(all_correspondences[j].index_match).z;
+    matchNormal(0) = -cloud->at(all_correspondences[j].index_match).normal_x;
+    matchNormal(1) = -cloud->at(all_correspondences[j].index_match).normal_y;
+    matchNormal(2) = -cloud->at(all_correspondences[j].index_match).normal_z;
+    // TODO TDBM - work out why the normal needs to be negated
+
+    // cout << "Normal is: " << matchNormal << endl;
+
+    // Get the vector from the surface to the test point 
+    delta = queryVec - matchPoint;
+
+    // Get the dot product - negative if the point is inside the surface (a dot b) = |a||b|cos(theta). |theta| > 90 deg means it is inside surface - results in a negative dot product
+    dotProd = queryVec.dot(matchNormal);
+    // cout << "Dot product result is: " << dotProd << endl;
+
+    // Set the sign of the distance based on the dot product sign// TDBM buffer on signed check?
+    if (dotProd < 0){
+      // Point inside object
+      distances(j) = all_correspondences[j].distance*-1.0;
+      // cout << "Signed distance is: " << distances(j) << endl;
+    }else{
+      // Point Outside object
+      distances(j) = all_correspondences[j].distance;
+      // cout << "Signed distance is: " << distances(j) << endl;
+    }
+  }
+
+  return distances;
+}

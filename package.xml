@@ -24,6 +24,7 @@
   <build_depend>sensor_msgs</build_depend>
   <build_depend>libpcl-all-dev</build_depend>
   <build_depend>nurbs++-3.0.12</build_depend>
+  <build_depend>cans_msgs</build_depend>
   <!-- <build_depend>libmagick</build_depend> -->
 
   <build_export_depend>pcl_conversions</build_export_depend>
@@ -32,6 +33,7 @@
   <build_export_depend>tf_conversions</build_export_depend>
   <build_export_depend>sensor_msgs</build_export_depend>
   <build_export_depend>nurbs++-3.0.12</build_export_depend>
+  <build_export_depend>cans_msgs</build_export_depend>
   <!-- <build_export_depend>libmagick</build_export_depend> -->
 
   <exec_depend>pcl_conversions</exec_depend>
@@ -41,6 +43,7 @@
   <exec_depend>sensor_msgs</exec_depend>
   <exec_depend>libpcl-all</exec_depend>
   <exec_depend>nurbs++-3.0.12</exec_depend>
+  <exec_depend>cans_msgs</exec_depend>
   <!-- name here is taken from the nurbs++-3.0.12.pc file in /usr/local/lib/pkgconfig/ -->
   <!-- <exec_depend>libmagick</exec_depend> -->
   

@@ -14,6 +14,7 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
   sensor_msgs
   tf_conversions
+  cans_msgs
 )
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}")
@@ -21,6 +22,11 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}")
 # find_package(ImageMagick COMPONENTS Magick++ REQUIRED)
 
 find_package(NURBS++ REQUIRED)
+
+if (EXISTS "${CMAKE_CURRENT_LIST_DIR}/../tools/pybind11/CMakeLists.txt")
+  set(HAVE_PYBIND11 TRUE)
+  message(STATUS "Found pybind11; generating Python bindings")
+endif()
 
 # find_package(GTest REQUIRED)
 
@@ -113,6 +119,8 @@ add_executable(cans_ros examples/rosInterfaceNURBSTest.cpp src/mapping3D.cpp src
 add_executable(unreal_cans examples/rosUnrealInterface.cpp src/mapping3D.cpp src/object3D.cpp src/splitSurface.cpp)
 add_executable(unreal_cans_timer examples/rosUnrealTimer.cpp src/mapping3D.cpp src/object3D.cpp src/splitSurface.cpp)
 
+add_executable(obstacles_test examples/obstacleRepresentation.cpp src/mapping3D.cpp src/object3D.cpp src/splitSurface.cpp)
+
 
 # add_definitions( -DMAGICKCORE_QUANTUM_DEPTH=16 )
 # add_definitions( -DMAGICKCORE_HDRI_ENABLE=0 )
@@ -139,6 +147,8 @@ target_link_libraries(tf_publish ${catkin_LIBRARIES} ${NURBS3_LIBRARIES})
 target_link_libraries(cans_ros ${catkin_LIBRARIES} ${NURBS3_LIBRARIES}) 
 target_link_libraries(unreal_cans ${catkin_LIBRARIES} ${NURBS3_LIBRARIES}) 
 target_link_libraries(unreal_cans_timer ${catkin_LIBRARIES} ${NURBS3_LIBRARIES}) 
+
+target_link_libraries(obstacles_test ${catkin_LIBRARIES} ${NURBS3_LIBRARIES}) 
 
 #############
 ## Install ##
@@ -175,6 +185,26 @@ target_link_libraries(unreal_cans_timer ${catkin_LIBRARIES} ${NURBS3_LIBRARIES})
 #   # myfile2
 #   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
 # )
+
+###################
+# PYTHON BINDINGS #
+###################
+if(HAVE_PYBIND11)
+  catkin_python_setup()
+
+  add_subdirectory(../tools/pybind11 pybind11)
+  message("Building Python bindings for cans")
+  pybind11_add_module(canspy
+    src/object3D.cpp
+    src/pybind11/object3D_bind.cpp
+    src/pybind11/bind.cpp)
+  set_target_properties(canspy PROPERTIES LINKER_LANGUAGE CXX)
+  target_link_libraries(canspy PUBLIC ${catkin_LIBRARIES} ${NURBS3_LIBRARIES})
+
+  set_target_properties(canspy
+    PROPERTIES LIBRARY_OUTPUT_DIRECTORY
+  ${CATKIN_DEVEL_PREFIX}/${CATKIN_PACKAGE_PYTHON_DESTINATION}/../)
+endif()
 
 #############
 ## Testing ##

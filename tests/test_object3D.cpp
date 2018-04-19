@@ -68,6 +68,62 @@ TEST_F (object3DTest, DataConstructor){
     EXPECT_EQ(obj.pointAt(0.3,0.7),surf.pointAt(0.3,0.7));
 }
 
+TEST_F (object3DTest, KnotsConstructor){
+    Object3D obj(scan2,3,3,7,7);
+
+    Vector_FLOAT knotU = obj.knotU();
+    Vector_FLOAT knotV = obj.knotV();
+    Matrix_HPoint3Df controlP = obj.ctrlPnts();
+
+    // Use knot and control points constructor
+    Object3D obj2(obj.degreeU(),obj.degreeV(),knotU,knotV,controlP);
+
+    // Test a few points to make sure the surface fitting is the same
+    EXPECT_EQ(obj2.pointAt(0.1,0.1),obj.pointAt(0.1,0.1));
+    EXPECT_EQ(obj2.pointAt(0.1,0.5),obj.pointAt(0.1,0.5));
+    EXPECT_EQ(obj2.pointAt(0.3,0.7),obj.pointAt(0.3,0.7));
+}
+
+TEST_F (object3DTest, KnotsConstructorEigen){
+    Object3D obj(scan2,3,3,7,7);
+
+    int sizeKnots = obj.knotU().size();
+
+    // Form Eigen structures
+    Eigen::Array<float,1,Eigen::Dynamic> Uvec(1, sizeKnots);
+    Eigen::Array<float,1,Eigen::Dynamic> Vvec(1, sizeKnots);
+    Eigen::Array<float,3,Eigen::Dynamic> controlP(3,obj.ctrlPnts().rows()*obj.ctrlPnts().cols());
+
+    // Fill Eigen arrays with values. 
+    for (int i = 0; i < sizeKnots; i++){
+        Uvec[i] = obj.knotU()[i];
+        Vvec[i] = obj.knotV()[i];
+    }
+
+    int index = 0;
+    for (int i = 0; i < obj.ctrlPnts().rows(); i++){
+        for (int j = 0; j < obj.ctrlPnts().cols(); j++){
+            controlP(0,index) = obj.ctrlPnts()(i,j).x();
+            controlP(1,index) = obj.ctrlPnts()(i,j).y();
+            controlP(2,index) = obj.ctrlPnts()(i,j).z();
+            index++;
+        }
+    }
+
+    // cout << "Control points are: " << controlP << endl;
+
+    // cout << "Control points shoulld be:\n" << obj.ctrlPnts() << endl;
+
+
+    // Use knot and control points constructor
+    Object3D obj2(obj.degreeU(),obj.degreeV(), Uvec, Vvec, controlP, obj.ctrlPnts().rows(),obj.ctrlPnts().cols());
+
+    // Test a few points to make sure the surface fitting is the same
+    EXPECT_EQ(obj2.pointAt(0.1,0.1),obj.pointAt(0.1,0.1));
+    EXPECT_EQ(obj2.pointAt(0.1,0.5),obj.pointAt(0.1,0.5));
+    EXPECT_EQ(obj2.pointAt(0.3,0.7),obj.pointAt(0.3,0.7));
+}
+
 TEST_F (object3DTest, readAndWrite){
 
     // Create the object
