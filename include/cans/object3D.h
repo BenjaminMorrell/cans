@@ -50,7 +50,7 @@ class Object3D : public NurbsSurfacef {
   public:
 
     void updateObject3D(int pU, int pV, Eigen::Array<float,1,Eigen::Dynamic>& Uvec, Eigen::Array<float,1,Eigen::Dynamic>& Vvec, Eigen::Array<float,3,Eigen::Dynamic>& ctrlPnts, int nCtrlS, int nCtrlT);
-
+    void updateObject3DCPP(int pU, int pV, std::vector<float>& Uvec, std::vector<float>& Vvec, std::vector<float>& ctrlPntsX, std::vector<float>& ctrlPntsY, std::vector<float>& ctrlPntsZ, int nCtrlS, int nCtrlT);
 
     void computeCentreFromData(const Matrix_Point3Df& scan, int step_size = 1);
     void computeCentreFromControlPoints();
@@ -65,7 +65,7 @@ class Object3D : public NurbsSurfacef {
     void getSurfacePointCloud( pcl::PointCloud<pcl::PointNormal>::Ptr cloud,int ms = 45, int mt = 45);
 
     float getDistanceFromPointToSurface(Eigen::Vector3f& query, int ms = 20, int mt = 20);
-    Eigen::Array<float,1,Eigen::Dynamic> getBatchDistanceFromPointsToSurface(Eigen::Array<float,3,Eigen::Dynamic>& query, int ms = 20, int mt = 20);
+    Eigen::Array<float,4,Eigen::Dynamic> getBatchDistanceFromPointsToSurface(Eigen::Array<float,3,Eigen::Dynamic>& query, int ms = 20, int mt = 20);
 
 
 

@@ -27,19 +27,22 @@ def readObject3DMessage(msg):
   # Create NURBS Object3D
 
   nKnots = np.size(knotU)
-  deg = msg.degU
-  nCtrl = msg.nCtrlS
+  degU = msg.degU
+  degV = msg.degV
+  nCtrlS = msg.nCtrlS
+  nCtrlT = msg.nCtrlT
   
   # init
-  obj2.updateObject3D(deg,deg,knotU,knotV,controlPoints,nCtrl,nCtrl)
+  obj2.updateObject3D(degU,degV,knotU,knotV,controlPoints,nCtrlS,nCtrlT)
 
   # ------------------------------------------------
   # Get distance to point
-  point = np.ones([3,1])
-  point[0] = 3.5
-  point[1] = 3.5
-  point[2] = 1.0
-
+  point = np.ones([3,1],dtype="float")
+  point[0] = 0.5
+  point[1] = 0.5
+  point[2] = 0.0
+  
+  import pdb; pdb.set_trace()
   dist = obj2.getDistanceFromPointToSurface(point, 25, 25)
 
   print("Distance to point {} is {}".format(point,dist))
@@ -57,11 +60,13 @@ def readObject3DMessage(msg):
 
 
   # query the distance 
-  distances = np.zeros([1,nPoints])
+  distAndGrad = np.zeros([4,nPoints])
+  import pdb; pdb.set_trace()
+  distAndGrad=obj2.getBatchDistanceFromPointsToSurface(points,25,25)
 
-  distances=obj2.getBatchDistanceFromPointsToSurface(points,25,25)
+  print("Distances are: {}".format(distAndGrad[0,:]))
 
-  print("Distances are: {}".format(distances))
+  print("Gradients are: {}".format(distAndGrad[1:,:]))
 
 if __name__ == '__main__':
 
@@ -69,7 +74,7 @@ if __name__ == '__main__':
   rospy.init_node('object3DListener',anonymous=True)
 
   # Create Subscriber
-  rospy.Subscriber("/object",Object3D,readObject3DMessage)
+  rospy.Subscriber("/object",Object3D,readObject3DMessage,queue_size=1)
 
   rospy.spin()
 
