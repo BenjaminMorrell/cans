@@ -7,6 +7,7 @@ import pickle
 import cans
 from cans_msgs.msg import Object3D
 import numpy as np
+import scipy.io
 
 from geometry_msgs.msg import PoseStamped
 
@@ -62,6 +63,8 @@ class Planner:
     # Set time to complete the trajectory
     self.computeTrajTime()
     self.planner.seed_times = np.array([self.tmax])
+
+    # self.planner.inflate_buffer = 0.0
     
     self.global_dict['disc_out_waypoints'] = waypoints
 
@@ -104,7 +107,13 @@ class Planner:
     self.planner.qr_polytraj.remove_nurbs_constraint()
 
     # Add NURBS constraint 
-    self.planner.load_nurbs_obstacle(self.nurbs)
+    # Custom weight
+    # self.planner.load_nurbs_obstacle(self.nurbs)
+    
+    # Fixed weight
+    self.planner.load_nurbs_obstacle(self.nurbs,custom_weighting=False)
+    self.planner.nurbs_weight = 1e-12
+    self.planner.on_nurbs_weight_update_button_clicked()
     # TODO(BM) find a more efficient way to update the NURBS for planning 
 
   def resetGoalinClass(self):
@@ -130,6 +139,10 @@ class Planner:
       qrp_out.remove_esdf_constraint()
 
       pickle.dump(qrp_out, f, 2 )
+
+    scipy.io.savemat('traj_opt.mat', qrp_out.state_combined)
+
+
 
   def readNURBSMessage(self,msg):
     

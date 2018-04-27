@@ -70,7 +70,6 @@ public:
     void updateObject(int objID, pcl::PointCloud<pcl::PointNormal>::Ptr obsObjPC);
     void knotInsertionPreMerge(Object3D& obj, std::string extendDirection);
 
-
     // Data association
     std::vector<float> computeSearchMetrics(Object3D& obj);
     std::vector<float> computeSearchMetrics(pcl::PointCloud<pcl::PointNormal>::Ptr cloud);
@@ -80,6 +79,7 @@ public:
     Matrix_Point3Df nurbsDataFromPointCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud);
     Matrix_Point3Df nurbsDataFromPointCloud(pcl::PointCloud<pcl::PointNormal>::Ptr cloud);
     Matrix_Point3Df nurbsDataFromPointCloud(pcl::PointCloud<pcl::PointNormal>::Ptr cloud, Eigen::Array<int, 2, 2>& dataIndices);
+    Matrix_Point3Df nurbsDataFromPointCloud(pcl::PointCloud<pcl::PointNormal>::Ptr cloud, Eigen::Array<int, Eigen::Dynamic, 2>& newRowIndices, Eigen::Array<int, Eigen::Dynamic, 2>& newColIndices);
     void pointCloudFromNurbsData(Matrix_Point3Df& data, pcl::PointCloud<pcl::PointNormal>::Ptr cloud);
     void pointCloudFromObject3D(int objID, int ms, int mt, pcl::PointCloud<pcl::PointNormal>::Ptr cloud);
     Vector_HPoint3Df getMatRow(Matrix_HPoint3Df, int);

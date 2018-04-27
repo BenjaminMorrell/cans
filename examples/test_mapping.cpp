@@ -385,12 +385,12 @@ void testHighLevelFunctions(int argc, char ** argv){
   
 }
 
-Eigen::Array<float,6,10> readPathTextFile(char * filename){
+Eigen::Array<float,6,Eigen::Dynamic> readPathTextFile(const char * filename, int nData){
 
   std::ifstream file;
   std::string line;
 
-  Eigen::Array<float,6,10> state(6,10);
+  Eigen::Array<float,6,Eigen::Dynamic> state(6,nData);
 
   float f1, f2, f3, f4, f5, f6, f7;
   char* s1[10], s2[7], s3[6], s4[2], s5[2], s6[2], s7[3], s8[3], s9[3];
@@ -399,7 +399,7 @@ Eigen::Array<float,6,10> readPathTextFile(char * filename){
 
   pFile = fopen (filename, "r");
 
-  for (int i = 0; i < 10; i++){
+  for (int i = 0; i < nData; i++){
     fscanf(pFile, "%s%f%s%s%s%f%s%f%s%f%s%f%s%f%s%f", &s1, &f1, &s2, &s3, &s4, &f2, &s5, &f3, &s6, &f4, &s7, &f5, &s8, &f6, &s9, &f7);
 
     // cout << f1 << ", " << f2 << ", " << f3 << ", " << f4 << ", " << f5 << endl;
@@ -426,7 +426,7 @@ Eigen::Array<float,6,10> readPathTextFile(char * filename){
 
   fclose(pFile);
 
-  cout << state << endl;
+  // cout << state << endl;
 
   return state;
 
@@ -447,7 +447,7 @@ void testBlenderSequence(int argc, char ** argv){
   cout << "In blender sequence test " << endl;
 
   // Load state
-  Eigen::Array<float,6,10> state = readPathTextFile("/home/bjm/Dropbox/PhD_Code/Data/3D_Scans/Blensor/Scan01/BlobScan_Path.txt");
+  Eigen::Array<float,6,10> state = readPathTextFile("/home/bjm/Dropbox/PhD_Code/Data/3D_Scans/Blensor/Scan01/BlobScan_Path.txt",10);
   cout << "State is:\n" << state << endl;
 
   // Init Mapping class
@@ -542,6 +542,194 @@ void testBlenderSequence(int argc, char ** argv){
   }
 }
 
+void testBlenderSequence2(int argc, char ** argv){
+  
+
+  int numberOfScans;
+  int dataSet;
+  int scanSteps;
+  int nData;
+
+  if (argc < 3){
+    cout << "Error: need to use at least 2 arugments: int dataset, int numberOfScans, float filename (optional)" << endl;
+    return;
+  }else{
+    dataSet = atoi(argv[1]);
+    numberOfScans = atoi(argv[2]);
+  }
+  
+  // Initialise
+  std::string filename;
+  std::string outFilename;
+  std::string filestem;
+  std::string outFilestem;
+  std::string pathFilename;
+  int res;
+  Eigen::Affine3f transform = Eigen::Affine3f::Identity();
+  cout << "In blender sequence test " << endl;
+
+  switch (dataSet){
+    case 0: 
+      // BLOB
+      cout << "Running Blob Dataset";
+      filestem = "/home/bjm/Dropbox/PhD_Code/Data/3D_Scans/Blensor/Scan01/BlobScan_Data000";
+      outFilestem = "/home/bjm/Dropbox/PhD_Code/Results/blob/blob_scan_res_new_";
+      pathFilename = "/home/bjm/Dropbox/PhD_Code/Data/3D_Scans/Blensor/Scan01/BlobScan_Path.txt";
+      scanSteps = 1;
+      numberOfScans = numberOfScans*scanSteps;
+      nData = 10;
+      break;
+    case 1:
+      // NEW BLOB
+      cout << "Running New Blob Dataset";
+      filestem = "/home/bjm/Dropbox/PhD_Code/Data/3D_Scans/Blensor/newBlob/newblobScans000";
+      outFilestem = "/home/bjm/Dropbox/PhD_Code/Results/newBlob/newblob_";
+      pathFilename = "/home/bjm/Dropbox/PhD_Code/Data/3D_Scans/Blensor/newBlob/newblobTrack.txt";
+      scanSteps = 5;
+      numberOfScans = numberOfScans*scanSteps;
+      nData = 100;
+      break;
+    case 2:
+      // Cube
+      cout << "Running Cube Dataset";
+      // filestem = "/home/bjm/Dropbox/PhD_Code/Data/3D_Scans/Blensor/Scan02/BlockScan_data000";
+      // outFilestem = "/home/bjm/Dropbox/PhD_Code/Results/Cube/cube_scan_res_";
+      // pathFilename = "/home/bjm/Dropbox/PhD_Code/Data/3D_Scans/Blensor/Scan02/BlockScan_path.txt";
+      filestem = "/home/bjm/Dropbox/PhD_Code/Data/3D_Scans/Blensor/One_Object/CUBE/oneObj_scan_data000";
+      outFilestem = "/home/bjm/Dropbox/PhD_Code/Results/Cube/cube_one_obj_scan_res_";
+      pathFilename = "/home/bjm/Dropbox/PhD_Code/Data/3D_Scans/Blensor/One_Object/CUBE/oneObj_scan_path.txt";
+      // Also CUBE_DIAG, CUBE_VERT, 
+      scanSteps = 1;
+      numberOfScans = numberOfScans*scanSteps;
+      nData = 10;
+      break;
+    case 3:
+      // Cube
+      cout << "\n\t\tRunning Cube VERT Dataset\n\n";
+      filestem = "/home/bjm/Dropbox/PhD_Code/Data/3D_Scans/Blensor/One_Object/CUBE_VERT/oneObj_scan_data000";
+      outFilestem = "/home/bjm/Dropbox/PhD_Code/Results/Cube/cube_vert_one_obj_scan_res_";
+      pathFilename = "/home/bjm/Dropbox/PhD_Code/Data/3D_Scans/Blensor/One_Object/CUBE_VERT/oneObj_scan_path.txt";
+      // Also CUBE_DIAG, CUBE_VERT, 
+      scanSteps = 1;
+      numberOfScans = numberOfScans*scanSteps;
+      nData = 10;
+      break;
+    case 4:
+      // Sphere
+      cout << "Running Sphere Dataset";
+      filestem = "/home/bjm/Dropbox/PhD_Code/Data/3D_Scans/Blensor/One_Object/SPHERE/oneObj_scan_data000";
+      outFilestem = "/home/bjm/Dropbox/PhD_Code/Results/Sphere/sphere_scan_res_";
+      pathFilename = "/home/bjm/Dropbox/PhD_Code/Data/3D_Scans/Blensor/One_Object/SPHERE/oneObj_scan_path.txt";
+      // ALso SPHERE_DIAG
+      scanSteps = 1;
+      numberOfScans = numberOfScans*scanSteps;
+      nData = 10;
+      break;
+    case 5:
+      // Sphere
+      cout << "Running Sphere Dataset";
+      filestem = "/home/bjm/Dropbox/PhD_Code/Data/3D_Scans/Blensor/One_Object/SPHERE_DIAG/oneObj_scan_data000";
+      outFilestem = "/home/bjm/Dropbox/PhD_Code/Results/Sphere/sphere_diag_scan_res_";
+      pathFilename = "/home/bjm/Dropbox/PhD_Code/Data/3D_Scans/Blensor/One_Object/SPHERE_DIAG/oneObj_scan_path.txt";
+      // ALso SPHERE_DIAG
+      scanSteps = 1;
+      numberOfScans = numberOfScans*scanSteps;
+      nData = 10;
+      break;
+  }
+  
+  // Eigen::Matrix3f rotMat;
+
+  
+  // Load state
+  Eigen::Array<float,6,Eigen::Dynamic> state = readPathTextFile(pathFilename.c_str(),nData);
+  cout << "State is:\n" << state << endl;
+
+  // Init Mapping class
+  Mapping3D mp;
+  mp.numRowsDesired = 95;
+  mp.numColsDesired = 95;
+  mp.maxNanAllowed = 10;
+  mp.removeNanBuffer = 3;
+  mp.nCtrlDefault[0] = 30;
+  mp.nCtrlDefault[1] = 30;
+
+  mp.newRowColBuffer = 20; // How many non new points in a row or column are permissible
+
+  pcl::PCDReader reader;
+
+  pcl::PCLPointCloud2::Ptr cloud_blob (new pcl::PCLPointCloud2);
+  pcl::PointCloud<pcl::PointNormal>::Ptr cloud (new pcl::PointCloud<pcl::PointNormal>); 
+
+  for (int i = 0; i < numberOfScans; i += scanSteps){
+    cout << "Processing Scan " << i << endl;
+    cout << "State x is: " << state(0,i) << endl;
+
+    // Get filename:
+    if (i < 9){
+      filename = filestem + "0" + static_cast<ostringstream*>( &(ostringstream() << (i+1)) )->str() + ".pcd";
+      cout << "filename is : " << filename;
+    }else{ // Scan numbers 10 and above. Goes up to 99
+      filename = filestem + static_cast<ostringstream*>( &(ostringstream() << (i+1)) )->str() + ".pcd";
+      cout << "filename is : " << filename;
+    }
+
+    // Read Scan
+    reader.read (filename, *cloud_blob);
+    cout << "scan read" << endl;
+
+    // Convert to PCL cloud
+    pcl::fromPCLPointCloud2 (*cloud_blob, *cloud); 
+
+    // cout << "Cloud blob transform is: " << cloud_blob->sensor_origin_ << "\n" << cloud_blob->sensor_orientation_ << endl;
+
+    // Fill transform
+    transform = Eigen::Affine3f::Identity();
+
+    // Translation
+    transform(0,3) = state(0,i);
+    transform(1,3) = state(1,i);
+    transform(2,3) = state(2,i);
+    
+    cout << "transform is " << transform.matrix() << endl;
+
+    // 3, 2, 1 Euler transformation
+    transform.rotate (Eigen::AngleAxisf(state(5,i),Eigen::Vector3f::UnitZ()));
+    transform.rotate (Eigen::AngleAxisf(state(4,i),Eigen::Vector3f::UnitY()));
+    transform.rotate (Eigen::AngleAxisf(state(3,i),Eigen::Vector3f::UnitX()));
+
+    cout << "transform is " << transform.matrix() << endl;
+
+    // Process Scan
+    res = mp.processScan(cloud,transform);
+
+    // Save Scan
+    outFilename = outFilestem + static_cast<ostringstream*>( &(ostringstream() << (i+1)) )->str() + ".wrl";
+    mp.objectMap[0].writeVRML(outFilename.c_str(),Color(255,100,255),50,80);  
+
+    
+  }
+
+  cout << "\nSize of Object map is: " << mp.objectMap.size() << endl;
+  
+  // Write result to pcd
+  mp.writeObjectPCDFile((outFilestem + "end_result.pcd").c_str(), 0, 125, 125);
+
+  // Write object 3D to file if argument given
+  if (argc > 3){
+    mp.objectMap[0].write(argv[3]);    
+    cout << "Starting centre is: " << mp.objectMap[0].getCentre() << ", and centre: " << mp.objectMap[0].getObjSize() << endl;
+
+    Object3D obj;
+    obj.readObject3D(argv[3]);
+    // obj.read("testSaveObject");
+    // obj.computeSizeFromControlPoints();
+    // obj.computeCentreFromControlPoints(); // TODO - color
+
+    obj.writeVRML("savedObject.wrl",Color(255,100,255),50,80); 
+    cout << "Loaded object has centre: " << obj.getCentre() << ", color: " << obj.getColor() << ", size: " << obj.getObjSize() << endl;
+  }
+}
 
 int
 main (int argc, char** argv)
@@ -559,7 +747,8 @@ main (int argc, char** argv)
 
   // testHighLevelFunctions(argc, argv);
 
-  testBlenderSequence(argc, argv);
+  // testBlenderSequence(argc, argv);
+  testBlenderSequence2(argc, argv);
 
   // readPathTextFile("/home/bjm/Dropbox/PhD_Code/Data/3D_Scans/Blensor/Scan01/BlobScan_Path.txt");
 

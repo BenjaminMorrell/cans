@@ -1894,6 +1894,85 @@ Matrix_Point3Df Mapping3D::nurbsDataFromPointCloud(pcl::PointCloud<pcl::PointNor
 
 //-------------------------------------------------------------------
 /*! 
+  \brief  Converts from point cloud to NURBS Matrix taking only the data indicated by newRowIndices and newnewColIndices
+  
+  \param cloud  the point cloud
+  \param newRowIndices indices for the rows to take out of the cloud, for each row or col: [start, end]
+  \param newColIndices indices for the columns to take out of the cloud, for each row or col: [start, end]
+
+  \author Benjamin Morrell
+  \date 3 April 2018
+*/
+Matrix_Point3Df Mapping3D::nurbsDataFromPointCloud(pcl::PointCloud<pcl::PointNormal>::Ptr cloud, Eigen::Array<int, Eigen::Dynamic, 2>& newRowIndices, Eigen::Array<int, Eigen::Dynamic, 2>& newColIndices){
+
+  int nRowOrCol = newRowIndices.rows();
+  int nPoints;
+  int ms;
+  int mt;
+  bool expandRowsNotCols;
+
+  // Find required size of mesh - smallest size
+  if (newRowIndices(0,0) == newRowIndices(0,1)){
+    // Constant row - expanding rows
+    expandRowsNotCols = true;
+    nPoints = (newColIndices.col(1) - newColIndices.col(0)).minCoeff()+1;// Minimum difference between start and end
+
+    ms = nRowOrCol;
+    mt = nPoints;
+
+    
+  }else if (newColIndices(0,0) == newColIndices(0,1)) {
+    // Constant col - expanding cols
+    expandRowsNotCols = false;
+    nPoints = (newRowIndices.col(1) - newRowIndices.col(0)).minCoeff()+1;// Minimum difference between start and end
+
+    ms = nPoints;
+    mt = nRowOrCol;
+
+  }else{
+    cout << "Error in indices, need row or column to be fixed" << endl;
+    Matrix_Point3Df mesh(1,1);
+    return mesh;
+  }
+
+  cout << "Number of rows/cols: " << nRowOrCol << endl;
+  cout << "Expanding row is " << expandRowsNotCols << endl;
+  cout << "Number of points along row/col is " << nPoints << endl;
+
+ 
+  // Initialise mesh in format for NURBS
+  Matrix_Point3Df mesh(ms,mt);
+
+  int ii;
+  int jj;
+
+  float stepS;
+  float stepT;
+
+  // Loop through each row or col
+  for (int i = 0; i < nRowOrCol; i++){
+    // Step will be zero for S if going along a row, and zero for T if going along a column
+    // Step is the number of points from start to end divided by the number of points desired
+    stepS = (float)(newRowIndices(i,1) - newRowIndices(i,0))/(float)(nPoints-1); // Should floor the division, so it won't exceed the limit
+    stepT = (float)(newColIndices(i,1) - newColIndices(i,0))/(float)(nPoints-1); // Should floor the division, so it won't exceed the limit
+    // cout << "For i = " << i << ", stepS: " << stepS << ", stepT: " << stepT << endl;
+    for (int j = 0; j < nPoints; j++ ){
+      // Compute indices to get data from cloud
+      ii = newRowIndices(i,0) + (int)(i*stepS);
+      jj = newColIndices(i,0) + (int)(j*stepT);
+      // cout << "(ii,jj) = (" << ii << ", " << jj << ")\n";
+      // Copy data
+      mesh(i,j).x() = cloud->at(jj,ii).x; // at(col,row)
+      mesh(i,j).y() = cloud->at(jj,ii).y; // at(col,row)
+      mesh(i,j).z() = cloud->at(jj,ii).z; // at(col,row)
+    }
+  }
+
+  return mesh;
+}
+
+//-------------------------------------------------------------------
+/*! 
   \brief  Converts from NURBS Matrix to pcl Point Cloud
   
   \author Benjamin Morrell

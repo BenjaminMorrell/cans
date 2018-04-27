@@ -1,6 +1,7 @@
 
 #include "cans/splitSurface.h"
 #include "gtest/gtest.h"
+#include <pcl/io/pcd_io.h>
 
 
 namespace {
@@ -404,6 +405,7 @@ TEST_F (splitSurfaceTest, upTests){
   }
 }
 
+// Overlap tests
 TEST_F (splitSurfaceTest, olTest){
 
   std::string expectExtDir = "NN";
@@ -448,6 +450,7 @@ TEST_F (splitSurfaceTest, mostlyOlTest){
   }    
 }
 
+// Rotate tests
 TEST_F (splitSurfaceTest, rotate90Test){
     
   // initialise
@@ -600,6 +603,233 @@ TEST_F (splitSurfaceTest, rotate180Test){
                                 7, 9;         
         EXPECT_TRUE((expectNewIndices == ss.newDataIndices).all());
         break;
+    }
+  }
+}
+
+// non-Rectangular extraction test
+TEST_F (splitSurfaceTest, testGetNewDataIndicesLeft){
+
+  for (int j = 0; j < 3; j++){
+    // Split surface right
+    ss.splitNewSurfaceObservation(data,data_l[j]);
+
+    // Get new data indices 
+    ss.getNewDataIndices();
+
+    // Print
+    cout << "New Row indices are:\n" << ss.newRowIndices << endl;
+    cout << "New Col indices are:\n" << ss.newColIndices << endl;
+
+    for (int i = 0; i < data->height; i ++){
+      // Row indices should be equal
+      EXPECT_EQ(ss.newRowIndices(i,0),ss.newRowIndices(i,1));
+      // Col indices
+      EXPECT_EQ(0, ss.newColIndices(i,0));
+      EXPECT_EQ(4, ss.newColIndices(i,1));
+    }
+  }
+}
+
+TEST_F (splitSurfaceTest, testGetNewDataIndicesRight){
+
+  for (int j = 0; j < 3; j++){
+    // Split surface right
+    ss.splitNewSurfaceObservation(data,data_r[j]);
+
+    // Get new data indices 
+    ss.getNewDataIndices();
+
+    // Print
+    cout << "New Row indices are:\n" << ss.newRowIndices << endl;
+    cout << "New Col indices are:\n" << ss.newColIndices << endl;
+
+    for (int i = 0; i < data->height; i ++){
+      // Row indices should be equal
+      EXPECT_EQ(ss.newRowIndices(i,0),ss.newRowIndices(i,1));
+      // Col indices
+      EXPECT_EQ(5, ss.newColIndices(i,0));
+      EXPECT_EQ(9, ss.newColIndices(i,1));
+    }
+  }
+}
+
+TEST_F (splitSurfaceTest, testGetNewDataIndicesDown){
+
+  for (int j = 0; j < 3; j++){
+    // Split surface right
+    ss.splitNewSurfaceObservation(data,data_d[j]);
+
+    // Get new data indices 
+    ss.getNewDataIndices();
+
+    // Print
+    cout << "New Row indices are:\n" << ss.newRowIndices << endl;
+    cout << "New Col indices are:\n" << ss.newColIndices << endl;
+
+    for (int i = 0; i < data->width; i ++){
+      // Col indices should be equal
+      EXPECT_EQ(ss.newColIndices(i,0),ss.newColIndices(i,1));
+      // Row indices
+      EXPECT_EQ(0, ss.newRowIndices(i,0));
+      EXPECT_EQ(4, ss.newRowIndices(i,1));
+    }
+  }
+}
+
+TEST_F (splitSurfaceTest, testGetNewDataIndicesUp){
+
+  for (int j = 0; j < 3; j++){
+    // Split surface right
+    ss.splitNewSurfaceObservation(data,data_u[j]);
+
+    // Get new data indices 
+    ss.getNewDataIndices();
+
+    // Print
+    cout << "New Row indices are:\n" << ss.newRowIndices << endl;
+    cout << "New Col indices are:\n" << ss.newColIndices << endl;
+
+    for (int i = 0; i < data->width; i ++){
+      // Col indices should be equal
+      EXPECT_EQ(ss.newColIndices(i,0),ss.newColIndices(i,1));
+      // Row indices
+      EXPECT_EQ(5, ss.newRowIndices(i,0));
+      EXPECT_EQ(9, ss.newRowIndices(i,1));
+    }
+  }
+}
+
+class testCExtendCase : public ::testing::Test {
+ protected:
+  testCExtendCase() : data(new pcl::PointCloud<pcl::PointNormal>(10,10)), dataC(new pcl::PointCloud<pcl::PointNormal>(10,10))
+  {
+    
+    int n_points = 10;
+    float offset;
+    // *data = pcl::PointCloud<pcl::PointNormal>(10,10);
+    
+    // Create data
+    for (int i = 0; i<n_points; i++){
+        if (i < 5){
+          offset = i*0.075;
+        }else{
+          offset = (n_points - i - 1)*0.075;
+        }
+        cout << "Offset is: " << offset << endl;
+        
+        for (int j = 0; j<n_points; j++){
+            data->at(j,i).x = (float)j/(n_points-1);
+            data->at(j,i).y = (float)i/(n_points-1);
+            data->at(j,i).z = 0.0f;
+
+            dataC->at(j,i).x = (float)j/(n_points-1) - offset;
+            dataC->at(j,i).y = (float)i/(n_points-1);
+            dataC->at(j,i).z = 0.0f;
+
+        } 
+    }
+
+    cout << "Data is: " << data << endl;
+
+    // Create transformation matrix
+    Eigen::Affine3f transform = Eigen::Affine3f::Identity();
+
+    
+    // Transform data to get test data sets   
+    // Left 
+    transform.translation() << -0.7, 0.2, 0.0;
+    data_l.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr(new pcl::PointCloud<pcl::PointNormal>(10,10)));
+    pcl::transformPointCloud(*data, *data_l[0], transform);
+    transform.translation() << -0.7, -0.2, 0.0;
+    data_l.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr(new pcl::PointCloud<pcl::PointNormal>(10,10)));
+    pcl::transformPointCloud(*data, *data_l[1], transform);
+    transform.translation() << -0.7, 0.0, 0.0;
+    data_l.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr(new pcl::PointCloud<pcl::PointNormal>(10,10)));
+    pcl::transformPointCloud(*data, *data_l[2], transform);  
+    
+    // Right
+    transform.translation() << 0.4, 0.2, 0.0;
+    data_r.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr(new pcl::PointCloud<pcl::PointNormal>(10,10)));
+    pcl::transformPointCloud(*data, *data_r[0], transform);
+    transform.translation() << 0.4, -0.2, 0.0;
+    data_r.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr(new pcl::PointCloud<pcl::PointNormal>(10,10)));
+    pcl::transformPointCloud(*data, *data_r[1], transform);
+    transform.translation() << 0.4, 0.0, 0.0;
+    data_r.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr(new pcl::PointCloud<pcl::PointNormal>(10,10)));
+    pcl::transformPointCloud(*data, *data_r[2], transform);
+
+    
+    
+  }
+
+  pcl::PointCloud<pcl::PointNormal>::Ptr data;
+  pcl::PointCloud<pcl::PointNormal>::Ptr dataC;
+  
+  // Vectors of point clouds 
+  std::vector<pcl::PointCloud<pcl::PointNormal>::Ptr, Eigen::aligned_allocator <pcl::PointCloud <pcl::PointNormal>::Ptr > > data_l;
+  std::vector<pcl::PointCloud<pcl::PointNormal>::Ptr, Eigen::aligned_allocator <pcl::PointCloud <pcl::PointNormal>::Ptr > > data_r;
+
+
+  // Class instatiation
+  SplitSurface ss;
+
+};
+
+TEST_F (testCExtendCase, testRight){
+  
+  // pcl::PCDWriter writer;
+  // writer.write<pcl::PointNormal> ("test.pcd", *data, false);
+
+  for (int j = 0; j < 3; j++){
+    // Split surface right
+    ss.splitNewSurfaceObservation(dataC,data_r[j]);
+
+    // Get new data indices 
+    ss.getNewDataIndices();
+
+    // Print
+    cout << "New Row indices are:\n" << ss.newRowIndices << endl;
+    cout << "New Col indices are:\n" << ss.newColIndices << endl;
+
+    Eigen::Array<int,1,10> expect_ind(1,10); expect_ind << 5, 5, 4, 3, 3, 3, 3, 4, 5, 5;
+
+    for (int i = 0; i < data->height; i ++){
+      // Row indices should be equal
+      EXPECT_EQ(ss.newRowIndices(i,0),ss.newRowIndices(i,1));
+      
+      // Col indices
+      EXPECT_EQ(expect_ind(i), ss.newColIndices(i,0));
+      EXPECT_EQ(9, ss.newColIndices(i,1));
+    }
+  }
+}
+
+TEST_F (testCExtendCase, testLeft){
+  
+  // pcl::PCDWriter writer;
+  // writer.write<pcl::PointNormal> ("test.pcd", *data, false);
+
+  for (int j = 2; j < 3; j++){
+    // Split surface right
+    ss.splitNewSurfaceObservation(dataC,data_l[j]);
+
+    // Get new data indices 
+    ss.getNewDataIndices();
+
+    // Print
+    cout << "New Row indices are:\n" << ss.newRowIndices << endl;
+    cout << "New Col indices are:\n" << ss.newColIndices << endl;
+
+    Eigen::Array<int,1,10> expect_ind(1,10); expect_ind << 6, 6, 5, 4, 4, 4, 4, 5, 6, 6;
+
+    for (int i = 0; i < data->height; i ++){
+      // Row indices should be equal
+      EXPECT_EQ(ss.newRowIndices(i,0),ss.newRowIndices(i,1));
+      
+      // Col indices
+      EXPECT_EQ(0, ss.newColIndices(i,0));
+      EXPECT_EQ(expect_ind(i), ss.newColIndices(i,1));
     }
   }
 }

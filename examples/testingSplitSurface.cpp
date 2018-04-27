@@ -87,15 +87,17 @@ void splitSurfaceRun(int argc, char ** argv){
   cout << "Extend Direction is: " << ss2.extendDirection << endl;
 
   // Create data
-  pcl::PointCloud<pcl::PointNormal>::Ptr pcTest (new pcl::PointCloud<pcl::PointNormal>(10,10));
-  int n_points = 10;
-  for (int i = 0; i<n_points; i++){
-      for (int j = 0; j<n_points; j++){
-          pcTest->at(j,i).x = (float)j/(n_points-1);
-          pcTest->at(j,i).y = (float)i/(n_points-1);
-      } 
-  }
-  cout << "pcTest at (5,4): " << pcTest->at(5,4) << endl;
+  // pcl::PointCloud<pcl::PointNormal>::Ptr pcTest (new pcl::PointCloud<pcl::PointNormal>(10,10));
+  // int n_points = 10;
+  // for (int i = 0; i<n_points; i++){
+  //     for (int j = 0; j<n_points; j++){
+  //         pcTest->at(j,i).x = (float)j/(n_points-1);
+  //         pcTest->at(j,i).y = (float)i/(n_points-1);
+  //     } 
+  // }
+  // cout << "pcTest at (5,4): " << pcTest->at(5,4) << endl;
+
+  // Test new function to 
 
 }
 

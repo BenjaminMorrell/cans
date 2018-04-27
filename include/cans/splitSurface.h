@@ -52,6 +52,8 @@ class SplitSurface {
 
     int getCloudWidth();
 
+    void getNewDataIndices();
+
     
 
     Eigen::Array<bool, Eigen::Dynamic, Eigen::Dynamic> newPointsArray;
@@ -59,6 +61,8 @@ class SplitSurface {
 
     Eigen::Array<int, 2,2> newDataIndices;
     Eigen::Array<int, 2, 2> overlapDataIndices;
+    Eigen::Array<int, Eigen::Dynamic, 2> newRowIndices;
+    Eigen::Array<int, Eigen::Dynamic, 2> newColIndices;
 
     Eigen::Array<int, Eigen::Dynamic, 1> newPointsRows;
     Eigen::Array<int, 1, Eigen::Dynamic> newPointsCols;

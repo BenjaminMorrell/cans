@@ -233,7 +233,7 @@ void SplitSurface::getNewDataExtendDirection(){
 
   if ((nRowColCount==maxCount).count() > 1){
     // Select one
-    cout << "Multiple maximums" << endl;
+    cout << "\n\t\tMultiple maximums!!\n" << endl;
     // TDBM - test this
 
     // Use the distance from the correspondences, L, R, D, U 
@@ -467,7 +467,7 @@ void SplitSurface::getMapDataExtendDirection(){
               row = newDataIndices(1,0) - nExtraNew;          
               col = mt/2;
               break;
-    case 'U' : // Get the upper edge of the new data
+    case 'U' : // Get the lower edge of the new data
               row = newDataIndices(0,0) + nExtraNew;          
               col = mt/2;
               break;
@@ -572,5 +572,136 @@ void SplitSurface::getMapDataExtendDirection(){
   
 
   // Loop through each surface edge
+
+}
+
+//-------------------------------------------------------------------
+/*! 
+  \brief  Get the indices of the new data to use
+
+  Assumes that extend direction has been determined. Picks out indices for each row or column of data
+  
+  \author Benjamin Morrell
+  \date 26 April 2018
+*/
+void SplitSurface::getNewDataIndices(){
+
+   // Process extend direction
+  int nPoints;
+
+  if (extendDirection[0] == 'L' || extendDirection[0] == 'R'){
+    // Number of points along extend edge
+    nPoints = mapCloud->height;
+  }else{
+    // Number of points along extend edge
+    nPoints = mapCloud->width;
+  }
+
+  // Point cloud dimensions
+  int ms = mapCloud->height;
+  int mt = mapCloud->width;
+
+  int ms_obs = obsCloud->height;
+  int mt_obs = obsCloud->width;
+
+
+  newRowIndices.resize(nPoints,2);
+  newColIndices.resize(nPoints,2);
+
+  // Init
+  pcl::PointCloud<pcl::PointNormal>::Ptr mapEdge(new pcl::PointCloud<pcl::PointNormal>(1,nPoints,pcl::PointNormal()));
+
+  // Get edge of surface on edge that is being extended
+  for (int i = 0; i < nPoints; i ++){
+    switch (extendDirection[0]){
+      case 'L' : // left edge
+        mapEdge->at(i) = mapCloud->at(0,i);
+        break;
+      case 'R' : // right edge
+        mapEdge->at(i) = mapCloud->at(mt-1,i);
+        break;
+      case 'D' : // Lower edge
+        mapEdge->at(i) = mapCloud->at(i,0);
+        break;
+      case 'U' : // Upper edge
+        mapEdge->at(i) = mapCloud->at(i,ms-1);
+        break;
+      // TODO - NN case?? TBDM
+    }
+  }
+
+  // Get correspondences
+  bool doNormalShooting = true;
+
+  if (doNormalShooting){
+    pcl::registration::CorrespondenceEstimationNormalShooting<pcl::PointNormal, pcl::PointNormal, pcl::PointNormal> corrEst;
+    corrEst.setInputSource (mapEdge);// Gets a corresponding point for every point in the Source
+    corrEst.setSourceNormals (mapEdge);
+    corrEst.setInputTarget (obsCloud); // Target for the source to find corresponding points in
+    // Test the first 10 correspondences for each point in source, and return the best
+    corrEst.setKSearch (10);
+    corrEst.determineCorrespondences (*correspondences_);
+  } else{
+    pcl::registration::CorrespondenceEstimation<pcl::PointNormal, pcl::PointNormal, pcl::PointNormal> corrEst;
+    corrEst.setInputSource (mapEdge);// Gets a corresponding point for every point in the Source
+    corrEst.setInputTarget (obsCloud);
+    corrEst.determineCorrespondences (*correspondences_);
+  }
+
+  pcl::Correspondences& corr_filt = *correspondences_;
+
+  // Extract indices from correspondences - to use for new data
+  int s_ind;
+  int t_ind;
+
+  for (int i = 0 ; i < nPoints; i++){
+
+    // Get 2D indices from 1D, row-major index
+    s_ind = corr_filt[i].index_match/mt;// Floor or how may times mt goes into index
+    t_ind = corr_filt[i].index_match%mt;// Remainder after dividing by mt
+
+    cout << "Point " << i << " as indices s, t, indices: (" << s_ind << ", " << t_ind << ")." << endl;
+
+    switch (extendDirection[1]){
+      case 'L' : // Data to the Left edge of the new data
+        // One row 
+        newRowIndices(i,0) = s_ind;
+        newRowIndices(i,1) = s_ind;
+        // Take along the row from the start
+        newColIndices(i,0) = 0;
+        newColIndices(i,1) = t_ind;
+        break;
+      case 'R' : // Data along rows to the right edge
+        // One row
+        newRowIndices(i,0) = s_ind;
+        newRowIndices(i,1) = s_ind;
+        // Take along the row to the end
+        newColIndices(i,0) = t_ind;
+        newColIndices(i,1) = mt_obs-1;
+        break;
+      case 'D' : // From bottom to lower edge of new data
+        // Take the row from the start to the match
+        newRowIndices(i,0) = 0;
+        newRowIndices(i,1) = s_ind;
+        // One col
+        newColIndices(i,0) = t_ind;
+        newColIndices(i,1) = t_ind;
+        break;
+      case 'U' : // From split to upper edge of new data
+        // Take the row from the match, up
+        newRowIndices(i,0) = s_ind;
+        newRowIndices(i,1) = ms_obs-1;
+        // One col
+        newColIndices(i,0) = t_ind;
+        newColIndices(i,1) = t_ind;
+        break;
+      // case 'N' : // No extension
+      //   extendDirection = "NN";
+      //   return;
+    }
+
+      // offset = j*obsCloud->height + i; // Col major
+      // cout << "offset is: " << offset << ", query index is: " << corr_filt[offset].index_query << endl;
+  }
 
 }
