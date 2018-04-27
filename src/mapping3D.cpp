@@ -15,7 +15,7 @@ Mapping3D::Mapping3D():
     nCtrlDefault{15,15}, order{3,3},
     searchThresh(7), numRowsDesired(45), numColsDesired(45),
     maxNanAllowed(10), removeNanBuffer(0), numberOfMetrics(7), msSurf(125), mtSurf(125),
-    knotInsertionFlag(true), numInsert(3), deltaKnotInsert(1e-2), newRowColBuffer(0)
+    knotInsertionFlag(true), numInsert(3), deltaKnotInsert(1e-2), newRowColBuffer(0), useNonRectData(false)
 {
   searchThresh[0] = 7.75;
   searchThresh[1] = 7.75;
@@ -819,14 +819,14 @@ std::vector<int> Mapping3D::computeNumberOfControlPoints(std::string extendDirec
   }
 
   // Increase number of knots in join direction to be above 2, if criteria is met
-  if (nCtrlNew[0] == 2){
-    if ((float)data.rows()/(float)data.cols()*srf.ctrlPnts().rows() > 1.8){
-      nCtrlNew[0] = 3;
-    }
-  }else if (nCtrlNew[1] == 2){
-    if ((float)data.cols()/(float)data.rows()*srf.ctrlPnts().cols() > 1.8){
-      nCtrlNew[1] = 3;
-    }
+  if (nCtrlNew[0] == 2 || nCtrlNew[0] == 3){
+    // if ((float)data.rows()/(float)data.cols()*srf.ctrlPnts().rows() > 1.8){
+      nCtrlNew[0] = 4;
+    // }
+  }else if (nCtrlNew[1] == 2 || nCtrlNew[1] == 3){
+    // if ((float)data.cols()/(float)data.rows()*srf.ctrlPnts().cols() > 1.8){
+      nCtrlNew[1] = 4;
+    // }
   }
 
   return nCtrlNew;
@@ -1511,6 +1511,12 @@ void Mapping3D::updateObject(int objID, pcl::PointCloud<pcl::PointNormal>::Ptr o
 
   ss.splitNewSurfaceObservation(mapObjPC, obsObjPC);
   cout << "Extend Direction is: " << ss.extendDirection << endl;
+  if (useNonRectData){
+    // Get new data indices 
+    ss.getNewDataIndices();
+    cout << "New Row indices are:\n" << ss.newRowIndices << endl;
+    cout << "New Col indices are:\n" << ss.newColIndices << endl;
+  }
 
   if (ss.extendDirection[0] == 'N' || ss.extendDirection[1] == 'N'){
     cout << "\nNo extension of surface needed (not enough new data)\n" << endl;
@@ -1518,7 +1524,12 @@ void Mapping3D::updateObject(int objID, pcl::PointCloud<pcl::PointNormal>::Ptr o
   }
 
   // Get matrix from new data
-  Matrix_Point3Df mesh = nurbsDataFromPointCloud(obsObjPC, ss.newDataIndices);
+  Matrix_Point3Df mesh;
+  if (useNonRectData){
+    mesh = nurbsDataFromPointCloud(obsObjPC, ss.newRowIndices, ss.newColIndices);
+  }else{
+    mesh = nurbsDataFromPointCloud(obsObjPC, ss.newDataIndices);
+  }
   cout << "Mesh2 size is (" << mesh.rows() << ", " << mesh.cols() << ")\n";
 
   // Get the number of control points
@@ -1894,7 +1905,7 @@ Matrix_Point3Df Mapping3D::nurbsDataFromPointCloud(pcl::PointCloud<pcl::PointNor
 
 //-------------------------------------------------------------------
 /*! 
-  \brief  Converts from point cloud to NURBS Matrix taking only the data indicated by newRowIndices and newnewColIndices
+  \brief  Converts from point cloud to NURBS Matrix taking only the data indicated by newRowIndices and newColIndices
   
   \param cloud  the point cloud
   \param newRowIndices indices for the rows to take out of the cloud, for each row or col: [start, end]

@@ -656,6 +656,9 @@ void testBlenderSequence2(int argc, char ** argv){
 
   mp.newRowColBuffer = 20; // How many non new points in a row or column are permissible
 
+  // New extension method
+  mp.useNonRectData = true;
+
   pcl::PCDReader reader;
 
   pcl::PCLPointCloud2::Ptr cloud_blob (new pcl::PCLPointCloud2);

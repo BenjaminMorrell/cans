@@ -657,8 +657,8 @@ void SplitSurface::getNewDataIndices(){
   for (int i = 0 ; i < nPoints; i++){
 
     // Get 2D indices from 1D, row-major index
-    s_ind = corr_filt[i].index_match/mt;// Floor or how may times mt goes into index
-    t_ind = corr_filt[i].index_match%mt;// Remainder after dividing by mt
+    s_ind = corr_filt[i].index_match/mt_obs;// Floor or how may times mt goes into index
+    t_ind = corr_filt[i].index_match%mt_obs;// Remainder after dividing by mt
 
     cout << "Point " << i << " as indices s, t, indices: (" << s_ind << ", " << t_ind << ")." << endl;
 

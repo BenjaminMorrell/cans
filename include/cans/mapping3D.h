@@ -98,6 +98,8 @@ public:
     int removeNanBuffer;
     int nCtrlDefault[2];
 
+    bool useNonRectData;
+
     int msSurf;
     int mtSurf;
 
