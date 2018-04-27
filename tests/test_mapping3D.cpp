@@ -2435,11 +2435,14 @@ using namespace PLib;
 
 class nurbsDataFromPCNonRect : public ::testing::Test {
  protected:
-  nurbsDataFromPCNonRect() : data(new pcl::PointCloud<pcl::PointNormal>(30,30)), dataC(new pcl::PointCloud<pcl::PointNormal>(30,30)) 
+  nurbsDataFromPCNonRect() : data(new pcl::PointCloud<pcl::PointNormal>(30,30)),
+   dataC(new pcl::PointCloud<pcl::PointNormal>(30,30)),
+   dataC2(new pcl::PointCloud<pcl::PointNormal>(30,30))
   {
     
     int n_points = 30;
     float offset;
+    float offset2;
 
     // *data = pcl::PointCloud<pcl::PointNormal>(30,30);
     
@@ -2459,6 +2462,16 @@ class nurbsDataFromPCNonRect : public ::testing::Test {
             dataC->at(j,i).x = (float)j/(n_points-1) - offset;
             dataC->at(j,i).y = (float)i/(n_points-1);
             dataC->at(j,i).z = 0.0f;
+
+            if (j < 15){
+                offset2 = j*0.3/14.0;
+            }else{
+                offset2 = (n_points - j - 1)*0.3/14.0;
+            }
+
+            dataC2->at(j,i).x = (float)j/(n_points-1);
+            dataC2->at(j,i).y = (float)i/(n_points-1) - offset2;
+            dataC2->at(j,i).z = 0.0f;
         } 
     }
 
@@ -2506,16 +2519,43 @@ class nurbsDataFromPCNonRect : public ::testing::Test {
     data_r.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr(new pcl::PointCloud<pcl::PointNormal>(30,30)));
     pcl::transformPointCloud(*data, *data_r[2], transform);
 
+
+    // Down
+    transform.translation() << 0.2, -0.7, 0.0;
+    data_d.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr(new pcl::PointCloud<pcl::PointNormal>(30,30)));
+    pcl::transformPointCloud(*data, *data_d[0], transform);
+    transform.translation() << -0.2, -0.7, 0.0;
+    data_d.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr(new pcl::PointCloud<pcl::PointNormal>(30,30)));
+    pcl::transformPointCloud(*data, *data_d[1], transform);
+    transform.translation() << 0.0, -0.7, 0.0;
+    data_d.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr(new pcl::PointCloud<pcl::PointNormal>(30,30)));
+    pcl::transformPointCloud(*data, *data_d[2], transform);
+
+    // Up
+    transform.translation() << 0.2, 0.4, 0.0;
+    data_u.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr(new pcl::PointCloud<pcl::PointNormal>(30,30)));
+    pcl::transformPointCloud(*data, *data_u[0], transform);
+    transform.translation() << -0.2, 0.4, 0.0;
+    data_u.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr(new pcl::PointCloud<pcl::PointNormal>(30,30)));
+    pcl::transformPointCloud(*data, *data_u[1], transform);
+    transform.translation() << 0.0, 0.4, 0.0;
+    data_u.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr(new pcl::PointCloud<pcl::PointNormal>(30,30)));
+    pcl::transformPointCloud(*data, *data_u[2], transform);
+
   }
 
   pcl::PointCloud<pcl::PointNormal>::Ptr data;
   pcl::PointCloud<pcl::PointNormal>::Ptr dataC;
+  pcl::PointCloud<pcl::PointNormal>::Ptr dataC2;
 
 
 
   // Vectors of point clouds 
   std::vector<pcl::PointCloud<pcl::PointNormal>::Ptr, Eigen::aligned_allocator <pcl::PointCloud <pcl::PointNormal>::Ptr > > data_l;
   std::vector<pcl::PointCloud<pcl::PointNormal>::Ptr, Eigen::aligned_allocator <pcl::PointCloud <pcl::PointNormal>::Ptr > > data_r;
+  std::vector<pcl::PointCloud<pcl::PointNormal>::Ptr, Eigen::aligned_allocator <pcl::PointCloud <pcl::PointNormal>::Ptr > > data_d;
+  std::vector<pcl::PointCloud<pcl::PointNormal>::Ptr, Eigen::aligned_allocator <pcl::PointCloud <pcl::PointNormal>::Ptr > > data_u;
+  
  
   // Class instatiation
   SplitSurface ss;
@@ -2619,12 +2659,108 @@ TEST_F (nurbsDataFromPCNonRect, testNormalLeft){
     }
 }
 
+TEST_F (nurbsDataFromPCNonRect, testNormalDown){
+
+    int ms, mt;
+    int col1,col2;
+
+    // Get the indices
+    for (int j = 0; j < 3; j++){
+        // Split surface 
+        ss.splitNewSurfaceObservation(data,data_d[j]);
+
+        // Get new data indices 
+        ss.getNewDataIndices();
+
+        // Print
+        cout << "New Row indices are:\n" << ss.newRowIndices << endl;
+        cout << "New Col indices are:\n" << ss.newColIndices << endl;
+
+        // Get mesh out 
+        Matrix_Point3Df mesh = mp.nurbsDataFromPointCloud(data_d[j], ss.newRowIndices, ss.newColIndices);
+
+        ms = mesh.rows();
+        mt = mesh.cols();
+
+        switch (j){
+            case 0: col1 = 0; col2 = 23; break;
+            case 1: col1 = 6; col2 = 29; break;
+            case 2: col1 = 0; col2 = data->height-1; break;
+        }
+
+        EXPECT_FLOAT_EQ(data_d[j]->at(col2,0).x,mesh(0,mt-1).x());
+        EXPECT_FLOAT_EQ(data_d[j]->at(col2,0).y,mesh(0,mt-1).y());
+        EXPECT_FLOAT_EQ(data_d[j]->at(col2,0).z,mesh(0,mt-1).z());
+        
+        EXPECT_FLOAT_EQ(data_d[j]->at(col2,20).x,mesh(ms-1,mt-1).x());
+        EXPECT_FLOAT_EQ(data_d[j]->at(col2,20).y,mesh(ms-1,mt-1).y());
+        EXPECT_FLOAT_EQ(data_d[j]->at(col2,20).z,mesh(ms-1,mt-1).z());
+
+        EXPECT_FLOAT_EQ(data_d[j]->at(col1,0).x,mesh(0,0).x());
+        EXPECT_FLOAT_EQ(data_d[j]->at(col1,0).y,mesh(0,0).y());
+        EXPECT_FLOAT_EQ(data_d[j]->at(col1,0).z,mesh(0,0).z());
+
+        EXPECT_FLOAT_EQ(data_d[j]->at(col1,20).x,mesh(ms-1,0).x());
+        EXPECT_FLOAT_EQ(data_d[j]->at(col1,20).y,mesh(ms-1,0).y());
+        EXPECT_FLOAT_EQ(data_d[j]->at(col1,20).z,mesh(ms-1,0).z());
+
+    }
+}
+
+TEST_F (nurbsDataFromPCNonRect, testNormalUp){
+
+    int ms, mt;
+    int col1,col2;
+
+    // Get the indices
+    for (int j = 0; j < 3; j++){
+        // Split surface 
+        ss.splitNewSurfaceObservation(data,data_u[j]);
+
+        // Get new data indices 
+        ss.getNewDataIndices();
+
+        // Print
+        cout << "New Row indices are:\n" << ss.newRowIndices << endl;
+        cout << "New Col indices are:\n" << ss.newColIndices << endl;
+
+        // Get mesh out 
+        Matrix_Point3Df mesh = mp.nurbsDataFromPointCloud(data_u[j], ss.newRowIndices, ss.newColIndices);
+
+        ms = mesh.rows();
+        mt = mesh.cols();
+
+        switch (j){
+            case 0: col1 = 0; col2 = 23; break;
+            case 1: col1 = 6; col2 = 29; break;
+            case 2: col1 = 0; col2 = data->height-1; break;
+        }
+
+        EXPECT_FLOAT_EQ(data_u[j]->at(col2,17).x,mesh(0,mt-1).x());
+        EXPECT_FLOAT_EQ(data_u[j]->at(col2,17).y,mesh(0,mt-1).y());
+        EXPECT_FLOAT_EQ(data_u[j]->at(col2,17).z,mesh(0,mt-1).z());
+        
+        EXPECT_FLOAT_EQ(data_u[j]->at(col2,data->width-1).x,mesh(ms-1,mt-1).x());
+        EXPECT_FLOAT_EQ(data_u[j]->at(col2,data->width-1).y,mesh(ms-1,mt-1).y());
+        EXPECT_FLOAT_EQ(data_u[j]->at(col2,data->width-1).z,mesh(ms-1,mt-1).z());
+
+        EXPECT_FLOAT_EQ(data_u[j]->at(col1,17).x,mesh(0,0).x());
+        EXPECT_FLOAT_EQ(data_u[j]->at(col1,17).y,mesh(0,0).y());
+        EXPECT_FLOAT_EQ(data_u[j]->at(col1,17).z,mesh(0,0).z());
+
+        EXPECT_FLOAT_EQ(data_u[j]->at(col1,data->width-1).x,mesh(ms-1,0).x());
+        EXPECT_FLOAT_EQ(data_u[j]->at(col1,data->width-1).y,mesh(ms-1,0).y());
+        EXPECT_FLOAT_EQ(data_u[j]->at(col1,data->width-1).z,mesh(ms-1,0).z());
+
+    }
+}
+
 TEST_F (nurbsDataFromPCNonRect, testRight){
 
     int ms, mt;
     int row1, row2, rowSelect;
 
-    Eigen::Array<float,1,Eigen::Dynamic> expectInd(1,data->width);
+    Eigen::Array<float,1,Eigen::Dynamic> expectInd(1,data->height);
     expectInd << 17,17,16,16,15,14,14,13,12,12,11,11,10,9,9,9,9,10,11,11,12,12,13,14,14,15,16,16,17,17;
 
     // Get the indices
@@ -2685,7 +2821,7 @@ TEST_F (nurbsDataFromPCNonRect, testLeft){
     int ms, mt;
     int row1, row2, rowSelect;
 
-    Eigen::Array<float,1,Eigen::Dynamic> expectInd(1,data->width);
+    Eigen::Array<float,1,Eigen::Dynamic> expectInd(1,data->height);
     expectInd << 20,20,19,18,18,17,17,16,15,15,14,13,13,12,12,12,12,13,13,14,15,15,16,17,17,18,18,19,20,20;
 
     // Get the indices
@@ -2738,6 +2874,128 @@ TEST_F (nurbsDataFromPCNonRect, testLeft){
             EXPECT_FLOAT_EQ(data_l[j]->at(expectInd[i],rowSelect).z,mesh(i,mt-1).z());
         }
         
+    }
+}
+
+TEST_F (nurbsDataFromPCNonRect, testDown){
+
+    int ms, mt;
+    int col1,col2;
+    int colSelect;
+
+    Eigen::Array<float,1,Eigen::Dynamic> expectInd(1,data->width);
+    expectInd << 20,20,19,18,18,17,17,16,15,15,14,13,13,12,12,12,12,13,13,14,15,15,16,17,17,18,18,19,20,20;
+
+
+    // Get the indices
+    for (int j = 0; j < 3; j++){
+        // Split surface 
+        ss.splitNewSurfaceObservation(dataC2,data_d[j]);
+
+        // Get new data indices 
+        ss.getNewDataIndices();
+
+        // Print
+        cout << "New Row indices are:\n" << ss.newRowIndices << endl;
+        cout << "New Col indices are:\n" << ss.newColIndices << endl;
+
+        // Get mesh out 
+        Matrix_Point3Df mesh = mp.nurbsDataFromPointCloud(data_d[j], ss.newRowIndices, ss.newColIndices);
+
+        ms = mesh.rows();
+        mt = mesh.cols();
+
+        switch (j){
+            case 0: col1 = 0; col2 = 23; break;
+            case 1: col1 = 6; col2 = 29; break;
+            case 2: col1 = 0; col2 = data->height-1; break;
+        }
+
+        EXPECT_FLOAT_EQ(data_d[j]->at(col2,0).x,mesh(0,mt-1).x());
+        EXPECT_FLOAT_EQ(data_d[j]->at(col2,0).y,mesh(0,mt-1).y());
+        EXPECT_FLOAT_EQ(data_d[j]->at(col2,0).z,mesh(0,mt-1).z());
+
+        EXPECT_FLOAT_EQ(data_d[j]->at(col1,0).x,mesh(0,0).x());
+        EXPECT_FLOAT_EQ(data_d[j]->at(col1,0).y,mesh(0,0).y());
+        EXPECT_FLOAT_EQ(data_d[j]->at(col1,0).z,mesh(0,0).z());
+
+        int colCount = 0;       
+        
+        for (int i = 0; i < mt; i++){
+            if (j == 0 && i<6){
+                colSelect = col1;
+            }else if (j == 1 && i > 22){
+                colSelect = col2;
+            }else{
+                colSelect = col1 + colCount;
+                colCount++;
+            }
+            cout << "col Select is: " << colSelect << endl;
+            EXPECT_FLOAT_EQ(data_d[j]->at(colSelect, expectInd[i]).x,mesh(ms-1,i).x());
+            EXPECT_FLOAT_EQ(data_d[j]->at(colSelect, expectInd[i]).y,mesh(ms-1,i).y());
+            EXPECT_FLOAT_EQ(data_d[j]->at(colSelect, expectInd[i]).z,mesh(ms-1,i).z());
+        }
+    }
+}
+
+TEST_F (nurbsDataFromPCNonRect, testUp){
+
+    int ms, mt;
+    int col1,col2;
+    int colSelect;
+
+    Eigen::Array<float,1,Eigen::Dynamic> expectInd(1,data->width);
+    expectInd << 17, 17, 16, 16, 15, 14, 14, 13, 12, 12, 11, 11, 10, 9, 9, 9, 9, 10, 11, 11, 12, 12, 13, 14, 14, 15, 16, 16, 17, 17;
+
+
+    // Get the indices
+    for (int j = 0; j < 3; j++){
+        // Split surface 
+        ss.splitNewSurfaceObservation(dataC2,data_u[j]);
+
+        // Get new data indices 
+        ss.getNewDataIndices();
+
+        // Print
+        cout << "New Row indices are:\n" << ss.newRowIndices << endl;
+        cout << "New Col indices are:\n" << ss.newColIndices << endl;
+
+        // Get mesh out 
+        Matrix_Point3Df mesh = mp.nurbsDataFromPointCloud(data_u[j], ss.newRowIndices, ss.newColIndices);
+
+        ms = mesh.rows();
+        mt = mesh.cols();
+
+        switch (j){
+            case 0: col1 = 0; col2 = 23; break;
+            case 1: col1 = 6; col2 = 29; break;
+            case 2: col1 = 0; col2 = data->width-1; break;
+        }
+
+        EXPECT_FLOAT_EQ(data_u[j]->at(col2,data->height-1).x,mesh(ms-1,mt-1).x());
+        EXPECT_FLOAT_EQ(data_u[j]->at(col2,data->height-1).y,mesh(ms-1,mt-1).y());
+        EXPECT_FLOAT_EQ(data_u[j]->at(col2,data->height-1).z,mesh(ms-1,mt-1).z());
+
+        EXPECT_FLOAT_EQ(data_u[j]->at(col1,data->height-1).x,mesh(ms-1,0).x());
+        EXPECT_FLOAT_EQ(data_u[j]->at(col1,data->height-1).y,mesh(ms-1,0).y());
+        EXPECT_FLOAT_EQ(data_u[j]->at(col1,data->height-1).z,mesh(ms-1,0).z());
+
+        int colCount = 0;       
+        
+        for (int i = 0; i < mt; i++){
+            if (j == 0 && i<6){
+                colSelect = col1;
+            }else if (j == 1 && i > 22){
+                colSelect = col2;
+            }else{
+                colSelect = col1 + colCount;
+                colCount++;
+            }
+            cout << "col Select is: " << colSelect << endl;
+            EXPECT_FLOAT_EQ(data_u[j]->at(colSelect, expectInd[i]).x,mesh(0,i).x());
+            EXPECT_FLOAT_EQ(data_u[j]->at(colSelect, expectInd[i]).y,mesh(0,i).y());
+            EXPECT_FLOAT_EQ(data_u[j]->at(colSelect, expectInd[i]).z,mesh(0,i).z());
+        }
     }
 }
 

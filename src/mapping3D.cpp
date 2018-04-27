@@ -1958,13 +1958,21 @@ Matrix_Point3Df Mapping3D::nurbsDataFromPointCloud(pcl::PointCloud<pcl::PointNor
     // cout << "For i = " << i << ", stepS: " << stepS << ", stepT: " << stepT << endl;
     for (int j = 0; j < nPoints; j++ ){
       // Compute indices to get data from cloud
-      ii = newRowIndices(i,0) + (int)(i*stepS);
+      ii = newRowIndices(i,0) + (int)(j*stepS);
       jj = newColIndices(i,0) + (int)(j*stepT);
       // cout << "(ii,jj) = (" << ii << ", " << jj << ")\n";
       // Copy data
-      mesh(i,j).x() = cloud->at(jj,ii).x; // at(col,row)
-      mesh(i,j).y() = cloud->at(jj,ii).y; // at(col,row)
-      mesh(i,j).z() = cloud->at(jj,ii).z; // at(col,row)
+      if (expandRowsNotCols){
+        // i is iterating through rows. j along rows
+        mesh(i,j).x() = cloud->at(jj,ii).x; // at(col,row)
+        mesh(i,j).y() = cloud->at(jj,ii).y; // at(col,row)
+        mesh(i,j).z() = cloud->at(jj,ii).z; // at(col,row)
+      }else{
+        // i is iterating through columns, j along columns
+        mesh(j,i).x() = cloud->at(jj,ii).x; // at(col,row)
+        mesh(j,i).y() = cloud->at(jj,ii).y; // at(col,row)
+        mesh(j,i).z() = cloud->at(jj,ii).z; // at(col,row)
+      }
     }
   }
 
