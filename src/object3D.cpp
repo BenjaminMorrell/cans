@@ -602,7 +602,7 @@ Matrix_Point3Df Object3D::getSurfacePoints(int ms, int mt){
     val += step;
   }
 
-  // cout << "params are: " << paramsS << "\n\n" << paramsT << endl;
+  cout << "params are: " << paramsS << "\n\n" << paramsT << endl;
 
   // Fill matrix
   for (int i = 0; i < ms; i++){
@@ -612,6 +612,13 @@ Matrix_Point3Df Object3D::getSurfacePoints(int ms, int mt){
       data(i,j).y() = this->pointAt(paramsS[i],paramsT[j]).y();
       data(i,j).z() = this->pointAt(paramsS[i],paramsT[j]).z();
       // cout << "Data from NURBS object is: " << data(i,j).x() << endl;
+      // try {
+      //   if (!std::isfinite(data(i,j).x())){
+      //     throw 1;
+      //   }
+      // }catch (int e){
+      //   cout << "Non finite value in getSurfacePoints, at (i,j) = (" << i << ", " << j << ")." << endl;
+      // }
     }
   }
   return data;

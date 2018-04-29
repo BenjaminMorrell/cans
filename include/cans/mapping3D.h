@@ -5,7 +5,7 @@
 #include "cans/object3D.h"
 #include "cans/splitSurface.h"
 #include <nurbsS.h>
-#include <cmath>
+
 // PCL specific includes
 #include <pcl/io/pcd_io.h>
 #include <pcl/point_types.h>

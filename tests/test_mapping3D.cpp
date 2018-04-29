@@ -35,7 +35,134 @@ TEST_F (mapping3DTest, BlankConstructor){
     Mapping3D map;
 }
 
+//--------------------------------------------
+//-------- NURBS Fitting tests  -----
+//--------------------------------------------
+class nurbsFittingTest : public ::testing::Test {
+ protected:
+  nurbsFittingTest() : obs1(20), obs2(20), obsSurf(20,20), deg(3), n_ctrl(7) {
+    
+    int n_param = 20;
+    float t = 0.1;
+    int j = 0;
 
+    Eigen::Array<float,1,Eigen::Dynamic> vals(1,n_param);
+    vals << 0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,2,2,3,3,4;
+    vals << 0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,2,2,3,3,4;
+
+    for (int i = 0; i< n_param; i++){
+        obs1[i].x() = (float)i/(float)n_param;
+        obs1[i].y() = 0.0;
+        obs1[i].z() = 0.0;
+
+        // Multiple double-ups
+        obs2[i].x() = vals(i);
+        obs2[i].y() = 0.0;
+        obs2[i].z() = 0.0;
+        for (int j = 0; j < n_param; j++){
+            obsSurf(i,j).x() = (float)j/(float)n_param;
+            obsSurf(i,j).y() = vals(i);
+            obsSurf(i,j).z() = 0.0;
+        }
+    }
+
+    // Double up one
+    obs1[0].x() = obs1[1].x();
+    // crv1.leastSquares(obs1,deg,n_ctrl);
+    // crv2.leastSquares(obs1,deg,n_ctrl);
+  }
+
+  ~nurbsFittingTest() {;}
+
+  Vector_Point3Df obs1;
+  Vector_Point3Df obs2;
+
+  Matrix_Point3Df obsSurf;
+
+  NurbsCurvef crv1;
+  NurbsCurvef crv2;
+  Object3D obj;
+
+  int deg;
+  int n_ctrl;
+
+};
+
+TEST_F (nurbsFittingTest, oneDoubleUpPoint){
+
+    // Test that this doesn't give nans
+    crv1.leastSquares(obs1,deg,n_ctrl);
+    bool bAreThereNans = false;
+    for (float s = 0.0; s < 1.0; s = s + 0.001){
+        if (!std::isfinite(crv1(s).x())){
+            bAreThereNans = true;
+        }
+    }
+
+    EXPECT_TRUE(!bAreThereNans);
+}
+
+TEST_F (nurbsFittingTest, multipleDoubleUpPoints){
+
+    // Test that this doesn't give nans
+    crv2.leastSquares(obs2,deg,n_ctrl);
+    bool bAreThereNans = false;
+    for (float s = 0.0; s < 1.0; s = s + 0.001){
+        if (!std::isfinite(crv2(s).x())){
+            bAreThereNans = true;
+        }
+        if (!std::isfinite(crv2(s).y())){
+            bAreThereNans = true;
+        }
+        if (!std::isfinite(crv2(s).z())){
+            bAreThereNans = true;
+        }
+    }
+
+    cout << "Curve Knots:\n" << crv2.knot() << endl;
+
+    cout << "Control Points:\n" << crv2.ctrlPnts() << endl;
+
+    EXPECT_TRUE(!bAreThereNans);
+}
+/*
+TEST_F (nurbsFittingTest, multipleDoubleUpPointsSurf){
+
+    // Test that this doesn't give nans
+    obj.leastSquares(obsSurf,deg,deg,n_ctrl,n_ctrl);
+    bool bAreThereNans = false;
+    for (float s = 0.0; s < 1.0; s = s + 0.01){
+        for (float t = 0.0; t < 1.0; t = t + 0.01){
+            if (!std::isfinite(obj(s,t).x())){
+                bAreThereNans = true;
+                cout << "NANS!" << endl;
+            }
+        }
+    }
+
+    EXPECT_TRUE(!bAreThereNans);
+}
+
+TEST_F (nurbsFittingTest, multipleDoubleUpPointsSurfConstructor){
+
+    // Test that this doesn't give nans
+    Object3D obj2(obsSurf,deg,deg,n_ctrl,n_ctrl);
+    bool bAreThereNans = false;
+    for (float s = 0.0; s < 1.0; s = s + 0.01){
+        for (float t = 0.0; t < 1.0; t = t + 0.01){
+            if (!std::isfinite(obj2(s,t).x())){
+                bAreThereNans = true;
+                cout << "NANS!" << endl;
+            }
+        }
+    }
+
+    EXPECT_TRUE(!bAreThereNans);
+}
+*/
+
+
+/*
 //--------------------------------------------
 //-------- Join Curve Tests -----
 //--------------------------------------------
@@ -2434,10 +2561,10 @@ TEST_F (updateSurfaceTest, testRotate180){
         mp.updateObjectInMap(0, obj_rot);
     }
 }
+*/
 
 // Non-rectangular new segments
-
-
+/*
 class nurbsDataFromPCNonRect : public ::testing::Test {
  protected:
   nurbsDataFromPCNonRect() : data(new pcl::PointCloud<pcl::PointNormal>(30,30)),
@@ -2514,7 +2641,10 @@ class nurbsDataFromPCNonRect : public ::testing::Test {
     pcl::transformPointCloud(*data, *data_l[1], transform);
     transform.translation() << -0.7, 0.0, 0.0;
     data_l.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr(new pcl::PointCloud<pcl::PointNormal>(30,30)));
-    pcl::transformPointCloud(*data, *data_l[2], transform);  
+    pcl::transformPointCloud(*data, *data_l[2], transform);
+    transform.translation() << -1.1, 0.0, 0.0;
+    data_l.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr(new pcl::PointCloud<pcl::PointNormal>(30,30)));
+    pcl::transformPointCloud(*data, *data_l[3], transform);
     
     // Right
     transform.translation() << 0.4, 0.2, 0.0;
@@ -2526,6 +2656,11 @@ class nurbsDataFromPCNonRect : public ::testing::Test {
     transform.translation() << 0.4, 0.0, 0.0;
     data_r.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr(new pcl::PointCloud<pcl::PointNormal>(30,30)));
     pcl::transformPointCloud(*data, *data_r[2], transform);
+    transform.translation() << 0.8, 0.0, 0.0;
+    data_r.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr(new pcl::PointCloud<pcl::PointNormal>(30,30)));
+    pcl::transformPointCloud(*data, *data_r[3], transform);
+    
+    
 
 
     // Down
@@ -3042,8 +3177,10 @@ TEST_F (nurbsDataFromPCNonRect, testRightObj){
 TEST_F (nurbsDataFromPCNonRect, testRightSurfUpdate){
     // Just to make sure it doesn't crash
     // TODO -some tests on the output object?
-
+    int row1,row2;
     mp.useNonRectData = true;
+
+    pcl::PointCloud<pcl::PointNormal>::Ptr cloud(new pcl::PointCloud<pcl::PointNormal>(45,45,pcl::PointNormal()));
 
     // Get the indices
     for (int j = 0; j < 3; j++){
@@ -3051,6 +3188,39 @@ TEST_F (nurbsDataFromPCNonRect, testRightSurfUpdate){
         // UPdate object 2
         mp.updateObject(1, data_r[j]);
 
+
+        switch (j){
+            case 0: row1 = 0; row2 = 23; break;
+            case 1: row1 = 6; row2 = 29; break;
+            case 2: row1 = 0; row2 = data->height-1; break;
+        }
+
+        EXPECT_FLOAT_EQ(data_r[j]->at(data->width-1,row1).x,mp.objectMap[1](0.0,1.0).x());
+        EXPECT_FLOAT_EQ(data_r[j]->at(data->width-1,row1).y,mp.objectMap[1](0.0,1.0).y());
+        EXPECT_FLOAT_EQ(data_r[j]->at(data->width-1,row1).z,mp.objectMap[1](0.0,1.0).z());
+
+        EXPECT_FLOAT_EQ(data_r[j]->at(data->width-1,row2).x,mp.objectMap[1](1.0,1.0).x());
+        EXPECT_FLOAT_EQ(data_r[j]->at(data->width-1,row2).y,mp.objectMap[1](1.0,1.0).y());
+        EXPECT_FLOAT_EQ(data_r[j]->at(data->width-1,row2).z,mp.objectMap[1](1.0,1.0).z());
+
+        EXPECT_FLOAT_EQ(data->at(0,0).x,mp.objectMap[1](0.0,0.0).x());
+        EXPECT_FLOAT_EQ(data->at(0,0).y,mp.objectMap[1](0.0,0.0).y());
+        EXPECT_FLOAT_EQ(data->at(0,0).z,mp.objectMap[1](0.0,0.0).z());
+
+        EXPECT_FLOAT_EQ(data->at(0,data->height-1).x,mp.objectMap[1](1.0,0.0).x());
+        EXPECT_FLOAT_EQ(data->at(0,data->height-1).y,mp.objectMap[1](1.0,0.0).y());
+        EXPECT_FLOAT_EQ(data->at(0,data->height-1).z,mp.objectMap[1](1.0,0.0).z());
+        
+
+        // Test generating data - to test it doesn't break. 
+        mp.pointCloudFromObject3D(1,45,45,cloud);
+        bool bIsnoNan = true;
+        for (int i = 0; i < 45*45; i++){
+            if (!pcl::isFinite(cloud->at(i))){
+                bIsnoNan = false;
+            }
+        }
+        EXPECT_TRUE(bIsnoNan);
         // Write to file
         // if (j == 0){
         //     mp.objectMap[1].writeVRML("UpdatedSurf0.wrl",Color(255,100,255),50,80);
@@ -3136,6 +3306,127 @@ TEST_F (nurbsDataFromPCNonRect, testUpSurfUpdate){
         mp.updateObjectInMap(2, objC2);
     }
 }
+
+TEST_F (nurbsDataFromPCNonRect, testRightSurfUpdateSuccessive){
+    // Just to make sure it doesn't crash
+    // TODO -some tests on the output object?
+
+    mp.useNonRectData = true;
+    int nPoints = 45;
+
+    pcl::PointCloud<pcl::PointNormal>::Ptr cloud(new pcl::PointCloud<pcl::PointNormal>(nPoints,nPoints,pcl::PointNormal()));
+
+
+    // Get the indices
+    for (int j = 0; j < 1; j++){
+        
+        // UPdate object 2
+        mp.updateObject(1, data_r[j]);
+
+        // Update again
+        
+        cout << "Getting point cloud" << endl;
+        pcl::PointCloud<pcl::PointNormal>::Ptr mapObjPC(new pcl::PointCloud<pcl::PointNormal>(125, 125, pcl::PointNormal()));
+        mp.pointCloudFromObject3D(1, 125, 125, mapObjPC);
+
+        cout << "Splitting surface " << endl;
+        // Split surface right
+        ss.splitNewSurfaceObservation(mapObjPC,data_r[3]);
+
+        cout << "Getting data indices" << endl;
+        // Get new data indices 
+        ss.getNewDataIndices();
+        cout << "New Row indices are:\n" << ss.newRowIndices << endl;
+        cout << "New Col indices are:\n" << ss.newColIndices << endl;
+
+        cout << "getting mesh from PC" << endl;
+
+        Matrix_Point3Df mesh = mp.nurbsDataFromPointCloud(data_r[3], ss.newRowIndices, ss.newColIndices);
+        
+        cout << "Checking Mesh, with rows, cols: " << mesh.rows() << ", " << mesh.cols() << endl;
+        cout << mesh << endl;
+        for (int i = 0; i < mesh.rows(); i++){
+            for (int j = 0; j < mesh.cols(); j++){
+                // cout << "in mesh check lop ij is " << i << ", " << j << endl;
+                if (!std::isfinite(mesh(i,j).x()) || !std::isfinite(mesh(i,j).y()) || !std::isfinite(mesh(i,j).z())){
+                    cout << "Mesh nan at (i,j): (" << i << ", " << j << ").\n";
+                }
+            }
+        }
+        cout << "Done checking mesh " << endl;
+
+        EXPECT_FLOAT_EQ(data_r[3]->at(29,6).x,mesh(0,mesh.cols()-1).x());
+        EXPECT_FLOAT_EQ(data_r[3]->at(29,6).y,mesh(0,mesh.cols()-1).y());
+        EXPECT_FLOAT_EQ(data_r[3]->at(29,6).z,mesh(0,mesh.cols()-1).z());
+
+        EXPECT_FLOAT_EQ(data_r[3]->at(29,29).x,mesh(mesh.rows()-1,mesh.cols()-1).x());
+        EXPECT_FLOAT_EQ(data_r[3]->at(29,29).y,mesh(mesh.rows()-1,mesh.cols()-1).y());
+        EXPECT_FLOAT_EQ(data_r[3]->at(29,29).z,mesh(mesh.rows()-1,mesh.cols()-1).z());
+
+        // Get point cloud
+        pcl::PointCloud<pcl::PointNormal>::Ptr newCloud(new pcl::PointCloud<pcl::PointNormal>(mesh.cols(), mesh.rows(), pcl::PointNormal()));
+
+        for (int i = 0; i < mesh.rows(); i++){
+            for (int j = 0 ; j < mesh.cols(); j++){
+                newCloud->at(j,i).x = mesh(i,j).x();
+                newCloud->at(j,i).y = mesh(i,j).y();
+                newCloud->at(j,i).z = mesh(i,j).z();
+            }
+        }
+        // Write cloud
+        pcl::PCDWriter writer;
+        writer.write<pcl::PointNormal> ("testNewPartError", *newCloud, false);
+
+        
+
+        std::vector<int> nCtrlNew = mp.computeNumberOfControlPoints(ss.extendDirection, mesh, mp.objectMap[1]);
+
+        Object3D obj(mesh, 3, 3, nCtrlNew[0], nCtrlNew[1]);
+
+        EXPECT_FLOAT_EQ(obj(0.0,1.0).x(),mesh(0,mesh.cols()-1).x());
+        EXPECT_FLOAT_EQ(obj(0.0,1.0).y(),mesh(0,mesh.cols()-1).y());
+        EXPECT_FLOAT_EQ(obj(0.0,1.0).z(),mesh(0,mesh.cols()-1).z());
+
+        EXPECT_FLOAT_EQ(obj(0.0,0.0).x(),mesh(0,0).x());
+        EXPECT_FLOAT_EQ(obj(0.0,0.0).y(),mesh(0,0).y());
+
+        EXPECT_FLOAT_EQ(obj(1.0,1.0).x(),mesh(mesh.rows()-1,mesh.cols()-1).x());
+        EXPECT_FLOAT_EQ(obj(1.0,1.0).y(),mesh(mesh.rows()-1,mesh.cols()-1).y());
+        EXPECT_FLOAT_EQ(obj(1.0,1.0).z(),mesh(mesh.rows()-1,mesh.cols()-1).z());
+
+        EXPECT_FLOAT_EQ(obj(1.0,0.0).x(),mesh(mesh.rows()-1,0).x());
+        EXPECT_FLOAT_EQ(obj(1.0,0.0).y(),mesh(mesh.rows()-1,0).y());
+
+
+        // Test generating data - to test it doesn't break. 
+        // mp.pointCloudFromObject3D(1,nPoints,nPoints,cloud);
+        // bool bIsnoNan = true;
+        // for (int i = 0; i < nPoints*nPoints; i++){
+        //     if (!pcl::isFinite(cloud->at(i))){
+        //         bIsnoNan = false;
+        //         // cout << "\n\n\t\tNANS IN SUCCESSIVE SURFACE!!\n\n" << endl;
+        //         cout << i << endl;
+        //     }
+        // }
+        // EXPECT_TRUE(bIsnoNan);
+
+        // // Write to file
+        // if (j == 0){
+        //     mp.objectMap[1].writeVRML("UpdatedSurf0.wrl",Color(255,100,255),50,80);
+        // }else if (j == 1){
+        //     mp.objectMap[1].writeVRML("UpdatedSurf1.wrl",Color(255,100,255),50,80);
+        // }else{
+        //     mp.objectMap[1].writeVRML("UpdatedSurf2.wrl",Color(255,100,255),50,80);
+        // }
+
+        // Reset object
+        mp.updateObjectInMap(1, objC);
+    }
+}
+
+*/
+
+
 } // namespace
 
 int main (int argc,char ** argv){

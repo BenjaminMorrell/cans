@@ -107,7 +107,7 @@ NurbsCurvef Mapping3D::joinCurves(NurbsCurvef& crv1, NurbsCurvef& crv2, bool new
     float factor1 = (float)n_ctrl1/(float)(n_ctrl1 + n_ctrl2);
     float factor2 = (float)n_ctrl2/(float)(n_ctrl1 + n_ctrl2);
 
-    cout << "In join curves, factor 1 is: " << factor1 << ", factor2 is: " << factor2 << endl;
+    // cout << "In join curves, factor 1 is: " << factor1 << ", factor2 is: " << factor2 << endl;
 
 
     // cout << "In Join Curves:\nKnots out: " << n_knot_out << "\tCtrl out: " << n_ctrl_out << endl;
@@ -1155,7 +1155,7 @@ bool Mapping3D::averageOutNans(pcl::PointCloud<pcl::PointNormal>::Ptr cloud, Eig
     }
   }
 
-  cout << "Nan's left?: " << noNans << endl;
+  cout << "All nans gone?: " << noNans << endl;
 
   return noNans;
 
@@ -1498,11 +1498,11 @@ void Mapping3D::updateObject(int objID, pcl::PointCloud<pcl::PointNormal>::Ptr o
 
   // cout << "Point cloud from object at (0,0) is: " << mapObjPC->at(0,0) << endl;
   // cout << "Point cloud from observation at (0,0) is: " << obsObjPC->at(0,0) << endl;
-  // Save point clouds to Matlab
-  // Write the downsampled version to disk
-  pcl::PCDWriter writer;
-  writer.write<pcl::PointNormal> ("observation.pcd", *obsObjPC, false);
-  writer.write<pcl::PointNormal> ("map_data.pcd", *mapObjPC, false);
+  // // Save point clouds to Matlab
+  // // Write the downsampled version to disk
+  // pcl::PCDWriter writer;
+  // writer.write<pcl::PointNormal> ("observation.pcd", *obsObjPC, false);
+  // writer.write<pcl::PointNormal> ("map_data.pcd", *mapObjPC, false);
 
   
   // Split new surface observation
@@ -1543,6 +1543,28 @@ void Mapping3D::updateObject(int objID, pcl::PointCloud<pcl::PointNormal>::Ptr o
 
   // Create Object for new surface? (nknots = deg + nctrl + 1)
   Object3D obj(mesh, order[0], order[1], nCtrlNew[0], nCtrlNew[1]);
+
+  if (useNonRectData){
+    // CHECK OBJECT:
+    obj.writeVRML("newSurf.wrl",Color(255,100,255),50,80);
+
+    // Test generating data
+    int nPoints = 25;
+    
+    // Get the data points
+    Matrix_Point3Df data = obj.getSurfacePoints(nPoints, nPoints);
+
+    bool bIsnoNan = true;
+    for (int i = 0; i < nPoints; i++){
+      for (int j = 0; j < nPoints; j++){
+        if (!std::isfinite(data(i,j).x())){
+            bIsnoNan = false;
+            cout << "\n\n\t\tNANS IN New object\n\n" << endl;
+        }
+      }
+    }
+  }
+ 
   
   // cout << "object of new mesh has data at (0,0): " << obj.pointAt(0.0,0.0) << endl;  
   // cout << "object of new mesh has data at (1.0,1.0): " << obj.pointAt(1.0,1.0) << endl;
@@ -1930,7 +1952,6 @@ Matrix_Point3Df Mapping3D::nurbsDataFromPointCloud(pcl::PointCloud<pcl::PointNor
 
     ms = nRowOrCol;
     mt = nPoints;
-
     
   }else if (newColIndices(0,0) == newColIndices(0,1)) {
     // Constant col - expanding cols
@@ -1984,6 +2005,9 @@ Matrix_Point3Df Mapping3D::nurbsDataFromPointCloud(pcl::PointCloud<pcl::PointNor
         mesh(j,i).y() = cloud->at(jj,ii).y; // at(col,row)
         mesh(j,i).z() = cloud->at(jj,ii).z; // at(col,row)
       }
+      if (!pcl::isFinite(cloud->at(jj,ii))){
+        cout << "\n\nNon-finite mesh point!!\n\n";
+      }
     }
   }
 
@@ -2035,6 +2059,13 @@ void Mapping3D::pointCloudFromObject3D(int objID, int ms, int mt, pcl::PointClou
       cloud->at(j,i).x = data(i,j).x(); // at(col,row)
       cloud->at(j,i).y = data(i,j).y(); // at(col,row)
       cloud->at(j,i).z = data(i,j).z(); // at(col,row)
+      // try {
+      //   if (!pcl::isFinite(cloud->at(j,i))){
+      //     throw 1;
+      //   }
+      // } catch(int e){
+      //   cout << "Non finite point taken from data in pointCloudFromObject3D" << endl;
+      // }
     }
   }
 }

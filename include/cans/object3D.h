@@ -6,6 +6,8 @@
 #include <nurbsS.h>
 #include <nurbs.h>
 
+#include <math.h>
+
 #include <Eigen/Core>
 
 #include <pcl/point_types.h>

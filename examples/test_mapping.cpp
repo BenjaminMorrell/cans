@@ -573,7 +573,7 @@ void testBlenderSequence2(int argc, char ** argv){
       // BLOB
       cout << "Running Blob Dataset";
       filestem = "/home/bjm/Dropbox/PhD_Code/Data/3D_Scans/Blensor/Scan01/BlobScan_Data000";
-      outFilestem = "/home/bjm/Dropbox/PhD_Code/Results/blob/blob_scan_res_new_";
+      outFilestem = "/home/bjm/Dropbox/PhD_Code/Results/blob/blob_scan_res_new_extend";
       pathFilename = "/home/bjm/Dropbox/PhD_Code/Data/3D_Scans/Blensor/Scan01/BlobScan_Path.txt";
       scanSteps = 1;
       numberOfScans = numberOfScans*scanSteps;
@@ -664,7 +664,7 @@ void testBlenderSequence2(int argc, char ** argv){
   pcl::PCLPointCloud2::Ptr cloud_blob (new pcl::PCLPointCloud2);
   pcl::PointCloud<pcl::PointNormal>::Ptr cloud (new pcl::PointCloud<pcl::PointNormal>); 
 
-  for (int i = 0; i < numberOfScans; i += scanSteps){
+  for (int i = 3; i < numberOfScans; i += scanSteps){
     cout << "Processing Scan " << i << endl;
     cout << "State x is: " << state(0,i) << endl;
 
