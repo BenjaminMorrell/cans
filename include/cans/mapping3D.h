@@ -87,6 +87,8 @@ public:
     void insertMatRow(Matrix_HPoint3Df&,Vector_HPoint3Df, int);
     void insertMatCol(Matrix_HPoint3Df&,Vector_HPoint3Df, int, bool);
 
+    int getNumberOfUniquePoints(Eigen::Array<int, Eigen::Dynamic, 2>& Indices);
+
     // Output functions
     void writeObjectPCDFile(const char* filename, const int objID, int ms = -1, int mt = -1);
 

@@ -651,8 +651,8 @@ void testBlenderSequence2(int argc, char ** argv){
   mp.numColsDesired = 95;
   mp.maxNanAllowed = 10;
   mp.removeNanBuffer = 3;
-  mp.nCtrlDefault[0] = 30;
-  mp.nCtrlDefault[1] = 30;
+  mp.nCtrlDefault[0] = 15;
+  mp.nCtrlDefault[1] = 15;
 
   mp.newRowColBuffer = 20; // How many non new points in a row or column are permissible
 
@@ -664,7 +664,7 @@ void testBlenderSequence2(int argc, char ** argv){
   pcl::PCLPointCloud2::Ptr cloud_blob (new pcl::PCLPointCloud2);
   pcl::PointCloud<pcl::PointNormal>::Ptr cloud (new pcl::PointCloud<pcl::PointNormal>); 
 
-  for (int i = 3; i < numberOfScans; i += scanSteps){
+  for (int i = 0; i < numberOfScans; i += scanSteps){
     cout << "Processing Scan " << i << endl;
     cout << "State x is: " << state(0,i) << endl;
 

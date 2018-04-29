@@ -1943,6 +1943,7 @@ Matrix_Point3Df Mapping3D::nurbsDataFromPointCloud(pcl::PointCloud<pcl::PointNor
   int ms;
   int mt;
   bool expandRowsNotCols;
+  int lastVal;
 
   // Find required size of mesh - smallest size
   if (newRowIndices(0,0) == newRowIndices(0,1)){
@@ -1950,16 +1951,26 @@ Matrix_Point3Df Mapping3D::nurbsDataFromPointCloud(pcl::PointCloud<pcl::PointNor
     expandRowsNotCols = true;
     nPoints = (newColIndices.col(1) - newColIndices.col(0)).minCoeff()+1;// Minimum difference between start and end
 
-    ms = nRowOrCol;
+    // Get number of unique points - the number of rows to take
+    // nRowOrCol 
+
+    ms = getNumberOfUniquePoints(newRowIndices);
     mt = nPoints;
+
+    lastVal = newRowIndices(0,0);
     
   }else if (newColIndices(0,0) == newColIndices(0,1)) {
     // Constant col - expanding cols
     expandRowsNotCols = false;
     nPoints = (newRowIndices.col(1) - newRowIndices.col(0)).minCoeff()+1;// Minimum difference between start and end
 
+    // Get number of unique points - the number of cols to take
+    // nRowOrCol = getNumberOfUniquePoints(newColIndices);
+
     ms = nPoints;
-    mt = nRowOrCol;
+    mt = getNumberOfUniquePoints(newColIndices);
+
+    lastVal = newColIndices(0,0);
 
   }else{
     cout << "Error in indices, need row or column to be fixed" << endl;
@@ -1971,15 +1982,20 @@ Matrix_Point3Df Mapping3D::nurbsDataFromPointCloud(pcl::PointCloud<pcl::PointNor
   cout << "Expanding row is " << expandRowsNotCols << endl;
   cout << "Number of points along row/col is " << nPoints << endl;
 
+  cout << "(m_s, m_t) = (" << ms << ", " << mt << ")\n";
+
  
   // Initialise mesh in format for NURBS
   Matrix_Point3Df mesh(ms,mt);
 
   int ii;
   int jj;
+  int mesh_i = 0;
 
   float stepS;
   float stepT;
+
+  bool newPoint = true;
 
   // Loop through each row or col
   for (int i = 0; i < nRowOrCol; i++){
@@ -1987,31 +2003,71 @@ Matrix_Point3Df Mapping3D::nurbsDataFromPointCloud(pcl::PointCloud<pcl::PointNor
     // Step is the number of points from start to end divided by the number of points desired
     stepS = (float)(newRowIndices(i,1) - newRowIndices(i,0))/(float)(nPoints-1); // Should floor the division, so it won't exceed the limit
     stepT = (float)(newColIndices(i,1) - newColIndices(i,0))/(float)(nPoints-1); // Should floor the division, so it won't exceed the limit
-    // cout << "For i = " << i << ", stepS: " << stepS << ", stepT: " << stepT << endl;
-    for (int j = 0; j < nPoints; j++ ){
-      // Compute indices to get data from cloud
-      ii = newRowIndices(i,0) + (int)(j*stepS);
-      jj = newColIndices(i,0) + (int)(j*stepT);
-      // cout << "(ii,jj) = (" << ii << ", " << jj << ")\n";
-      // Copy data
-      if (expandRowsNotCols){
-        // i is iterating through rows. j along rows
-        mesh(i,j).x() = cloud->at(jj,ii).x; // at(col,row)
-        mesh(i,j).y() = cloud->at(jj,ii).y; // at(col,row)
-        mesh(i,j).z() = cloud->at(jj,ii).z; // at(col,row)
-      }else{
-        // i is iterating through columns, j along columns
-        mesh(j,i).x() = cloud->at(jj,ii).x; // at(col,row)
-        mesh(j,i).y() = cloud->at(jj,ii).y; // at(col,row)
-        mesh(j,i).z() = cloud->at(jj,ii).z; // at(col,row)
+
+    if (expandRowsNotCols){
+      // Constant row
+      if (newRowIndices(i,0) != lastVal){
+        // New Val
+        newPoint = true;
+        lastVal = newRowIndices(i,0);
       }
-      if (!pcl::isFinite(cloud->at(jj,ii))){
-        cout << "\n\nNon-finite mesh point!!\n\n";
+    }else{
+      // Constant col
+      if (newColIndices(i,0) != lastVal){
+        // New Val
+        newPoint = true;
+        lastVal = newColIndices(i,0);
       }
     }
+
+    // cout << "For i = " << i << ", stepS: " << stepS << ", stepT: " << stepT << endl;
+    if (newPoint){
+      for (int j = 0; j < nPoints; j++ ){
+        // Compute indices to get data from cloud
+        ii = newRowIndices(i,0) + (int)(j*stepS);
+        jj = newColIndices(i,0) + (int)(j*stepT);
+        // cout << "(ii,jj) = (" << ii << ", " << jj << ")\n";
+        // Copy data
+        if (expandRowsNotCols){
+          // i is iterating through rows. j along rows
+          mesh(mesh_i,j).x() = cloud->at(jj,ii).x; // at(col,row)
+          mesh(mesh_i,j).y() = cloud->at(jj,ii).y; // at(col,row)
+          mesh(mesh_i,j).z() = cloud->at(jj,ii).z; // at(col,row)
+        }else{
+          // i is iterating through columns, j along columns
+          mesh(j,mesh_i).x() = cloud->at(jj,ii).x; // at(col,row)
+          mesh(j,mesh_i).y() = cloud->at(jj,ii).y; // at(col,row)
+          mesh(j,mesh_i).z() = cloud->at(jj,ii).z; // at(col,row)
+        }
+        if (!pcl::isFinite(cloud->at(jj,ii))){
+          cout << "\n\nNon-finite mesh point!!\n\n";
+        }
+      }
+      cout << "Mesh_i is: " << mesh_i << endl;
+      mesh_i++;
+    }
+    newPoint = false;
   }
 
   return mesh;
+}
+
+// Function as a helper to get the number of unique points 
+int Mapping3D::getNumberOfUniquePoints(Eigen::Array<int, Eigen::Dynamic, 2>& Indices){
+
+  int count = 1;
+  int current = Indices(0,0);
+
+  for (int i = 1; i < Indices.rows(); i ++){
+    if (current != Indices(i,0)){
+      count++;
+      current = Indices(i,0);
+    }
+  }
+
+  cout << "Number of unique points: " << count << endl;
+
+  return count;
 }
 
 //-------------------------------------------------------------------
