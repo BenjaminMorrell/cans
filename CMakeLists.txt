@@ -121,6 +121,8 @@ add_executable(unreal_cans_timer examples/rosUnrealTimer.cpp src/mapping3D.cpp s
 
 add_executable(obstacles_test examples/obstacleRepresentation.cpp src/mapping3D.cpp src/object3D.cpp src/splitSurface.cpp)
 
+add_executable(slam_test examples/slamNURBS.cpp src/nurbSLAM.cpp src/mapping3D.cpp src/object3D.cpp src/splitSurface.cpp)
+
 
 # add_definitions( -DMAGICKCORE_QUANTUM_DEPTH=16 )
 # add_definitions( -DMAGICKCORE_HDRI_ENABLE=0 )
@@ -149,6 +151,8 @@ target_link_libraries(unreal_cans ${catkin_LIBRARIES} ${NURBS3_LIBRARIES})
 target_link_libraries(unreal_cans_timer ${catkin_LIBRARIES} ${NURBS3_LIBRARIES}) 
 
 target_link_libraries(obstacles_test ${catkin_LIBRARIES} ${NURBS3_LIBRARIES}) 
+
+target_link_libraries(slam_test ${catkin_LIBRARIES} ${NURBS3_LIBRARIES}) 
 
 #############
 ## Install ##

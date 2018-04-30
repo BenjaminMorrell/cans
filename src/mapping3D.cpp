@@ -549,7 +549,8 @@ Object3D Mapping3D::joinSurfaces(Object3D& srf1, Object3D& srf2, std::string ext
         // -----------------------------------------------------------------
         // Input checks
         if (n_ctrlCheck2 != srf1.ctrlPnts().rows()){
-          cout << "Error!: Need to have matched numbers of control points along the join direction\nReturning an empty surface" << endl;
+          cout << "Need to have matched numbers of control points along the join direction\nDoing Knot Insertion" << endl;
+          knotInsertionAlongSeam(srf2, extendDirection, srf1.ctrlPnts().rows() - n_ctrlCheck2);
           cout << "Srf1 dimensions are: (" << srf1.ctrlPnts().rows() << ", " << srf1.ctrlPnts().cols() << ")\n";
           cout << "Srf2 dimensions are: (" << srf2.ctrlPnts().rows() << ", " << srf2.ctrlPnts().cols() << ")\n";
           srfOut = new Object3D();
@@ -657,7 +658,8 @@ Object3D Mapping3D::joinSurfaces(Object3D& srf1, Object3D& srf2, std::string ext
         // -----------------------------------------------------------------
         // Input checks
         if (n_ctrlCheck2 != srf1.ctrlPnts().cols()){
-          cout << "Error!: Need to have matched numbers of control points along the join direction\nReturning an empty surface" << endl;
+          cout << "Need to have matched numbers of control points along the join direction\nDoing Knot Insertion" << endl;
+          knotInsertionAlongSeam(srf2, extendDirection, srf1.ctrlPnts().cols() - n_ctrlCheck2);
           cout << "Srf1 dimensions are: (" << srf1.ctrlPnts().rows() << ", " << srf1.ctrlPnts().cols() << ")\n";
           cout << "Srf2 dimensions are: (" << srf2.ctrlPnts().rows() << ", " << srf2.ctrlPnts().cols() << ")\n";
           srfOut = new Object3D();
@@ -818,6 +820,8 @@ std::vector<int> Mapping3D::computeNumberOfControlPoints(std::string extendDirec
     nCtrlNew[1] = 0;
   }
 
+  
+
   // Increase number of knots in join direction to be above 2, if criteria is met
   if (nCtrlNew[0] == 2 || nCtrlNew[0] == 3){
     // if ((float)data.rows()/(float)data.cols()*srf.ctrlPnts().rows() > 1.8){
@@ -827,6 +831,16 @@ std::vector<int> Mapping3D::computeNumberOfControlPoints(std::string extendDirec
     // if ((float)data.cols()/(float)data.rows()*srf.ctrlPnts().cols() > 1.8){
       nCtrlNew[1] = 4;
     // }
+  }
+
+  // Make sure there are not more control points than data
+  if (nCtrlNew[0] > data.rows()){
+    cout << "\n\tMore control points: " << nCtrlNew[0] << " than data: " << data.rows() << ". Reducing control points\n" << endl;
+    nCtrlNew[0] = data.rows();
+  }
+  if (nCtrlNew[1] > data.cols()){
+    cout << "\n\tMore control points: " << nCtrlNew[1] << " than data: " << data.cols() << ". Reducing control points\n" << endl;
+    nCtrlNew[1] = data.cols();
   }
 
   return nCtrlNew;
@@ -1544,26 +1558,26 @@ void Mapping3D::updateObject(int objID, pcl::PointCloud<pcl::PointNormal>::Ptr o
   // Create Object for new surface? (nknots = deg + nctrl + 1)
   Object3D obj(mesh, order[0], order[1], nCtrlNew[0], nCtrlNew[1]);
 
-  if (useNonRectData){
-    // CHECK OBJECT:
-    obj.writeVRML("newSurf.wrl",Color(255,100,255),50,80);
+  // if (useNonRectData){
+  //   // CHECK OBJECT:
+  //   obj.writeVRML("newSurf.wrl",Color(255,100,255),50,80);
 
-    // Test generating data
-    int nPoints = 25;
+  //   // Test generating data
+  //   int nPoints = 25;
     
-    // Get the data points
-    Matrix_Point3Df data = obj.getSurfacePoints(nPoints, nPoints);
+  //   // Get the data points
+  //   Matrix_Point3Df data = obj.getSurfacePoints(nPoints, nPoints);
 
-    bool bIsnoNan = true;
-    for (int i = 0; i < nPoints; i++){
-      for (int j = 0; j < nPoints; j++){
-        if (!std::isfinite(data(i,j).x())){
-            bIsnoNan = false;
-            cout << "\n\n\t\tNANS IN New object\n\n" << endl;
-        }
-      }
-    }
-  }
+  //   bool bIsnoNan = true;
+  //   for (int i = 0; i < nPoints; i++){
+  //     for (int j = 0; j < nPoints; j++){
+  //       if (!std::isfinite(data(i,j).x())){
+  //           bIsnoNan = false;
+  //           cout << "\n\n\t\tNANS IN New object\n\n" << endl;
+  //       }
+  //     }
+  //   }
+  // }
  
   
   // cout << "object of new mesh has data at (0,0): " << obj.pointAt(0.0,0.0) << endl;  
@@ -1574,6 +1588,7 @@ void Mapping3D::updateObject(int objID, pcl::PointCloud<pcl::PointNormal>::Ptr o
     cout << "inserting knots" << endl;
     knotInsertionPreMerge(obj, ss.extendDirection);
   }
+  
 
 
   // Join Surfaces
@@ -1655,6 +1670,71 @@ void Mapping3D::knotInsertionPreMerge(Object3D& obj, std::string extendDirection
   }else{
     cout << "knots pre-insertion are: " << obj.knotV() << endl;
     cout << "Inserting knots in V: " << knotsInsert << endl;
+    obj.refineKnotV(knotsInsert);
+  }
+}
+
+/*! 
+  \brief  inserts knots into a surface in preparation for merging with another surface - along the seam
+
+  \param      obj           the Object3D to insert knots for
+  \param[in]  exendDirection The direction surfaces are joining
+  \param[in]  nInsert         The number of knots to insert
+  
+  \author Benjamin Morrell
+  \date 5 April 2018
+*/
+void Mapping3D::knotInsertionAlongSeam(Object3D& obj, std::string extendDirection, int nInsert){
+
+  // From global settings
+  // float deltaKnotInsert = 1e-4;
+  // int numInsert = 3;
+
+  Vector_FLOAT knotsInsert(nInsert);
+
+  int nCtrlS = obj.ctrlPnts().rows();
+  int nCtrlT = obj.ctrlPnts().cols();
+
+  float startVal = 0.0 + deltaKnotInsert;
+  float endVal = 1.0 - deltaKnotInsert;
+  bool insertUFlag;
+
+  switch (extendDirection[1]){
+    case 'L' :
+      // Add knots in the s direction 
+      insertUFlag = true;
+      break;
+    case 'R' : 
+      // Add knots in the s direction 
+      insertUFlag = true;
+      break;
+    case 'D' :
+      // Add knots in the t direction 
+      insertUFlag = false;
+      break;
+    case 'U' : 
+      // Add knots in the t direction 
+      insertUFlag = false;
+      break;
+  }
+
+  // Fill knot vector
+  float step = (endVal - startVal)/((float)nInsert-1);
+
+  for (int i = 0; i < nInsert; i++){
+    knotsInsert[i] = startVal + step * i;
+  }
+
+  
+
+  // Do knot insertion
+  if (insertUFlag){
+    cout << "AlongSeam knots pre-insertion are: " << obj.knotU() << endl;
+    cout << "AlongSeam Inserting knots in U: " << knotsInsert << endl;
+    obj.refineKnotU(knotsInsert);
+  }else{
+    cout << "AlongSeam knots pre-insertion are: " << obj.knotV() << endl;
+    cout << "AlongSeam Inserting knots in V: " << knotsInsert << endl;
     obj.refineKnotV(knotsInsert);
   }
 }
@@ -2253,4 +2333,52 @@ void Mapping3D::writeObjectPCDFile(const char* filename, const int objID, int ms
   
   pcl::PCDWriter writer;
   writer.write<pcl::PointNormal> (filename, *mapObjPC, false);
+}
+
+/*! 
+  \brief Fills a ros message with the object of the given object ID
+  
+  \author Benjamin Morrell
+  \date 30 April 2018
+*/
+void Mapping3D::fillObject3DMessage(int objID, cans_msgs::Object3D& msg){
+  
+  msg.ID = 0;
+
+  // NURBS parameters
+  msg.degU = objectMap[objID].degreeU();
+  msg.degV = objectMap[objID].degreeV();
+  msg.nCtrlS = objectMap[objID].ctrlPnts().rows();
+  msg.nCtrlT = objectMap[objID].ctrlPnts().cols();
+
+  // Knot Vector
+  std::vector<float> knotU;
+  std::vector<float> knotV;
+  for (int i = 0; i < objectMap[objID].knotU().size(); i++){
+    knotU.push_back(objectMap[objID].knotU()[i]);
+  }
+  for (int i = 0; i < objectMap[objID].knotV().size(); i++){
+    knotV.push_back(objectMap[objID].knotV()[i]);
+  }
+  
+  msg.knotU = knotU;
+  msg.knotV = knotV;
+
+  // Control points
+  std::vector<float> controlX;
+  std::vector<float> controlY;
+  std::vector<float> controlZ;
+
+  for (int i = 0; i < msg.nCtrlS; i++){
+    for (int j = 0; j < msg.nCtrlT; j++){
+      controlX.push_back(objectMap[objID].ctrlPnts()(i,j).x());
+      controlY.push_back(objectMap[objID].ctrlPnts()(i,j).y());
+      controlZ.push_back(objectMap[objID].ctrlPnts()(i,j).z());
+    }
+  }
+
+  msg.ControlPoints_x = controlX;
+  msg.ControlPoints_y = controlY;
+  msg.ControlPoints_z = controlZ;
+
 }

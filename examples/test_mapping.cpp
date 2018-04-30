@@ -572,30 +572,30 @@ void testBlenderSequence2(int argc, char ** argv){
     case 0: 
       // BLOB
       cout << "Running Blob Dataset";
-      filestem = "/home/bjm/Dropbox/PhD_Code/Data/3D_Scans/Blensor/Scan01/BlobScan_Data000";
-      outFilestem = "/home/bjm/Dropbox/PhD_Code/Results/blob/blob_scan_res_new_extend";
+      filestem = "/home/bjm/Dropbox/PhD_Code/Data/3D_Scans/Blensor/Scan01/BlobScan_Data00";
+      outFilestem = "/home/bjm/Dropbox/PhD_Code/Results/blob/blob_scan_res_new_extend_";
       pathFilename = "/home/bjm/Dropbox/PhD_Code/Data/3D_Scans/Blensor/Scan01/BlobScan_Path.txt";
       scanSteps = 1;
       numberOfScans = numberOfScans*scanSteps;
       nData = 10;
       break;
     case 1:
-      // NEW BLOB
-      cout << "Running New Blob Dataset";
-      filestem = "/home/bjm/Dropbox/PhD_Code/Data/3D_Scans/Blensor/newBlob/newblobScans000";
-      outFilestem = "/home/bjm/Dropbox/PhD_Code/Results/newBlob/newblob_";
-      pathFilename = "/home/bjm/Dropbox/PhD_Code/Data/3D_Scans/Blensor/newBlob/newblobTrack.txt";
-      scanSteps = 5;
+      // Longer Blob
+      cout << "Running Long Blob Dataset";
+      filestem = "/home/bjm/Dropbox/PhD_Code/Data/3D_Scans/Blensor/BlobLong/BlobScan_data00";
+      outFilestem = "/home/bjm/Dropbox/PhD_Code/Results/BlobLong/blob_";
+      pathFilename = "/home/bjm/Dropbox/PhD_Code/Data/3D_Scans/Blensor/BlobLong/BlobScan_path.txt";
+      scanSteps = 11;
       numberOfScans = numberOfScans*scanSteps;
       nData = 100;
       break;
     case 2:
       // Cube
       cout << "Running Cube Dataset";
-      // filestem = "/home/bjm/Dropbox/PhD_Code/Data/3D_Scans/Blensor/Scan02/BlockScan_data000";
+      // filestem = "/home/bjm/Dropbox/PhD_Code/Data/3D_Scans/Blensor/Scan02/BlockScan_data00";
       // outFilestem = "/home/bjm/Dropbox/PhD_Code/Results/Cube/cube_scan_res_";
       // pathFilename = "/home/bjm/Dropbox/PhD_Code/Data/3D_Scans/Blensor/Scan02/BlockScan_path.txt";
-      filestem = "/home/bjm/Dropbox/PhD_Code/Data/3D_Scans/Blensor/One_Object/CUBE/oneObj_scan_data000";
+      filestem = "/home/bjm/Dropbox/PhD_Code/Data/3D_Scans/Blensor/One_Object/CUBE/oneObj_scan_data00";
       outFilestem = "/home/bjm/Dropbox/PhD_Code/Results/Cube/cube_one_obj_scan_res_";
       pathFilename = "/home/bjm/Dropbox/PhD_Code/Data/3D_Scans/Blensor/One_Object/CUBE/oneObj_scan_path.txt";
       // Also CUBE_DIAG, CUBE_VERT, 
@@ -606,7 +606,7 @@ void testBlenderSequence2(int argc, char ** argv){
     case 3:
       // Cube
       cout << "\n\t\tRunning Cube VERT Dataset\n\n";
-      filestem = "/home/bjm/Dropbox/PhD_Code/Data/3D_Scans/Blensor/One_Object/CUBE_VERT/oneObj_scan_data000";
+      filestem = "/home/bjm/Dropbox/PhD_Code/Data/3D_Scans/Blensor/One_Object/CUBE_VERT/oneObj_scan_data00";
       outFilestem = "/home/bjm/Dropbox/PhD_Code/Results/Cube/cube_vert_one_obj_scan_res_";
       pathFilename = "/home/bjm/Dropbox/PhD_Code/Data/3D_Scans/Blensor/One_Object/CUBE_VERT/oneObj_scan_path.txt";
       // Also CUBE_DIAG, CUBE_VERT, 
@@ -617,7 +617,7 @@ void testBlenderSequence2(int argc, char ** argv){
     case 4:
       // Sphere
       cout << "Running Sphere Dataset";
-      filestem = "/home/bjm/Dropbox/PhD_Code/Data/3D_Scans/Blensor/One_Object/SPHERE/oneObj_scan_data000";
+      filestem = "/home/bjm/Dropbox/PhD_Code/Data/3D_Scans/Blensor/One_Object/SPHERE/oneObj_scan_data00";
       outFilestem = "/home/bjm/Dropbox/PhD_Code/Results/Sphere/sphere_scan_res_";
       pathFilename = "/home/bjm/Dropbox/PhD_Code/Data/3D_Scans/Blensor/One_Object/SPHERE/oneObj_scan_path.txt";
       // ALso SPHERE_DIAG
@@ -628,13 +628,23 @@ void testBlenderSequence2(int argc, char ** argv){
     case 5:
       // Sphere
       cout << "Running Sphere Dataset";
-      filestem = "/home/bjm/Dropbox/PhD_Code/Data/3D_Scans/Blensor/One_Object/SPHERE_DIAG/oneObj_scan_data000";
+      filestem = "/home/bjm/Dropbox/PhD_Code/Data/3D_Scans/Blensor/One_Object/SPHERE_DIAG/oneObj_scan_data00";
       outFilestem = "/home/bjm/Dropbox/PhD_Code/Results/Sphere/sphere_diag_scan_res_";
       pathFilename = "/home/bjm/Dropbox/PhD_Code/Data/3D_Scans/Blensor/One_Object/SPHERE_DIAG/oneObj_scan_path.txt";
       // ALso SPHERE_DIAG
       scanSteps = 1;
       numberOfScans = numberOfScans*scanSteps;
       nData = 10;
+      break;
+    case 99:
+      // NEW BLOB
+      cout << "Running New Blob Dataset";
+      filestem = "/home/bjm/Dropbox/PhD_Code/Data/3D_Scans/Blensor/newBlob/newblobScans00";
+      outFilestem = "/home/bjm/Dropbox/PhD_Code/Results/newBlob/newblob_";
+      pathFilename = "/home/bjm/Dropbox/PhD_Code/Data/3D_Scans/Blensor/newBlob/newblobTrack.txt";
+      scanSteps = 5;
+      numberOfScans = numberOfScans*scanSteps;
+      nData = 100;
       break;
   }
   
@@ -650,11 +660,11 @@ void testBlenderSequence2(int argc, char ** argv){
   mp.numRowsDesired = 95;
   mp.numColsDesired = 95;
   mp.maxNanAllowed = 10;
-  mp.removeNanBuffer = 3;
-  mp.nCtrlDefault[0] = 15;
-  mp.nCtrlDefault[1] = 15;
+  mp.removeNanBuffer = 2;
+  mp.nCtrlDefault[0] = 17;
+  mp.nCtrlDefault[1] = 17;
 
-  mp.newRowColBuffer = 20; // How many non new points in a row or column are permissible
+  mp.newRowColBuffer = 10; // How many non new points in a row or column are permissible
 
   // New extension method
   mp.useNonRectData = true;
@@ -670,9 +680,12 @@ void testBlenderSequence2(int argc, char ** argv){
 
     // Get filename:
     if (i < 9){
+      filename = filestem + "00" + static_cast<ostringstream*>( &(ostringstream() << (i+1)) )->str() + ".pcd";
+      cout << "filename is : " << filename;
+    }else if (i < 99){
       filename = filestem + "0" + static_cast<ostringstream*>( &(ostringstream() << (i+1)) )->str() + ".pcd";
       cout << "filename is : " << filename;
-    }else{ // Scan numbers 10 and above. Goes up to 99
+    }else{
       filename = filestem + static_cast<ostringstream*>( &(ostringstream() << (i+1)) )->str() + ".pcd";
       cout << "filename is : " << filename;
     }
@@ -718,9 +731,12 @@ void testBlenderSequence2(int argc, char ** argv){
   // Write result to pcd
   mp.writeObjectPCDFile((outFilestem + "end_result.pcd").c_str(), 0, 125, 125);
 
+  // Write final object to file
+  mp.objectMap[0].write((outFilestem + "final_obj.obj").c_str());
+
   // Write object 3D to file if argument given
   if (argc > 3){
-    mp.objectMap[0].write(argv[3]);    
+    mp.objectMap[0].write(argv[3]);
     cout << "Starting centre is: " << mp.objectMap[0].getCentre() << ", and centre: " << mp.objectMap[0].getObjSize() << endl;
 
     Object3D obj;

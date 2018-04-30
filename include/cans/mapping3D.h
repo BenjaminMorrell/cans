@@ -6,6 +6,8 @@
 #include "cans/splitSurface.h"
 #include <nurbsS.h>
 
+#include <cans_msgs/Object3D.h>
+
 // PCL specific includes
 #include <pcl/io/pcd_io.h>
 #include <pcl/point_types.h>
@@ -69,6 +71,7 @@ public:
     void updateObjectInMap(int objID, Object3D& obj);
     void updateObject(int objID, pcl::PointCloud<pcl::PointNormal>::Ptr obsObjPC);
     void knotInsertionPreMerge(Object3D& obj, std::string extendDirection);
+    void knotInsertionAlongSeam(Object3D& obj, std::string extendDirection, int nInsert);
 
     // Data association
     std::vector<float> computeSearchMetrics(Object3D& obj);
@@ -92,7 +95,7 @@ public:
     // Output functions
     void writeObjectPCDFile(const char* filename, const int objID, int ms = -1, int mt = -1);
 
-
+    void fillObject3DMessage(int objID, cans_msgs::Object3D& msg);
 
     int numRowsDesired;
     int numColsDesired;
