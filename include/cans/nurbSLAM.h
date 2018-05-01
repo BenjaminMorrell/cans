@@ -25,6 +25,9 @@
 // #include <pcl/registration/correspondence_rejection_distance.h>
 #include <pcl/registration/ia_ransac.h>
 #include <pcl/segmentation/sac_segmentation.h>
+
+#include <pcl/keypoints/iss_3d.h>
+
 // May not need..
 #include <pcl/visualization/pcl_visualizer.h>
 typedef pcl::visualization::PointCloudColorHandlerCustom<pcl::PointNormal> ColorHandlerT; // Visualisation?
@@ -56,6 +59,7 @@ class NurbSLAM {
 
     int processSingleScan(pcl::PointCloud<pcl::PointNormal>::Ptr cloud, pcl::PointCloud<pcl::PointNormal>::Ptr cloudTransformed);
 
+    Eigen::Matrix4f alignScanKeypointsWithMapObject(pcl::PointCloud<pcl::PointNormal>::Ptr mapObjPC, pcl::PointCloud<pcl::PointNormal>::Ptr obsObjPC);
     Eigen::Matrix4f alignScanWithMapObject(pcl::PointCloud<pcl::PointNormal>::Ptr cloud, pcl::PointCloud<pcl::PointNormal>::Ptr cloud2);
 
     void updateSLAMFilter();
@@ -73,8 +77,11 @@ class NurbSLAM {
 
     // Localisation settings
     float nSurfPointsFactor;// - factor multiplied by the number of control points to get the number of surface samples
-    float pclRadiusSetting; // size to search for normal and feature estimation.
-
+    float pclNormalRadiusSetting; // size to search for normal estimation.
+    float pclFeatureRadiusSetting; // size to search for feature estimation.
+    float modelResolution; // Setting for keypoint extraction
+    float inlierMultiplier; // Setting that affects the size of the inlier threshold
+    bool bUseKeypoints;
     int localisationOption;
 };
 

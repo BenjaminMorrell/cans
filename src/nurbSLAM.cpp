@@ -12,18 +12,20 @@ using namespace PLib;
   \date 30 April 2018
 */
 NurbSLAM::NurbSLAM(): localisationOption(2), bShowAlignment(false),
-    nSurfPointsFactor(3.0), pclRadiusSetting(0.1)
+    nSurfPointsFactor(3.0), pclNormalRadiusSetting(0.05), pclFeatureRadiusSetting(0.1),
+    bUseKeypoints(true), modelResolution(0.005), inlierMultiplier(0.1)
 {
   state = Eigen::Affine3f::Identity();
+  transformDelta = Eigen::Affine3f::Identity();
 
   // Mapping settings
   mp.numRowsDesired = 95;
   mp.numColsDesired = 95;
   mp.maxNanAllowed = 10;
   mp.removeNanBuffer = 2;
-  mp.nCtrlDefault[0] = 15;
-  mp.nCtrlDefault[1] = 15;
-  // mp.newRowColBuffer = 20; // How many non new points in a row or column are permissible
+  mp.nCtrlDefault[0] = 17;
+  mp.nCtrlDefault[1] = 17;
+  mp.newRowColBuffer = 10; // How many non new points in a row or column are permissible
   // New extension method
   mp.useNonRectData = true;
 
@@ -76,7 +78,11 @@ void NurbSLAM::processScans(std::vector<pcl::PointCloud<pcl::PointNormal>::Ptr> 
       cout << "Map obj at (0,0) is: " << mapObjPC->at(0,0) << endl;
       
       // Compute the loclisation transform for that object
-      transformationList.push_back(alignScanWithMapObject(mapObjPC, objectMeshList[i]));
+      if (bUseKeypoints){
+        transformationList.push_back(alignScanKeypointsWithMapObject(mapObjPC, objectMeshList[i]));
+      }else{
+        transformationList.push_back(alignScanWithMapObject(mapObjPC, objectMeshList[i]));
+      }
     }
   }
 
@@ -135,6 +141,123 @@ int NurbSLAM::processSingleScan(pcl::PointCloud<pcl::PointNormal>::Ptr cloud, pc
 // ------------- LOCALISATION  -----------------------------
 //-------------------------------------------------------------------
 /*! 
+  \brief  Compute the transform to match the scan to the map object using keypoints
+
+  \author Benjamin Morrell
+  \date 30 April 2018
+*/
+Eigen::Matrix4f NurbSLAM::alignScanKeypointsWithMapObject(pcl::PointCloud<pcl::PointNormal>::Ptr mapObjPC, pcl::PointCloud<pcl::PointNormal>::Ptr obsObjPC){
+  pcl::PointCloud<pcl::PointNormal>::Ptr mapObjPC_keypoints (new pcl::PointCloud<pcl::PointNormal>);
+  pcl::PointCloud<pcl::PointNormal>::Ptr obsObjPC_keypoints (new pcl::PointCloud<pcl::PointNormal>);
+  pcl::PointCloud<pcl::FPFHSignature33>::Ptr mapObjPC_features (new pcl::PointCloud<pcl::FPFHSignature33>);
+  pcl::PointCloud<pcl::FPFHSignature33>::Ptr obsObjPC_features (new pcl::PointCloud<pcl::FPFHSignature33>);
+  pcl::PointCloud<pcl::PointNormal>::Ptr obsObjPC_aligned (new pcl::PointCloud<pcl::PointNormal>);
+
+  // Not use if this is needed
+  // mapObjPC->is_dense = false;
+  // obsObjPC->is_dense = false;
+
+  std::cerr << "PointCloud1 dimensions, W: " << mapObjPC->width << "\tH: " << mapObjPC->height << "\t is dense? " << mapObjPC->is_dense << std::endl;
+  std::cerr << "PointCloud2 dimensions, W: " << obsObjPC->width << "\tH: " << obsObjPC->height << "\t is dense? " << obsObjPC->is_dense << std::endl;
+
+  cout << "Map obj at (0,0) is: " << mapObjPC->at(0,0) << endl;
+  cout << "Obs obj at (0,0) is: " << obsObjPC->at(0,0) << endl;
+
+  Eigen::Matrix4f transformOut;
+
+  pcl::search::KdTree<pcl::PointNormal>::Ptr search_method_(new pcl::search::KdTree<pcl::PointNormal>);
+  
+  // Extract keypoints
+  pcl::ISSKeypoint3D<pcl::PointNormal, pcl::PointNormal> iss_detector;
+
+  iss_detector.setSearchMethod(search_method_);
+  iss_detector.setSalientRadius (6 * modelResolution);
+  iss_detector.setNonMaxRadius (4 * modelResolution);
+  iss_detector.setThreshold21 (0.975);
+  iss_detector.setThreshold32 (0.975);
+  iss_detector.setMinNeighbors (5);
+  iss_detector.setNumberOfThreads (4);
+  iss_detector.setInputCloud (mapObjPC);
+  iss_detector.compute (*mapObjPC_keypoints);
+  cout << "computed keypoints for cloud 1. have " << mapObjPC_keypoints->size() << endl;
+  iss_detector.setInputCloud (obsObjPC);
+  iss_detector.compute (*obsObjPC_keypoints);
+  cout << "computed keypoints for cloud 2. have " << obsObjPC_keypoints->size() << endl;
+    
+  // Estimate normals
+  pcl::NormalEstimation<pcl::PointNormal, pcl::PointNormal> nest;
+  nest.setRadiusSearch(pclNormalRadiusSetting);
+  // nest.setKSearch(7);
+  nest.setSearchMethod(search_method_);
+  nest.setInputCloud(mapObjPC);
+  nest.compute(*mapObjPC);
+  cout << "computed normals for cloud 1" << endl;
+  nest.setInputCloud(obsObjPC);
+  nest.compute(*obsObjPC);
+  cout << "computed normals for cloud 2" << endl;
+
+  cout << "Normals have been estimated" << endl;
+
+  // Estimate features
+  pcl::FPFHEstimationOMP<pcl::PointNormal,pcl::PointNormal,pcl::FPFHSignature33> fest;
+  fest.setRadiusSearch(pclFeatureRadiusSetting);
+  // fest.setKSearch(7);
+  fest.setSearchMethod(search_method_);
+  fest.setSearchSurface(mapObjPC);
+  fest.setInputCloud(mapObjPC_keypoints);
+  fest.setInputNormals(mapObjPC);
+  fest.compute (*mapObjPC_features);
+  fest.setSearchSurface(obsObjPC);
+  fest.setInputCloud(obsObjPC_keypoints);
+  fest.setInputNormals(obsObjPC);
+  fest.compute (*obsObjPC_features);
+  cout << "Features have been computed" << endl;
+  
+
+  //Perform alignment
+  // Prerejective RANSAC
+  // SampleConsensusPrerejective_Exposed<pcl::PointNormal,pcl::PointNormal,pcl::FPFHSignature33> align;
+  pcl::SampleConsensusPrerejective<pcl::PointNormal,pcl::PointNormal,pcl::FPFHSignature33> align;
+  align.setInputSource(obsObjPC_keypoints);
+  align.setSourceFeatures(obsObjPC_features);
+  align.setInputTarget(mapObjPC_keypoints);
+  align.setTargetFeatures(mapObjPC_features);
+  //Settings
+  align.setMaximumIterations (5000); // Number of RANSAC iterations
+  align.setNumberOfSamples (3); // Number of points to sample for generating/prerejecting a pose
+  align.setCorrespondenceRandomness (3); // Number of nearest features to use
+  align.setSimilarityThreshold (0.9f); // Polygonal edge length similarity threshold
+  align.setMaxCorrespondenceDistance (2.5f * inlierMultiplier);// Inlier threshold
+  align.setInlierFraction (0.25f); // Required inlier fraction for accepting a pose hypothesis
+
+  align.align(*obsObjPC_aligned);
+
+  transformOut = align.getFinalTransformation ();
+
+  if (align.hasConverged()){
+    cout << " Successfully converged" << endl;
+  }else {
+    cout << "Alignment FAILED to converge" << endl;
+  }
+  
+
+  cout << "Completed alignment" << endl;
+  cout << "Transform matrix out is: " << transformOut << endl;
+  if (bShowAlignment){
+    // Show alignment
+    pcl::visualization::PCLVisualizer visu("Alignment");
+    visu.addPointCloud (mapObjPC, ColorHandlerT (mapObjPC, 0.0, 255.0, 0.0), "mapObjPC");
+    visu.addPointCloud (obsObjPC_aligned, ColorHandlerT (obsObjPC_aligned, 0.0, 0.0, 255.0), "obsObjPC_alignedKP");
+    visu.addPointCloud (obsObjPC, ColorHandlerT (obsObjPC, 255.0, 0.0, 0.0), "obsObjPC");
+    visu.addPointCloud (mapObjPC_keypoints, ColorHandlerT (mapObjPC_keypoints, 0.0, 255.0, 255.0), "mapObjPCKP");
+    visu.addPointCloud (obsObjPC_keypoints, ColorHandlerT (obsObjPC_keypoints, 255.0, 0.0, 255.0), "obsObjPCKP");
+    visu.spin ();
+  }
+
+  return transformOut;
+}
+
+/*! 
   \brief  Compute the transform to match the scan to the map object
 
   \author Benjamin Morrell
@@ -184,7 +307,7 @@ Eigen::Matrix4f NurbSLAM::alignScanWithMapObject(pcl::PointCloud<pcl::PointNorma
     
     // Estimate normals
     pcl::NormalEstimation<pcl::PointNormal, pcl::PointNormal> nest;
-    nest.setRadiusSearch(pclRadiusSetting);
+    nest.setRadiusSearch(pclNormalRadiusSetting);
     // nest.setKSearch(7);
     nest.setSearchMethod(search_method_);
     nest.setInputCloud(mapObjPC);
@@ -198,7 +321,7 @@ Eigen::Matrix4f NurbSLAM::alignScanWithMapObject(pcl::PointCloud<pcl::PointNorma
 
     // Estimate features
     pcl::FPFHEstimationOMP<pcl::PointNormal,pcl::PointNormal,pcl::FPFHSignature33> fest;
-    fest.setRadiusSearch(pclRadiusSetting);
+    fest.setRadiusSearch(pclFeatureRadiusSetting);
     // fest.setKSearch(7);
     fest.setInputCloud(mapObjPC);
     fest.setSearchMethod(search_method_);
@@ -315,6 +438,10 @@ void NurbSLAM::alignAndUpdateMeshes(){
 
   std::vector<float> searchMetrics;
 
+  cout << "In Align and update Meshes. TransformDelta is: " << transformDelta.matrix() << endl;
+
+  cout << "Object mesh list has values cloud at [0] of size: " << objectMeshList[0]->size() << endl;
+  cout << "and at (0,0) = " << objectMeshList[0]->at(0,0) << endl;
 
   for (int i = 0; i < objIDList.size(); i++){
     // Align scans with new transformation delta (delat from existing transform)

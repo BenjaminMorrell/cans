@@ -22,6 +22,8 @@
 // #include <pcl/segmentation/sac_segmentation.h>
 // #include <pcl/visualization/pcl_visualizer.h>
 
+// #include <pcl/visualization/cloud_viewer.h>
+
 // #include "cans/mapping3D.h"
 // #include "cans/object3D.h"
 #include "cans/nurbSLAM.h"
@@ -111,7 +113,7 @@ void runSLAM(int argc,char ** argv){
       filestem = "/home/bjm/Dropbox/PhD_Code/Data/3D_Scans/Blensor/BlobLong/BlobScan_data00";
       outFilestem = "/home/bjm/Dropbox/PhD_Code/Results/BlobLong/blob_";
       pathFilename = "/home/bjm/Dropbox/PhD_Code/Data/3D_Scans/Blensor/BlobLong/BlobScan_path.txt";
-      scanSteps = 5;
+      scanSteps = 1;
       numberOfScans = numberOfScans*scanSteps;
       nData = 100;
       break;
@@ -162,13 +164,33 @@ void runSLAM(int argc,char ** argv){
       numberOfScans = numberOfScans*scanSteps;
       nData = 10;
       break;
+    case 6:
+      // Longer Blob 2 - no problematic square parts
+      cout << "Running Long Blob2 Dataset";
+      filestem = "/home/bjm/Dropbox/PhD_Code/Data/3D_Scans/Blensor/Blob2/BlobScan_data00";
+      outFilestem = "/home/bjm/Dropbox/PhD_Code/Results/Blob2/blob_";
+      pathFilename = "/home/bjm/Dropbox/PhD_Code/Data/3D_Scans/Blensor/Blob2/BlobScan_path.txt";
+      scanSteps = 1;
+      numberOfScans = numberOfScans*scanSteps;
+      nData = 100;
+      break;
+    case 7:
+      // Blob Lateral - NOTE that the path may be wrong - so only use for SLAM...
+      cout << "Running Long BlobLat Dataset";
+      filestem = "/home/bjm/Dropbox/PhD_Code/Data/3D_Scans/Blensor/BlobLat/BlobScan_data00";
+      outFilestem = "/home/bjm/Dropbox/PhD_Code/Results/BlobLat/blob_";
+      pathFilename = "/home/bjm/Dropbox/PhD_Code/Data/3D_Scans/Blensor/BlobLat/BlobScan_path.txt";
+      scanSteps = 1;
+      numberOfScans = numberOfScans*scanSteps;
+      nData = 40;
+      break;
     case 99:
       // NEW BLOB
       cout << "Running New Blob Dataset";
       filestem = "/home/bjm/Dropbox/PhD_Code/Data/3D_Scans/Blensor/newBlob/newblobScans00";
       outFilestem = "/home/bjm/Dropbox/PhD_Code/Results/newBlob/newblob_";
       pathFilename = "/home/bjm/Dropbox/PhD_Code/Data/3D_Scans/Blensor/newBlob/newblobTrack.txt";
-      scanSteps = 5;
+      scanSteps = 1;
       numberOfScans = numberOfScans*scanSteps;
       nData = 100;
       break;
@@ -178,12 +200,23 @@ void runSLAM(int argc,char ** argv){
   NurbSLAM slam;
 
   slam.bShowAlignment = true;
-  slam.pclRadiusSetting = 0.2;
-  slam.nSurfPointsFactor = 3.0; // default is 3.0
+  slam.bUseKeypoints = false;
+  slam.pclNormalRadiusSetting = 0.05;
+  slam.pclFeatureRadiusSetting = 0.1;
+  slam.nSurfPointsFactor = 5.0; // default is 3.0
   slam.localisationOption = 2;// Option for localisation method (0 - PCL, 1 - RANSAC IA, 2 - Prerejective RANSAC)
   if (argc > 3){
     slam.localisationOption = atoi(argv[3]);
   }
+
+  // Other settings
+  slam.inlierMultiplier = 0.1; // for the RANSAC inlier threshold
+  slam.modelResolution = 0.005; // For localisation
+
+  // Mapping settings
+  // slam.mp.numRowsDesired = 95;
+  // slam.mp.numColsDesired = 95;
+
 
   // Load true state
   Eigen::Array<float,6,Eigen::Dynamic> state = readPathTextFile(pathFilename.c_str(),nData);
@@ -237,6 +270,12 @@ void runSLAM(int argc,char ** argv){
     // Convert to PCL cloud
     pcl::fromPCLPointCloud2 (*cloud_blob, *cloud); 
     cout << "converted PC" << endl;
+
+    // pcl::visualization::CloudViewer viewer ("Simple Cloud Viewer");
+    // viewer.showCloud (*cloud);
+    // while (!viewer.wasStopped ())
+    // {
+    // }
 
     // Put in vector (if we had multiple objects)
     clouds.push_back(cloud);

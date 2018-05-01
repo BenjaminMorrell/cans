@@ -932,8 +932,20 @@ void Mapping3D::meshFromScan(pcl::PointCloud<pcl::PointNormal>::Ptr cloudOut, pc
           cloudOut->at(jj,ii).y = cloudIn->at(j,i).y;
           cloudOut->at(jj,ii).z = cloudIn->at(j,i).z;
 
+          
           // Store indices if the value is nan
           if (!pcl::isFinite(cloudIn->at(j,i))){
+            nanIndices(0,ijk) = ii;
+            nanIndices(1,ijk) = jj;
+            ijk++; 
+          }else if (std::abs(cloudOut->at(jj,ii).z) < 3.0 || std::abs(cloudOut->at(jj,ii).z) > 10.0){
+            // Filter out large z variances THESE ARE HARD CODED FOR THE MOMENT!!!
+            cout << "Removing point because out of z threshold. z was: " << cloudOut->at(jj,ii).z << endl;
+            
+            cloudOut->at(jj,ii).x = 1.0/0.0;
+            cloudOut->at(jj,ii).y = 1.0/0.0;
+            cloudOut->at(jj,ii).z = 1.0/0.0;
+
             nanIndices(0,ijk) = ii;
             nanIndices(1,ijk) = jj;
             ijk++; 

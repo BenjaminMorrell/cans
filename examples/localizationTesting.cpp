@@ -22,6 +22,8 @@
 #include <pcl/segmentation/sac_segmentation.h>
 #include <pcl/visualization/pcl_visualizer.h>
 
+#include <pcl/keypoints/iss_3d.h>
+
 #include "cans/mapping3D.h"
 #include "cans/object3D.h"
 #include "cans/splitSurface.h"
@@ -446,7 +448,123 @@ void getAlignedCorrespondences(int argc, char ** argv){
 
 }
 
-Eigen::Matrix4f runAlignmentPreRejective(pcl::PointCloud<pcl::PointNormal>::Ptr cloud, pcl::PointCloud<pcl::PointNormal>::Ptr cloud2, int option, bool bShowAlignment = true){
+Eigen::Matrix4f runKeypointAlignment(pcl::PointCloud<pcl::PointNormal>::Ptr cloud, pcl::PointCloud<pcl::PointNormal>::Ptr cloud2, float normRange = 0.05, float featureRange = 0.1, float model_resolution = 0.01, bool bShowAlignment = true){
+  
+  pcl::PointCloud<pcl::PointNormal>::Ptr cloud_keypoints (new pcl::PointCloud<pcl::PointNormal>);
+  pcl::PointCloud<pcl::PointNormal>::Ptr cloud2_keypoints (new pcl::PointCloud<pcl::PointNormal>);
+  pcl::PointCloud<pcl::FPFHSignature33>::Ptr cloud_features (new pcl::PointCloud<pcl::FPFHSignature33>);
+  pcl::PointCloud<pcl::FPFHSignature33>::Ptr cloud2_features (new pcl::PointCloud<pcl::FPFHSignature33>);
+  pcl::PointCloud<pcl::PointNormal>::Ptr cloud2_keyAligned (new pcl::PointCloud<pcl::PointNormal>);
+
+  cout << "inside runAlignmentPreRejective" << endl;
+
+  // This was to try and fix some of the error messages...
+  cloud->is_dense = false;
+  cloud2->is_dense = false;
+
+  std::cerr << "PointCloud1 dimensions, W: " << cloud->width << "\tH: " << cloud->height << "\t is dense? " << cloud->is_dense << std::endl;
+  std::cerr << "PointCloud2 dimensions, W: " << cloud2->width << "\tH: " << cloud2->height << "\t is dense? " << cloud2->is_dense << std::endl;
+ 
+
+  // bool useicp = false;
+  // bool useiaransac = false;
+  // bool useprerejsac = true;
+
+  // float model_resolution = 0.03; // NEED TO TUNE THIS - MAYBE MAKE AN INPUT
+
+  Eigen::Matrix4f transformOut;
+
+  pcl::search::KdTree<pcl::PointNormal>::Ptr search_method_(new pcl::search::KdTree<pcl::PointNormal>);
+  
+  // Extract keypoints
+  pcl::ISSKeypoint3D<pcl::PointNormal, pcl::PointNormal> iss_detector;
+
+  iss_detector.setSearchMethod(search_method_);
+  iss_detector.setSalientRadius (6 * model_resolution);
+  iss_detector.setNonMaxRadius (4 * model_resolution);
+  iss_detector.setThreshold21 (0.975);
+  iss_detector.setThreshold32 (0.975);
+  iss_detector.setMinNeighbors (5);
+  iss_detector.setNumberOfThreads (4);
+  iss_detector.setInputCloud (cloud);
+  iss_detector.compute (*cloud_keypoints);
+  cout << "computed keypoints for cloud 1. have " << cloud_keypoints->size() << endl;
+  iss_detector.setInputCloud (cloud2);
+  iss_detector.compute (*cloud2_keypoints);
+  cout << "computed keypoints for cloud 2. have " << cloud2_keypoints->size() << endl;
+
+  // Estimate normals for the keypoints
+  pcl::NormalEstimation<pcl::PointNormal, pcl::PointNormal> nest;
+  nest.setRadiusSearch(normRange);
+  // nest.setKSearch(7);
+  nest.setSearchMethod(search_method_);
+  nest.setInputCloud(cloud);
+  nest.compute(*cloud);
+  cout << "computed normals for cloud 1" << endl;
+  nest.setInputCloud(cloud2);
+  nest.compute(*cloud2);
+  cout << "computed normals for cloud 2" << endl;
+
+  cout << "Normals have been estimated" << endl;
+
+  // Estimate features
+  pcl::FPFHEstimationOMP<pcl::PointNormal,pcl::PointNormal,pcl::FPFHSignature33> fest;
+  fest.setRadiusSearch(featureRange);
+  // fest.setKSearch(7);
+  fest.setSearchMethod(search_method_);
+  fest.setSearchSurface(cloud);
+  fest.setInputCloud(cloud_keypoints);
+  fest.setInputNormals(cloud);
+  fest.compute (*cloud_features);
+  fest.setSearchSurface(cloud2);
+  fest.setInputCloud(cloud2_keypoints);
+  fest.setInputNormals(cloud2);
+  fest.compute (*cloud2_features);
+  cout << "Features have been computed" << endl;
+  
+  // Prerejective RANSAC
+  // SampleConsensusPrerejective_Exposed<pcl::PointNormal,pcl::PointNormal,pcl::FPFHSignature33> align;
+  pcl::SampleConsensusPrerejective<pcl::PointNormal,pcl::PointNormal,pcl::FPFHSignature33> align;
+  align.setInputSource(cloud2_keypoints);
+  align.setSourceFeatures(cloud2_features);
+  align.setInputTarget(cloud_keypoints);
+  align.setTargetFeatures(cloud_features);
+  //Settings
+  align.setMaximumIterations (5000); // Number of RANSAC iterations
+  align.setNumberOfSamples (3); // Number of points to sample for generating/prerejecting a pose
+  align.setCorrespondenceRandomness (3); // Number of nearest features to use
+  align.setSimilarityThreshold (0.9f); // Polygonal edge length similarity threshold
+  align.setMaxCorrespondenceDistance (2.5f * 0.2f);// Inlier threshold
+  align.setInlierFraction (0.25f); // Required inlier fraction for accepting a pose hypothesis
+
+  align.align(*cloud2_keyAligned);
+
+  transformOut = align.getFinalTransformation ();
+
+  if (align.hasConverged()){
+    cout << " Successfully converged" << endl;
+  }else {
+    cout << "Alignment FAILED to converge" << endl;
+  }
+
+  cout << "Completed alignment" << endl;
+
+  cout << "Transform matrix out is: " << transformOut << endl;
+  if (bShowAlignment){
+    // Show alignment
+    pcl::visualization::PCLVisualizer visu("Alignment");
+    // visu.addPointCloud (cloud, ColorHandlerT (cloud, 0.0, 255.0, 0.0), "cloud1");
+    visu.addPointCloud (cloud_keypoints, ColorHandlerT (cloud_keypoints, 0.0, 255.0, 0.0), "cloud_keypoints");
+    visu.addPointCloud (cloud2_keyAligned, ColorHandlerT (cloud2_keyAligned, 0.0, 0.0, 255.0), "cloud2_Keyaligned");
+    visu.addPointCloud (cloud2_keypoints, ColorHandlerT (cloud2_keypoints, 0.0, 255.0, 255.0), "cloud2_keypoints");
+    // visu.addPointCloud (cloud2, ColorHandlerT (cloud2, 255.0, 0.0, 0.0), "cloud2");
+    visu.spin ();
+  }
+
+  return transformOut;
+}
+
+Eigen::Matrix4f runAlignmentPreRejective(pcl::PointCloud<pcl::PointNormal>::Ptr cloud, pcl::PointCloud<pcl::PointNormal>::Ptr cloud2, int option, float normRange = 0.05, float featureRange = 0.1, bool bShowAlignment = true){
   pcl::PointCloud<pcl::FPFHSignature33>::Ptr cloud_features (new pcl::PointCloud<pcl::FPFHSignature33>);
   pcl::PointCloud<pcl::FPFHSignature33>::Ptr cloud2_features (new pcl::PointCloud<pcl::FPFHSignature33>);
   pcl::PointCloud<pcl::PointNormal>::Ptr cloud2_aligned (new pcl::PointCloud<pcl::PointNormal>);
@@ -494,7 +612,7 @@ Eigen::Matrix4f runAlignmentPreRejective(pcl::PointCloud<pcl::PointNormal>::Ptr 
     
     // Estimate normals
     pcl::NormalEstimation<pcl::PointNormal, pcl::PointNormal> nest;
-    nest.setRadiusSearch(0.1);
+    nest.setRadiusSearch(normRange);
     // nest.setKSearch(7);
     nest.setSearchMethod(search_method_);
     nest.setInputCloud(cloud);
@@ -517,7 +635,7 @@ Eigen::Matrix4f runAlignmentPreRejective(pcl::PointCloud<pcl::PointNormal>::Ptr 
 
     // Estimate features
     pcl::FPFHEstimationOMP<pcl::PointNormal,pcl::PointNormal,pcl::FPFHSignature33> fest;
-    fest.setRadiusSearch(0.1);
+    fest.setRadiusSearch(featureRange);
     // fest.setKSearch(7);
     fest.setInputCloud(cloud);
     fest.setSearchMethod(search_method_);
@@ -743,9 +861,10 @@ void testLocalizationSequenceWithOptions(int argc, char** argv){
   int dataSet;
   int scanSteps;
   int nData;
+  
 
   if (argc < 3){
-    cout << "Error: need to use at least 2 arugments: int dataset, int numberOfScans (optional) int localisationMethod" << endl;
+    cout << "Error: need to use at least 2 arugments: int dataset, int numberOfScans (optional) int localisationMethod (optional two together) float radius normal float radius feature" << endl;
     return;
   }else{
     dataSet = atoi(argv[1]);
@@ -763,7 +882,7 @@ void testLocalizationSequenceWithOptions(int argc, char** argv){
   Eigen::Affine3f alignmentTransform = Eigen::Affine3f::Identity();
 
   // Points to generate on the surface
-  int msSurf = 95; // These will be modified in the options below. 
+  int msSurf = 105; // These will be modified in the options below. 
   int mtSurf = 195;
 
   // Load data for given test case:
@@ -779,8 +898,8 @@ void testLocalizationSequenceWithOptions(int argc, char** argv){
       scanSteps = 1;
       numberOfScans = numberOfScans*scanSteps;
       nData = 10;
-      msSurf = 195;
-      mtSurf = 395; 
+      // msSurf = 55;
+      // mtSurf = 125; 
       break;
     case 1:
       // Longer Blob
@@ -853,8 +972,8 @@ void testLocalizationSequenceWithOptions(int argc, char** argv){
 
   // Init mapping class with settings
   Mapping3D mp;
-  mp.numRowsDesired = 125;
-  mp.numColsDesired = 125;
+  mp.numRowsDesired = 95;
+  mp.numColsDesired = 95;
   mp.maxNanAllowed = 20;
   mp.removeNanBuffer = 2;// Was 3
   // mp.nCtrlDefault[0] = 15;
@@ -866,8 +985,19 @@ void testLocalizationSequenceWithOptions(int argc, char** argv){
   mp.useNonRectData = true;
 
   int option = 2; // Option for localisation method (0 - PCL, 1 - RANSAC IA, 2 - Prerejective RANSAC)
+  float normRange = 0.05;
+  float featureRange = 0.1;
+  float model_resolution = 0.01;
+
   if (argc > 3){
     option = atoi(argv[3]);
+    if (argc > 4){
+      normRange = atof(argv[4]);
+      featureRange = atof(argv[5]);
+      if (argc > 6){
+        model_resolution = atof(argv[6]);
+      }
+    }
   }
 
   // ------------------------------------------------------
@@ -943,7 +1073,11 @@ void testLocalizationSequenceWithOptions(int argc, char** argv){
     cout << "Transformed PC" << endl;
 
     // Run alignment
-    alignmentTransform.matrix() = runAlignmentPreRejective(mapObjPC, cloudTransformed,option,showAlignment);
+    if (option < 4){
+      alignmentTransform.matrix() = runAlignmentPreRejective(mapObjPC, cloudTransformed,option,normRange, featureRange, showAlignment);
+    } else{
+      alignmentTransform.matrix() = runKeypointAlignment(mapObjPC, cloudTransformed, normRange, featureRange, model_resolution, true);
+    }
 
     // Update transform estimate
     transform = alignmentTransform * transform ;

@@ -636,6 +636,26 @@ void testBlenderSequence2(int argc, char ** argv){
       numberOfScans = numberOfScans*scanSteps;
       nData = 10;
       break;
+    case 6:
+      // Longer Blob 2 - no problematic square parts
+      cout << "Running Long Blob2 Dataset";
+      filestem = "/home/bjm/Dropbox/PhD_Code/Data/3D_Scans/Blensor/Blob2/BlobScan_data00";
+      outFilestem = "/home/bjm/Dropbox/PhD_Code/Results/Blob2/blob_";
+      pathFilename = "/home/bjm/Dropbox/PhD_Code/Data/3D_Scans/Blensor/Blob2/BlobScan_path.txt";
+      scanSteps = 5;
+      numberOfScans = numberOfScans*scanSteps;
+      nData = 100;
+      break;
+    case 7:
+      // Blob Lateral - NOTE that the path may be wrong - so only use for SLAM...
+      cout << "Running Long BlobLat Dataset";
+      filestem = "/home/bjm/Dropbox/PhD_Code/Data/3D_Scans/Blensor/BlobLat/BlobScan_data00";
+      outFilestem = "/home/bjm/Dropbox/PhD_Code/Results/BlobLat/blob_";
+      pathFilename = "/home/bjm/Dropbox/PhD_Code/Data/3D_Scans/Blensor/BlobLat/BlobScan_path.txt";
+      scanSteps = 4;
+      numberOfScans = numberOfScans*scanSteps;
+      nData = 40;
+      break;
     case 99:
       // NEW BLOB
       cout << "Running New Blob Dataset";
@@ -667,7 +687,7 @@ void testBlenderSequence2(int argc, char ** argv){
   mp.newRowColBuffer = 10; // How many non new points in a row or column are permissible
 
   // New extension method
-  mp.useNonRectData = true;
+  mp.useNonRectData = false;
 
   pcl::PCDReader reader;
 
