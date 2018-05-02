@@ -906,11 +906,36 @@ void Mapping3D::meshFromScan(pcl::PointCloud<pcl::PointNormal>::Ptr cloudOut, pc
     }
   }
 
-  // Downsample 
-  downsampleRow(rowFlags);
-  downsampleCol(colFlags);
-
   cout << "Number of nans left: " << nanArray.count() << endl;
+
+  cout << "Number of rows: " << rowFlags.count() << endl;
+  cout << "Number of cols: " << colFlags.count() << endl;
+
+  int numRows = this->numRowsDesired;
+  int numCols = this->numColsDesired;
+
+  // Rest cloud size given number of output rows and cols
+  if (rowFlags.count() < numRowsDesired){
+    pcl::common::deleteRows(*cloudOut, *cloudOut, std::max(1,(int)(numRowsDesired - rowFlags.count())/2));
+    cout << "Remove rows from output. Size is now: Rows: " << cloudOut->height << ", Cols: " << cloudOut->width << endl;
+    // Note that delete Rows removes twice the input amount -= so take the new values from the output cloud
+    numRows = cloudOut->height;
+  }
+
+  if (colFlags.count() < numColsDesired){
+    pcl::common::deleteCols(*cloudOut, *cloudOut, std::max(1,(int)(numColsDesired - colFlags.count())/2));
+    cout << "Remove cols from output. Size is now: Rows: " << cloudOut->height << ", Cols: " << cloudOut->width << endl;
+    // Note that delete Cols removes twice the input amount -= so take the new values from the output cloud
+    numCols = cloudOut->width;
+  }
+
+  // Downsample 
+  downsampleRow(rowFlags, numRows);
+  downsampleCol(colFlags, numCols);
+
+  cout << "After downsample:" << endl;
+  cout << "Number of rows: " << rowFlags.count() << endl;
+  cout << "Number of cols: " << colFlags.count() << endl;
 
   // Extract point cloud
   int ii = 0;
@@ -938,18 +963,19 @@ void Mapping3D::meshFromScan(pcl::PointCloud<pcl::PointNormal>::Ptr cloudOut, pc
             nanIndices(0,ijk) = ii;
             nanIndices(1,ijk) = jj;
             ijk++; 
-          }else if (std::abs(cloudOut->at(jj,ii).z) < 3.0 || std::abs(cloudOut->at(jj,ii).z) > 10.0){
-            // Filter out large z variances THESE ARE HARD CODED FOR THE MOMENT!!!
-            cout << "Removing point because out of z threshold. z was: " << cloudOut->at(jj,ii).z << endl;
-            
-            cloudOut->at(jj,ii).x = 1.0/0.0;
-            cloudOut->at(jj,ii).y = 1.0/0.0;
-            cloudOut->at(jj,ii).z = 1.0/0.0;
-
-            nanIndices(0,ijk) = ii;
-            nanIndices(1,ijk) = jj;
-            ijk++; 
           }
+          // else if (std::abs(cloudOut->at(jj,ii).z) < 3.0 || std::abs(cloudOut->at(jj,ii).z) > 10.0){
+          //   // Filter out large z variances THESE ARE HARD CODED FOR THE MOMENT!!!
+          //   cout << "Removing point because out of z threshold. z was: " << cloudOut->at(jj,ii).z << endl;
+            
+          //   cloudOut->at(jj,ii).x = 1.0/0.0;
+          //   cloudOut->at(jj,ii).y = 1.0/0.0;
+          //   cloudOut->at(jj,ii).z = 1.0/0.0;
+
+          //   nanIndices(0,ijk) = ii;
+          //   nanIndices(1,ijk) = jj;
+          //   ijk++; 
+          // }
 
           // Increment the new column index
           jj++;
@@ -962,6 +988,9 @@ void Mapping3D::meshFromScan(pcl::PointCloud<pcl::PointNormal>::Ptr cloudOut, pc
 
   cout << "Finished copying data across" << endl;
 
+  pcl::PCDWriter writer;
+  writer.write<pcl::PointNormal> ("cloud_pre_nan_average.pcd", *cloudOut, false);
+
   // cout << "NanIndices are: " << nanIndices << endl;
 
   // Average Nans
@@ -970,8 +999,9 @@ void Mapping3D::meshFromScan(pcl::PointCloud<pcl::PointNormal>::Ptr cloudOut, pc
     noNans = averageOutNans(cloudOut, nanIndices);
     cout << "Iteration for averaging Nans" << endl;
   }
-  
-  
+
+  writer.write<pcl::PointNormal> ("cloud_post_nan_average.pcd", *cloudOut, false);
+
 }
 
 /*! 
@@ -1091,12 +1121,24 @@ bool Mapping3D::removeColsNan(Eigen::Array<bool, Eigen::Dynamic, Eigen::Dynamic>
   \author Benjamin Morrell
   \date 30 March 2018
 */
-void Mapping3D::downsampleRow(Eigen::Array<bool,Eigen::Dynamic, 1>& rowFlags){
+void Mapping3D::downsampleRow(Eigen::Array<bool,Eigen::Dynamic, 1>& rowFlags, int numRows){
+
+  // Flag for default input
+  if (numRows < 0 ){
+    numRows = this->numRowsDesired;
+  }
+
+  // Exit if already few enough rows or columnts
+  if (rowFlags.count() <= numRows){
+    // Nothing to do
+    cout << "Number of rows less than or equal to desired. Not downsampling" << endl;
+    return;
+  }
 
   // Create linspaced array 
   Eigen::Array<float, Eigen::Dynamic, 1> selectArrayf;
   Eigen::Array<int, Eigen::Dynamic, 1> selectArray;
-  selectArrayf.setLinSpaced(this->numRowsDesired, 0, rowFlags.count()-1);
+  selectArrayf.setLinSpaced(numRows, 0, rowFlags.count()-1);
   selectArray = selectArrayf.round().cast<int>();
 
   int j = 0;
@@ -1123,12 +1165,24 @@ void Mapping3D::downsampleRow(Eigen::Array<bool,Eigen::Dynamic, 1>& rowFlags){
   \author Benjamin Morrell
   \date 30 March 2018
 */
-void Mapping3D::downsampleCol(Eigen::Array<bool, 1, Eigen::Dynamic>& colFlags){
+void Mapping3D::downsampleCol(Eigen::Array<bool, 1, Eigen::Dynamic>& colFlags, int numCols){
+
+  // Flag for default input
+  if (numCols < 0 ){
+    numCols = this->numColsDesired;
+  }
+
+  // Exit if already few enough rows or columnts
+  if (colFlags.count() <= numCols){
+    // Nothing to do
+    cout << "Number of cols less than or equal to desired. Not downsampling" << endl;
+    return;
+  }
 
   // Create linspaced array 
   Eigen::Array<float, Eigen::Dynamic, 1> selectArrayf;
   Eigen::Array<int, Eigen::Dynamic, 1> selectArray;
-  selectArrayf.setLinSpaced(this->numColsDesired, 0, colFlags.count()-1);
+  selectArrayf.setLinSpaced(numCols, 0, colFlags.count()-1);
   selectArray = selectArrayf.round().cast<int>();
   
   int j = 0;

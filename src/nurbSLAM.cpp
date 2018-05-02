@@ -268,7 +268,7 @@ Eigen::Matrix4f NurbSLAM::alignScanWithMapObject(pcl::PointCloud<pcl::PointNorma
   pcl::PointCloud<pcl::FPFHSignature33>::Ptr obsObjPC_features (new pcl::PointCloud<pcl::FPFHSignature33>);
   pcl::PointCloud<pcl::PointNormal>::Ptr obsObjPC_aligned (new pcl::PointCloud<pcl::PointNormal>);
 
-  // Not use if this is needed
+  // Not use if this is needed - is_dense means that there are no nans
   // mapObjPC->is_dense = false;
   // obsObjPC->is_dense = false;
 

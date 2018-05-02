@@ -14,6 +14,7 @@
 #include <pcl/point_cloud.h>
 #include <pcl/common/common.h>
 #include <pcl/common/transforms.h>
+#include <pcl/common/spring.h>
 
 
 
@@ -59,8 +60,8 @@ public:
     void getNanMatrixFromPointCloud(Eigen::Array<bool, Eigen::Dynamic, Eigen::Dynamic>& nanArray, pcl::PointCloud<pcl::PointNormal>::Ptr cloud);
     bool removeRowsNan(Eigen::Array<bool, Eigen::Dynamic, Eigen::Dynamic>& nanArray,Eigen::Array<bool,Eigen::Dynamic, 1>& rowFlags);
     bool removeColsNan(Eigen::Array<bool, Eigen::Dynamic, Eigen::Dynamic>& nanArray,Eigen::Array<bool, 1, Eigen::Dynamic>& colFlags);
-    void downsampleRow(Eigen::Array<bool,Eigen::Dynamic, 1>& rowFlags);
-    void downsampleCol(Eigen::Array<bool, 1, Eigen::Dynamic>& colFlags);
+    void downsampleRow(Eigen::Array<bool,Eigen::Dynamic, 1>& rowFlags, int numRows = -1);
+    void downsampleCol(Eigen::Array<bool, 1, Eigen::Dynamic>& colFlags, int numCols = -1);
     bool averageOutNans(pcl::PointCloud<pcl::PointNormal>::Ptr cloud, Eigen::Array<int,2,Eigen::Dynamic>& nanIndices);
     void regionAverage(pcl::PointCloud<pcl::PointNormal>::Ptr cloud, int i, int j);
     void regionAverageSimple(pcl::PointCloud<pcl::PointNormal>::Ptr cloud, int i, int j);
