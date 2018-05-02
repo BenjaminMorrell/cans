@@ -115,6 +115,14 @@ int NurbSLAM::processSingleScan(pcl::PointCloud<pcl::PointNormal>::Ptr cloud, pc
   // Process Scan to get mesh
   mp.meshFromScan(cloudReduced, cloud);
 
+  // Resize cloudTransformed from size of cloudReduced
+  if (cloudReduced->height < mp.numRowsDesired){
+      pcl::common::deleteRows(*cloudTransformed, *cloudTransformed, std::max(1,(int)(mp.numRowsDesired - cloudReduced->height)/2));
+  }
+  if (cloudReduced->width < mp.numColsDesired){
+    pcl::common::deleteCols(*cloudTransformed, *cloudTransformed, std::max(1,(int)(mp.numColsDesired - cloudReduced->width)/2));
+  }
+
   cout << "transform is: " << state.matrix() << endl;
 
   // Transform with current state

@@ -44,9 +44,13 @@ class NurbSLAM {
     // Other SLAM filter stuff maybe...
 
     // Lists to store sets of scans
-    std::vector<pcl::PointCloud<pcl::PointNormal>::Ptr> objectMeshList; // This may break
+    std::vector<pcl::PointCloud<pcl::PointNormal>::Ptr> objectMeshList; 
+    std::vector<pcl::PointCloud<pcl::PointNormal>::Ptr> mapMeshList; 
+    std::vector<pcl::PointCloud<pcl::FPFHSignature33>::Ptr> mapFeatureList; 
     std::vector<int> objIDList;
     std::vector<Eigen::Matrix4f> transformationList;
+
+    
 
   public:
 
