@@ -50,7 +50,8 @@ class NurbSLAM {
     std::vector<int> objIDList;
     std::vector<Eigen::Matrix4f> transformationList;
 
-    
+    float inlierFraction;
+    float validInlierTheshold;
 
   public:
 

@@ -916,14 +916,14 @@ void Mapping3D::meshFromScan(pcl::PointCloud<pcl::PointNormal>::Ptr cloudOut, pc
 
   // Rest cloud size given number of output rows and cols
   if (rowFlags.count() < numRowsDesired){
-    pcl::common::deleteRows(*cloudOut, *cloudOut, std::max(1,(int)(numRowsDesired - rowFlags.count())/2));
+    pcl::common::deleteRows(*cloudOut, *cloudOut, numRowsDesired - rowFlags.count()));
     cout << "Remove rows from output. Size is now: Rows: " << cloudOut->height << ", Cols: " << cloudOut->width << endl;
     // Note that delete Rows removes twice the input amount -= so take the new values from the output cloud
     numRows = cloudOut->height;
   }
 
   if (colFlags.count() < numColsDesired){
-    pcl::common::deleteCols(*cloudOut, *cloudOut, std::max(1,(int)(numColsDesired - colFlags.count())/2));
+    pcl::common::deleteCols(*cloudOut, *cloudOut, numColsDesired - colFlags.count()));
     cout << "Remove cols from output. Size is now: Rows: " << cloudOut->height << ", Cols: " << cloudOut->width << endl;
     // Note that delete Cols removes twice the input amount -= so take the new values from the output cloud
     numCols = cloudOut->width;
@@ -1627,7 +1627,7 @@ void Mapping3D::updateObject(int objID, pcl::PointCloud<pcl::PointNormal>::Ptr o
 
   // if (useNonRectData){
   //   // CHECK OBJECT:
-  //   obj.writeVRML("newSurf.wrl",Color(255,100,255),50,80);
+  obj.writeVRML("newSurf.wrl",Color(255,100,255),50,80);
 
   //   // Test generating data
   //   int nPoints = 25;
@@ -1666,6 +1666,8 @@ void Mapping3D::updateObject(int objID, pcl::PointCloud<pcl::PointNormal>::Ptr o
 
   // Update the map
   updateObjectInMap(objID, objJoin);
+
+  objectMap[objID].writeVRML("updatedSurf.wrl",Color(255,100,255),50,80);
   
 }
 
@@ -1901,9 +1903,7 @@ int Mapping3D::dataAssociation(std::vector<float> searchMetrics){
   // Input
   // Eigen::Array<float, 1, Eigen::Dynamic> searchMetrics(1,7);
 
-  // From object map [x, y, z, size, r, g, b]. Init here with 10 objects as an example
-  // Eigen::Array<float,Eigen::Dynamic, Eigen::Dynamic> objectMetrics(10,7);
-
+  // From object map [x, y, z, size, r, g, b]. 
   // std::vector<float> searchThresh;
 
   int objID = -1;
@@ -1966,7 +1966,7 @@ int Mapping3D::dataAssociation(std::vector<float> searchMetrics){
     objID = -1;
   }else{
     cout << "Multiple objects in search criteria" << endl;
-    while (activeObjects.count() > 1){
+    while (activeObjects.count() > 0){
       // Get index of the first remaining match
       activeObjects.maxCoeff(&i);
       
@@ -1978,12 +1978,13 @@ int Mapping3D::dataAssociation(std::vector<float> searchMetrics){
         objID = i;
         // update min dist
         minDist = dist;
+        cout << "min dist is " << minDist << "with id " << i << endl;
       }
       // Update activeObjects to get next search
       activeObjects[i] = false;
     }
   }
-
+  cout << "Object distances are: " << distances << endl;
   cout << "Object match is: " << objID << endl;
 
   return objID;
@@ -2243,6 +2244,7 @@ void Mapping3D::pointCloudFromNurbsData(Matrix_Point3Df& data, pcl::PointCloud<p
   \param objID  the id of the object in the map to get the data from
   \param ms     the number of points to create in the s parametric direction
   \param mt     the number of points to create in the t parametric direction
+  \param[out]   the output cloud
   
   \author Benjamin Morrell
   \date 4 April 2018

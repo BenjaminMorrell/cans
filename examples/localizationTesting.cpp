@@ -1095,10 +1095,10 @@ void testLocalizationSequenceWithOptions(int argc, char** argv){
     
     // Resize transformed
     if (cloudReduced->height < mp.numRowsDesired){
-      pcl::common::deleteRows(*cloudTransformed, *cloudTransformed, std::max(1,(int)(mp.numRowsDesired - cloudReduced->height)/2));
+      pcl::common::deleteRows(*cloudTransformed, *cloudTransformed, std::max(1,(int)(1 + mp.numRowsDesired - cloudReduced->height)/2));
     }
     if (cloudReduced->width < mp.numColsDesired){
-      pcl::common::deleteCols(*cloudTransformed, *cloudTransformed, std::max(1,(int)(mp.numColsDesired - cloudReduced->width)/2));
+      pcl::common::deleteCols(*cloudTransformed, *cloudTransformed, std::max(1,(int)(1 + mp.numColsDesired - cloudReduced->width)/2));
     }
     cout << "Resized cloudTransformed in localisation to: height: " << cloudTransformed->height << ", width: " << cloudTransformed->width << endl;
     
@@ -1132,13 +1132,13 @@ void testLocalizationSequenceWithOptions(int argc, char** argv){
 
     // Resize cloud back to default
     if (cloudReduced->height < mp.numRowsDesired){
-      pcl::common::mirrorRows(*cloudReduced, *cloudReduced, std::max(1,(int)(mp.numRowsDesired - cloudReduced->height)/2));
-      pcl::common::mirrorRows(*cloudTransformed, *cloudTransformed, std::max(1,(int)(mp.numRowsDesired - cloudReduced->height)/2));
+      pcl::common::mirrorRows(*cloudReduced, *cloudReduced, std::max(1,(int)(1 + mp.numRowsDesired - cloudReduced->height)/2));
+      pcl::common::mirrorRows(*cloudTransformed, *cloudTransformed, std::max(1,(int)(1 + mp.numRowsDesired - cloudReduced->height)/2));
 
     }
     if (cloudReduced->width < mp.numColsDesired){
-      pcl::common::mirrorColumns(*cloudReduced, *cloudReduced, std::max(1,(int)(mp.numColsDesired - cloudReduced->width)/2));
-      pcl::common::mirrorRows(*cloudTransformed, *cloudTransformed, std::max(1,(int)(mp.numColsDesired - cloudReduced->width)/2));
+      pcl::common::mirrorColumns(*cloudReduced, *cloudReduced, std::max(1,(int)(1 + mp.numColsDesired - cloudReduced->width)/2));
+      pcl::common::mirrorRows(*cloudTransformed, *cloudTransformed, std::max(1,(int)(1 + mp.numColsDesired - cloudReduced->width)/2));
     }
     cout << "cloud size reset in localisation to: height: " << cloudReduced->height << ", width: " << cloudReduced->width << endl;
     

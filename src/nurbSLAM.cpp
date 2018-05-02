@@ -13,7 +13,8 @@ using namespace PLib;
 */
 NurbSLAM::NurbSLAM(): localisationOption(2), bShowAlignment(false),
     nSurfPointsFactor(3.0), pclNormalRadiusSetting(0.05), pclFeatureRadiusSetting(0.1),
-    bUseKeypoints(true), modelResolution(0.005), inlierMultiplier(0.1)
+    bUseKeypoints(true), modelResolution(0.005), inlierMultiplier(0.1), validInlierTheshold(0.5),
+    inlierFraction(1.0)
 {
   state = Eigen::Affine3f::Identity();
   transformDelta = Eigen::Affine3f::Identity();
@@ -73,6 +74,13 @@ void NurbSLAM::processScans(std::vector<pcl::PointCloud<pcl::PointNormal>::Ptr> 
       }else{
         transformationList.push_back(alignScanWithMapObject(objIDList[i], objectMeshList[i]));
       }
+      if (inlierFraction < validInlierTheshold){
+        cout << "inlier fraction of " << inlierFraction << " is below valid threshold: " << validInlierTheshold << ". Ignoring match." << endl;
+        // Reject match - set to ignore flag
+        objIDList[i] = -1;
+        // Remove transformation
+        transformationList.pop_back();
+      }// TODO - to set as a new obstacle
     }
   }
 
@@ -122,10 +130,10 @@ int NurbSLAM::processSingleScan(pcl::PointCloud<pcl::PointNormal>::Ptr cloud, pc
 
   // Resize cloudTransformed from size of cloudReduced
   if (cloudReduced->height < mp.numRowsDesired){
-    pcl::common::deleteRows(*cloudTransformed, *cloudTransformed, std::max(1,(int)(mp.numRowsDesired - cloudReduced->height)/2));
+    pcl::common::deleteRows(*cloudTransformed, *cloudTransformed, std::max(1,(int)(1 + mp.numRowsDesired - cloudReduced->height)/2));
   }
   if (cloudReduced->width < mp.numColsDesired){
-    pcl::common::deleteCols(*cloudTransformed, *cloudTransformed, std::max(1,(int)(mp.numColsDesired - cloudReduced->width)/2));
+    pcl::common::deleteCols(*cloudTransformed, *cloudTransformed, std::max(1,(int)(1 + mp.numColsDesired - cloudReduced->width)/2));
   }
 
   cout << "transform is: " << state.matrix() << endl;
@@ -203,15 +211,10 @@ Eigen::Matrix4f NurbSLAM::alignScanKeypointsWithMapObject(int objID, pcl::PointC
   nest.setRadiusSearch(pclNormalRadiusSetting);
   // nest.setKSearch(7);
   nest.setSearchMethod(search_method_);
-  nest.setInputCloud(mapMeshList[objID]);
-  nest.compute(*mapMeshList[objID]);
-  cout << "computed normals for cloud 1" << endl;
   nest.setInputCloud(obsObjPC);
   nest.compute(*obsObjPC);
-  cout << "computed normals for cloud 2" << endl;
-
-  cout << "Normals have been estimated" << endl;
-
+  cout << "computed normals for cloud observation" << endl;
+  
   // Estimate features
   pcl::FPFHEstimationOMP<pcl::PointNormal,pcl::PointNormal,pcl::FPFHSignature33> fest;
   fest.setRadiusSearch(pclFeatureRadiusSetting);
@@ -364,6 +367,9 @@ Eigen::Matrix4f NurbSLAM::alignScanWithMapObject(int objID, pcl::PointCloud<pcl:
       }else {
         cout << "\n\tAlignment FAILED to converge\n" << endl;
       }
+
+      
+
     }else if (localisationOption == 2){
       // Prerejective RANSAC
       // SampleConsensusPrerejective_Exposed<pcl::PointNormal,pcl::PointNormal,pcl::FPFHSignature33> align;
@@ -389,8 +395,14 @@ Eigen::Matrix4f NurbSLAM::alignScanWithMapObject(int objID, pcl::PointCloud<pcl:
       }else {
         cout << "Alignment FAILED to converge" << endl;
       }
-    }
 
+      cout << "\n\n\t\t NUMBER OF INLIERS IS: " << align.getInliers().size() << "/ " << obsObjPC->width*obsObjPC->height << "\n\n\n";
+      cout << "\n\n\t\t INLIER FRACTION IS: " << (float)align.getInliers().size()/(float)(obsObjPC->width*obsObjPC->height) << "\n\n\n";
+
+      inlierFraction = (float)align.getInliers().size()/(float)(obsObjPC->width*obsObjPC->height);
+    }
+    
+  }
     cout << "Completed alignment" << endl;
     cout << "Transform matrix out is: " << transformOut << endl;
   if (bShowAlignment){
@@ -403,8 +415,6 @@ Eigen::Matrix4f NurbSLAM::alignScanWithMapObject(int objID, pcl::PointCloud<pcl:
   }
 
   return transformOut;
-
-  }
 }
 
 
@@ -454,6 +464,11 @@ void NurbSLAM::alignAndUpdateMeshes(){
   cout << "and at (0,0) = " << objectMeshList[0]->at(0,0) << endl;
 
   for (int i = 0; i < objIDList.size(); i++){
+    if (objIDList[i] == -2){
+      // Ignore this scan
+      cout << "ignoring scan due to bad alignment" << endl;
+      continue;
+    }
     // Align scans with new transformation delta (delat from existing transform)
     pcl::transformPointCloud(*objectMeshList[i], *cloudTransformed, transformDelta);
 
@@ -515,15 +530,16 @@ void NurbSLAM::updatePointCloudAndFeaturesInMap(int objID){
   // Initialise
   if (mapMeshList.size() <= objID){
     // New object
-    mapMeshList.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr (new pcl::PointCloud<pcl::PointNormal>(msSurf, mtSurf)));
+    cout << "new object - fist mesh to generate" << endl;
+    mapMeshList.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr (new pcl::PointCloud<pcl::PointNormal>(mtSurf, msSurf, pcl::PointNormal())));
     mapFeatureList.push_back(pcl::PointCloud<pcl::FPFHSignature33>::Ptr (new pcl::PointCloud<pcl::FPFHSignature33>));
   }else{
     // write a new over the old
-    mapMeshList[objID] = pcl::PointCloud<pcl::PointNormal>::Ptr (new pcl::PointCloud<pcl::PointNormal>(msSurf, mtSurf));
+    cout << "update object - replace the mesh and features" << endl;
+    mapMeshList[objID] = pcl::PointCloud<pcl::PointNormal>::Ptr (new pcl::PointCloud<pcl::PointNormal>(mtSurf, msSurf, pcl::PointNormal()));
     mapFeatureList[objID] = pcl::PointCloud<pcl::FPFHSignature33>::Ptr (new pcl::PointCloud<pcl::FPFHSignature33>);
   }
   
-
   // Generate point cloud for NURBS
   mp.pointCloudFromObject3D(objID, msSurf, mtSurf, mapMeshList[objID]);
 

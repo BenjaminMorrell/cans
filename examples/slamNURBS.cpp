@@ -199,7 +199,7 @@ void runSLAM(int argc,char ** argv){
   // Init SLAM class
   NurbSLAM slam;
 
-  slam.bShowAlignment = true;
+  slam.bShowAlignment = false;
   slam.bUseKeypoints = false;
   slam.pclNormalRadiusSetting = 0.05;
   slam.pclFeatureRadiusSetting = 0.1;
@@ -253,6 +253,14 @@ void runSLAM(int argc,char ** argv){
   // Run sequence of scans 
   for (int i = 0; i < numberOfScans; i += scanSteps){
     cout << "Processing Scan " << i << endl;
+
+    if (i == 43 || i == 85){
+      slam.bShowAlignment = true;
+    }
+
+    // if (i == 60){
+    //   slam.bShowAlignment = false;
+    // }
 
     // Get filename:
     if (i < 9){
