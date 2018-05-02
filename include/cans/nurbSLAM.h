@@ -63,12 +63,13 @@ class NurbSLAM {
 
     int processSingleScan(pcl::PointCloud<pcl::PointNormal>::Ptr cloud, pcl::PointCloud<pcl::PointNormal>::Ptr cloudTransformed);
 
-    Eigen::Matrix4f alignScanKeypointsWithMapObject(pcl::PointCloud<pcl::PointNormal>::Ptr mapObjPC, pcl::PointCloud<pcl::PointNormal>::Ptr obsObjPC);
-    Eigen::Matrix4f alignScanWithMapObject(pcl::PointCloud<pcl::PointNormal>::Ptr cloud, pcl::PointCloud<pcl::PointNormal>::Ptr cloud2);
+    Eigen::Matrix4f alignScanKeypointsWithMapObject(int objID, pcl::PointCloud<pcl::PointNormal>::Ptr obsObjPC);
+    Eigen::Matrix4f alignScanWithMapObject(int objID, pcl::PointCloud<pcl::PointNormal>::Ptr obsObjPC);
 
     void updateSLAMFilter();
 
     void alignAndUpdateMeshes();
+    void updatePointCloudAndFeaturesInMap(int objID);
 
     void initState(Eigen::Affine3f startingState);
 

@@ -274,12 +274,6 @@ void runSLAM(int argc,char ** argv){
     pcl::fromPCLPointCloud2 (*cloud_blob, *cloud); 
     cout << "converted PC" << endl;
 
-    // pcl::visualization::CloudViewer viewer ("Simple Cloud Viewer");
-    // viewer.showCloud (*cloud);
-    // while (!viewer.wasStopped ())
-    // {
-    // }
-
     // Put in vector (if we had multiple objects)
     clouds.push_back(cloud);
 
@@ -306,6 +300,12 @@ void runSLAM(int argc,char ** argv){
 
   // Print final state
   cout << "Final state set is: " << state << endl;
+
+  // Write to file
+  ofstream myfile;
+  myfile.open ((outFilestem + "state_track_slam.txt").c_str());
+  myfile << state;
+  myfile.close();
 
   // Save final object
   // Write result to pcd
