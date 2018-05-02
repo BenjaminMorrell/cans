@@ -234,6 +234,9 @@ void runSLAM(int argc,char ** argv){
 
   cout << "transform is " << transform.matrix() << endl;
 
+  // Reset state to zero
+  state.setZero(state.rows(),state.cols());
+
   // INITIALISE STATE
   slam.initState(transform);
 
@@ -300,6 +303,20 @@ void runSLAM(int argc,char ** argv){
     // Empty cloud vector
     clouds.clear();
   }
+
+  // Print final state
+  cout << "Final state set is: " << state << endl;
+
+  // Save final object
+  // Write result to pcd
+  slam.mp.writeObjectPCDFile((outFilestem + "end_result.pcd").c_str(), 0, 125, 125);
+
+  // Write final object to file
+  slam.mp.objectMap[0].write((outFilestem + "final_obj.obj").c_str());
+
+  // Write VRML
+  slam.mp.objectMap[0].writeVRML((outFilestem + "savedObject.wrl").c_str(),Color(255,100,255),50,80); 
+  
 }
 
 

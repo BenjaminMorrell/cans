@@ -936,6 +936,7 @@ void Mapping3D::meshFromScan(pcl::PointCloud<pcl::PointNormal>::Ptr cloudOut, pc
   cout << "After downsample:" << endl;
   cout << "Number of rows: " << rowFlags.count() << endl;
   cout << "Number of cols: " << colFlags.count() << endl;
+  cout << "Cloud size is: " << cloudOut->height << ", Cols: " << cloudOut->width << endl;
 
   // Extract point cloud
   int ii = 0;

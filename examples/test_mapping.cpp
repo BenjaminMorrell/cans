@@ -585,7 +585,7 @@ void testBlenderSequence2(int argc, char ** argv){
       filestem = "/home/bjm/Dropbox/PhD_Code/Data/3D_Scans/Blensor/BlobLong/BlobScan_data00";
       outFilestem = "/home/bjm/Dropbox/PhD_Code/Results/BlobLong/blob_";
       pathFilename = "/home/bjm/Dropbox/PhD_Code/Data/3D_Scans/Blensor/BlobLong/BlobScan_path.txt";
-      scanSteps = 11;
+      scanSteps = 5;
       numberOfScans = numberOfScans*scanSteps;
       nData = 100;
       break;
@@ -687,7 +687,7 @@ void testBlenderSequence2(int argc, char ** argv){
   mp.newRowColBuffer = 10; // How many non new points in a row or column are permissible
 
   // New extension method
-  mp.useNonRectData = false;
+  mp.useNonRectData = true;
 
   pcl::PCDReader reader;
 

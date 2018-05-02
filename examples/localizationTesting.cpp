@@ -1,5 +1,6 @@
 #include <ros/ros.h>
 #include <iostream>
+#include <fstream>
 
 //PCL includes
 #include <Eigen/Core>
@@ -558,7 +559,7 @@ Eigen::Matrix4f runKeypointAlignment(pcl::PointCloud<pcl::PointNormal>::Ptr clou
     visu.addPointCloud (cloud2_keyAligned, ColorHandlerT (cloud2_keyAligned, 0.0, 0.0, 255.0), "cloud2_Keyaligned");
     visu.addPointCloud (cloud2_keypoints, ColorHandlerT (cloud2_keypoints, 0.0, 255.0, 255.0), "cloud2_keypoints");
     // visu.addPointCloud (cloud2, ColorHandlerT (cloud2, 255.0, 0.0, 0.0), "cloud2");
-    visu.spin ();
+    visu.spinOnce(1);
   }
 
   return transformOut;
@@ -907,7 +908,7 @@ void testLocalizationSequenceWithOptions(int argc, char** argv){
       filestem = "/home/bjm/Dropbox/PhD_Code/Data/3D_Scans/Blensor/BlobLong/BlobScan_data00";
       outFilestem = "/home/bjm/Dropbox/PhD_Code/Results/BlobLong/blob_";
       pathFilename = "/home/bjm/Dropbox/PhD_Code/Data/3D_Scans/Blensor/BlobLong/BlobScan_path.txt";
-      scanSteps = 5;
+      scanSteps = 1;
       numberOfScans = numberOfScans*scanSteps;
       nData = 100;
       break;
@@ -958,6 +959,26 @@ void testLocalizationSequenceWithOptions(int argc, char** argv){
       numberOfScans = numberOfScans*scanSteps;
       nData = 10;
       break;
+    case 6:
+      // Longer Blob 2 - no problematic square parts
+      cout << "Running Long Blob2 Dataset";
+      filestem = "/home/bjm/Dropbox/PhD_Code/Data/3D_Scans/Blensor/Blob2/BlobScan_data00";
+      outFilestem = "/home/bjm/Dropbox/PhD_Code/Results/Blob2/blob_";
+      pathFilename = "/home/bjm/Dropbox/PhD_Code/Data/3D_Scans/Blensor/Blob2/BlobScan_path.txt";
+      scanSteps = 1;
+      numberOfScans = numberOfScans*scanSteps;
+      nData = 100;
+      break;
+    case 7:
+      // Blob Lateral - NOTE that the path may be wrong - so only use for SLAM...
+      cout << "Running Long BlobLat Dataset";
+      filestem = "/home/bjm/Dropbox/PhD_Code/Data/3D_Scans/Blensor/BlobLat/BlobScan_data00";
+      outFilestem = "/home/bjm/Dropbox/PhD_Code/Results/BlobLat/blob_";
+      pathFilename = "/home/bjm/Dropbox/PhD_Code/Data/3D_Scans/Blensor/BlobLat/BlobScan_path.txt";
+      scanSteps = 4;
+      numberOfScans = numberOfScans*scanSteps;
+      nData = 40;
+      break;
     case 99:
       // NEW BLOB
       cout << "Running New Blob Dataset";
@@ -974,12 +995,12 @@ void testLocalizationSequenceWithOptions(int argc, char** argv){
   Mapping3D mp;
   mp.numRowsDesired = 95;
   mp.numColsDesired = 95;
-  mp.maxNanAllowed = 20;
-  mp.removeNanBuffer = 2;// Was 3
-  // mp.nCtrlDefault[0] = 15;
-  // mp.nCtrlDefault[1] = 15;
+  mp.maxNanAllowed = 10;
+  mp.removeNanBuffer = 2;
+  mp.nCtrlDefault[0] = 17;
+  mp.nCtrlDefault[1] = 17;
 
-  // mp.newRowColBuffer = 20; // How many non new points in a row or column are permissible
+  mp.newRowColBuffer = 10; // How many non new points in a row or column are permissible
 
   // New extension method
   mp.useNonRectData = true;
@@ -1004,12 +1025,16 @@ void testLocalizationSequenceWithOptions(int argc, char** argv){
   // ------------------------------------------------------
   // Load the object
   mp.addObjectFromFile((outFilestem + "final_obj.obj").c_str());
+  // mp.addObjectFromFile((outFilestem + "final_obj_20_scans.obj").c_str());
   // ------------------------------------------------------
   // ------------------------------------------------------
 
   // Load state
   Eigen::Array<float,6,Eigen::Dynamic> state = readPathTextFile(pathFilename.c_str(),nData);
+  Eigen::Array<float,6,Eigen::Dynamic> stateTrack = readPathTextFile(pathFilename.c_str(),nData);
+  stateTrack.setZero(state.rows(),state.cols());
   cout << "State is:\n" << state << endl;
+
   
   // Translation
   transform(0,3) = state(0,0);
@@ -1067,6 +1092,16 @@ void testLocalizationSequenceWithOptions(int argc, char** argv){
     // Reduce
     mp.meshFromScan(cloudReduced, cloud);
     cout << "Reduced PC" << endl;
+    
+    // Resize transformed
+    if (cloudReduced->height < mp.numRowsDesired){
+      pcl::common::deleteRows(*cloudTransformed, *cloudTransformed, std::max(1,(int)(mp.numRowsDesired - cloudReduced->height)/2));
+    }
+    if (cloudReduced->width < mp.numColsDesired){
+      pcl::common::deleteCols(*cloudTransformed, *cloudTransformed, std::max(1,(int)(mp.numColsDesired - cloudReduced->width)/2));
+    }
+    cout << "Resized cloudTransformed in localisation to: height: " << cloudTransformed->height << ", width: " << cloudTransformed->width << endl;
+    
 
     // Transform
     pcl::transformPointCloud(*cloudReduced, *cloudTransformed, transform);
@@ -1085,21 +1120,38 @@ void testLocalizationSequenceWithOptions(int argc, char** argv){
     cout << "State transform is " << transform.matrix() << endl;
 
     // Update State for tracking
-    state(0,i) = transform.matrix()(0,3);
-    state(1,i) = transform.matrix()(1,3);
-    state(2,i) = transform.matrix()(2,3);
+    stateTrack(0,i) = transform.matrix()(0,3);
+    stateTrack(1,i) = transform.matrix()(1,3);
+    stateTrack(2,i) = transform.matrix()(2,3);
 
     rpy = transform.rotation().eulerAngles(2, 1, 0); // Check ordering
 
-    state(3,i) = rpy(2);
-    state(4,i) = rpy(1);
-    state(5,i) = rpy(0);
+    stateTrack(3,i) = rpy(2);
+    stateTrack(4,i) = rpy(1);
+    stateTrack(5,i) = rpy(0);
 
+    // Resize cloud back to default
+    if (cloudReduced->height < mp.numRowsDesired){
+      pcl::common::mirrorRows(*cloudReduced, *cloudReduced, std::max(1,(int)(mp.numRowsDesired - cloudReduced->height)/2));
+      pcl::common::mirrorRows(*cloudTransformed, *cloudTransformed, std::max(1,(int)(mp.numRowsDesired - cloudReduced->height)/2));
+
+    }
+    if (cloudReduced->width < mp.numColsDesired){
+      pcl::common::mirrorColumns(*cloudReduced, *cloudReduced, std::max(1,(int)(mp.numColsDesired - cloudReduced->width)/2));
+      pcl::common::mirrorRows(*cloudTransformed, *cloudTransformed, std::max(1,(int)(mp.numColsDesired - cloudReduced->width)/2));
+    }
+    cout << "cloud size reset in localisation to: height: " << cloudReduced->height << ", width: " << cloudReduced->width << endl;
+    
 
   }
 
   // Basic for the moment - copy and paste state to get in Matlab - get an idea of tracking
-  cout << "output state is:\n" << state << endl;
+  cout << "output state is:\n" << stateTrack << endl;
+
+  ofstream myfile;
+  myfile.open ((outFilestem + "state_track_localisation.txt").c_str());
+  myfile << stateTrack;
+  myfile.close();
 
   // TDBM later - get last scan saved in PCD once aligned - how far off is it as a measure of localisation accuracy...
 }

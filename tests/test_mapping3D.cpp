@@ -123,7 +123,8 @@ TEST_F (nurbsFittingTest, multipleDoubleUpPoints){
 
     cout << "Control Points:\n" << crv2.ctrlPnts() << endl;
 
-    EXPECT_TRUE(!bAreThereNans);
+    // THIS SHOULD FAIL _ JUST CHECKING IT DOES
+    EXPECT_TRUE(bAreThereNans);
 }
 
 TEST_F (nurbsFittingTest, nCtrlMoreNPoints){
@@ -176,7 +177,7 @@ TEST_F (nurbsFittingTest, multipleDoubleUpPointsSurfConstructor){
 */
 
 
-/*
+
 //--------------------------------------------
 //-------- Join Curve Tests -----
 //--------------------------------------------
@@ -1405,6 +1406,11 @@ TEST_F (object3DJoiningTest, testAsymDDGiveEmptyBecauseError){
 
 }
 
+//----------------------------------------------------------------
+//----------------------------------------------------------------
+//------------- MESH FROM SCAN TESTS  ------------------
+//----------------------------------------------------------------
+//----------------------------------------------------------------
 class meshFromScanTest : public ::testing::Test{
     protected:
         meshFromScanTest() : cloud(new pcl::PointCloud<pcl::PointNormal>(10,10)), nanArray(10,10), expectNanArray(10,10),
@@ -1762,6 +1768,45 @@ TEST_F (meshFromScanTest, meshFromScanFunction){
     EXPECT_FLOAT_EQ(cloud->at(8,3).x,cloudOut->at(5,0).x);
     EXPECT_FLOAT_EQ(cloud->at(8,3).y,cloudOut->at(5,0).y);
     EXPECT_FLOAT_EQ(cloud->at(8,3).z,cloudOut->at(5,0).z);
+
+}
+
+TEST_F (meshFromScanTest, tooFewRows){
+
+    mp.numRowsDesired = 8;
+    mp.numColsDesired = 8;
+
+    mp.removeNanBuffer = 3;
+
+    pcl::PointCloud<pcl::PointNormal>::Ptr cloudOut (new pcl::PointCloud<pcl::PointNormal>(mp.numColsDesired,mp.numRowsDesired));
+
+    // Mesh from scan
+    mp.meshFromScan(cloudOut, cloud);
+
+    cout << "Cloud out size: height:" << cloudOut->height << ", width: " << cloudOut->width << endl;
+
+    EXPECT_EQ(6,cloudOut->height);
+    EXPECT_EQ(8,cloudOut->width);
+    
+
+}
+
+TEST_F (meshFromScanTest, tooFewCols){
+
+    mp.numRowsDesired = 6;
+    mp.numColsDesired = 9;
+
+    mp.removeNanBuffer = 3;
+
+    pcl::PointCloud<pcl::PointNormal>::Ptr cloudOut (new pcl::PointCloud<pcl::PointNormal>(mp.numColsDesired,mp.numRowsDesired));
+
+    // Mesh from scan
+    mp.meshFromScan(cloudOut, cloud);
+
+    cout << "Cloud out size: height:" << cloudOut->height << ", width: " << cloudOut->width << endl;
+
+    EXPECT_EQ(6,cloudOut->height);
+    EXPECT_EQ(7,cloudOut->width);
 
 }
 
@@ -2575,7 +2620,7 @@ TEST_F (updateSurfaceTest, testRotate180){
         mp.updateObjectInMap(0, obj_rot);
     }
 }
-*/
+
 
 //----------------------------------------------------------------
 //----------------------------------------------------------------
@@ -2726,7 +2771,7 @@ class nurbsDataFromPCNonRect : public ::testing::Test {
   Object3D objC2;
 
 };
-/*
+
 TEST_F (nurbsDataFromPCNonRect, testNormalRight){
 
     int ms, mt;
@@ -3324,7 +3369,7 @@ TEST_F (nurbsDataFromPCNonRect, testUpSurfUpdate){
         mp.updateObjectInMap(2, objC2);
     }
 }
-*/
+
 TEST_F (nurbsDataFromPCNonRect, testRightSurfUpdateSuccessiveCompact){
     // Just to make sure it doesn't crash
     // TODO -some tests on the output object?
