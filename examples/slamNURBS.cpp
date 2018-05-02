@@ -254,9 +254,9 @@ void runSLAM(int argc,char ** argv){
   for (int i = 0; i < numberOfScans; i += scanSteps){
     cout << "Processing Scan " << i << endl;
 
-    if (i == 43 || i == 85){
-      slam.bShowAlignment = true;
-    }
+    // if (i == 43 || i == 85){
+    //   slam.bShowAlignment = true;
+    // }
 
     // if (i == 60){
     //   slam.bShowAlignment = false;
@@ -315,15 +315,22 @@ void runSLAM(int argc,char ** argv){
   myfile << state;
   myfile.close();
 
-  // Save final object
-  // Write result to pcd
-  slam.mp.writeObjectPCDFile((outFilestem + "end_result.pcd").c_str(), 0, 125, 125);
+  // Save final objects
+  for (int i = 0; i < slam.mp.objectMap.size(); i++){
+    
+    // Write result to pcd
+    filename = outFilestem + static_cast<ostringstream*>( &(ostringstream() << (i)) )->str() + "_end_result.pcd";
+    slam.mp.writeObjectPCDFile(filename.c_str(), i, 125, 125);
 
-  // Write final object to file
-  slam.mp.objectMap[0].write((outFilestem + "final_obj.obj").c_str());
 
-  // Write VRML
-  slam.mp.objectMap[0].writeVRML((outFilestem + "savedObject.wrl").c_str(),Color(255,100,255),50,80); 
+    // Write final object to file
+    filename = outFilestem + static_cast<ostringstream*>( &(ostringstream() << (i)) )->str() + "_final_obj.obj";
+    slam.mp.objectMap[i].write(filename.c_str());
+
+    // Write VRML
+    filename = outFilestem + static_cast<ostringstream*>( &(ostringstream() << (i)) )->str() + "_savedObject.wrl";
+    slam.mp.objectMap[i].writeVRML(filename.c_str(),Color(255,100,255),50,80); 
+  }
   
 }
 

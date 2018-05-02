@@ -916,14 +916,14 @@ void Mapping3D::meshFromScan(pcl::PointCloud<pcl::PointNormal>::Ptr cloudOut, pc
 
   // Rest cloud size given number of output rows and cols
   if (rowFlags.count() < numRowsDesired){
-    pcl::common::deleteRows(*cloudOut, *cloudOut, numRowsDesired - rowFlags.count()));
+    pcl::common::deleteRows(*cloudOut, *cloudOut, numRowsDesired - rowFlags.count());
     cout << "Remove rows from output. Size is now: Rows: " << cloudOut->height << ", Cols: " << cloudOut->width << endl;
     // Note that delete Rows removes twice the input amount -= so take the new values from the output cloud
     numRows = cloudOut->height;
   }
 
   if (colFlags.count() < numColsDesired){
-    pcl::common::deleteCols(*cloudOut, *cloudOut, numColsDesired - colFlags.count()));
+    pcl::common::deleteCols(*cloudOut, *cloudOut, numColsDesired - colFlags.count());
     cout << "Remove cols from output. Size is now: Rows: " << cloudOut->height << ", Cols: " << cloudOut->width << endl;
     // Note that delete Cols removes twice the input amount -= so take the new values from the output cloud
     numCols = cloudOut->width;
