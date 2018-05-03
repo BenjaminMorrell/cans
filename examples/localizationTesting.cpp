@@ -28,6 +28,7 @@
 #include "cans/mapping3D.h"
 #include "cans/object3D.h"
 #include "cans/splitSurface.h"
+#include "cans/nurbSLAM.h"
 
 using namespace std;
 
@@ -862,15 +863,22 @@ void testLocalizationSequenceWithOptions(int argc, char** argv){
   int dataSet;
   int scanSteps;
   int nData;
+  bool useSLAMClass = false;
   
 
   if (argc < 3){
-    cout << "Error: need to use at least 2 arugments: int dataset, int numberOfScans (optional) int localisationMethod (optional two together) float radius normal float radius feature" << endl;
+    cout << "Error: need to use at least 3 arugments: int dataset, int numberOfScans (optional) int useSLAMClass, int localisationMethod (optional two together) float radius normal float radius feature" << endl;
     return;
   }else{
     dataSet = atoi(argv[1]);
     numberOfScans = atoi(argv[2]);
+    if (argc > 3){
+      if (atoi(argv[3]) == 1){
+        useSLAMClass = true;
+      }
+    }
   }
+  cout << "use SLAM class: " << useSLAMClass << endl;
 
   // Initialise
   std::string filename;
@@ -993,41 +1001,66 @@ void testLocalizationSequenceWithOptions(int argc, char** argv){
 
   // Init mapping class with settings
   Mapping3D mp;
-  mp.numRowsDesired = 95;
-  mp.numColsDesired = 95;
-  mp.maxNanAllowed = 10;
-  mp.removeNanBuffer = 2;
-  mp.nCtrlDefault[0] = 17;
-  mp.nCtrlDefault[1] = 17;
+  NurbSLAM slam;
+  // bool useSLAMClass = true;
+  if (useSLAMClass){
+    
+    slam.mp.numRowsDesired = 95;
+    slam.mp.numColsDesired = 95;
+    slam.mp.maxNanAllowed = 10;
+    slam.mp.removeNanBuffer = 2;
+    slam.mp.nCtrlDefault[0] = 17;
+    slam.mp.nCtrlDefault[1] = 17;
 
-  mp.newRowColBuffer = 10; // How many non new points in a row or column are permissible
+    slam.mp.newRowColBuffer = 10; // How many non new points in a row or column are permissible
 
-  // New extension method
-  mp.useNonRectData = true;
+    // New extension method
+    slam.mp.useNonRectData = true;
+
+    slam.activateLocalisationMode();
+
+    slam.loadObjectIntoMap((outFilestem + "final_obj.obj").c_str());
+
+    cout << "Added object to map using SLAM class" << endl;
+
+  }else{
+    
+    mp.numRowsDesired = 95;
+    mp.numColsDesired = 95;
+    mp.maxNanAllowed = 10;
+    mp.removeNanBuffer = 2;
+    mp.nCtrlDefault[0] = 17;
+    mp.nCtrlDefault[1] = 17;
+
+    mp.newRowColBuffer = 10; // How many non new points in a row or column are permissible
+
+    // New extension method
+    mp.useNonRectData = true;
+  
+    // ------------------------------------------------------
+    // ------------------------------------------------------
+    // Load the object
+    mp.addObjectFromFile((outFilestem + "final_obj.obj").c_str());
+    // mp.addObjectFromFile((outFilestem + "final_obj_20_scaslam.obj").c_str());
+    // ------------------------------------------------------
+    // ------------------------------------------------------
+  }
 
   int option = 2; // Option for localisation method (0 - PCL, 1 - RANSAC IA, 2 - Prerejective RANSAC)
   float normRange = 0.05;
   float featureRange = 0.1;
   float model_resolution = 0.01;
 
-  if (argc > 3){
-    option = atoi(argv[3]);
-    if (argc > 4){
-      normRange = atof(argv[4]);
-      featureRange = atof(argv[5]);
-      if (argc > 6){
-        model_resolution = atof(argv[6]);
+  if (argc > 4){
+    option = atoi(argv[4]);
+    if (argc > 5){
+      normRange = atof(argv[5]);
+      featureRange = atof(argv[6]);
+      if (argc > 7){
+        model_resolution = atof(argv[7]);
       }
     }
   }
-
-  // ------------------------------------------------------
-  // ------------------------------------------------------
-  // Load the object
-  mp.addObjectFromFile((outFilestem + "final_obj.obj").c_str());
-  // mp.addObjectFromFile((outFilestem + "final_obj_20_scans.obj").c_str());
-  // ------------------------------------------------------
-  // ------------------------------------------------------
 
   // Load state
   Eigen::Array<float,6,Eigen::Dynamic> state = readPathTextFile(pathFilename.c_str(),nData);
@@ -1048,6 +1081,11 @@ void testLocalizationSequenceWithOptions(int argc, char** argv){
 
   cout << "transform is " << transform.matrix() << endl;
 
+  if (useSLAMClass){
+    // Setting starting state from starting transform
+    slam.setState(transform);
+  }
+
     // Setup to run sequence of scans 
   pcl::PCDReader reader;
 
@@ -1057,10 +1095,13 @@ void testLocalizationSequenceWithOptions(int argc, char** argv){
   pcl::PointCloud<pcl::PointNormal>::Ptr cloudReduced (new pcl::PointCloud<pcl::PointNormal>(mp.numRowsDesired, mp.numColsDesired));
   pcl::PointCloud<pcl::PointNormal>::Ptr cloudTransformed (new pcl::PointCloud<pcl::PointNormal>(mp.numRowsDesired, mp.numColsDesired));
   pcl::PointCloud<pcl::PointNormal>::Ptr mapObjPC(new pcl::PointCloud<pcl::PointNormal>(mtSurf, msSurf, pcl::PointNormal()));
-  
-  // Generate point cloud from object - to use for localisation
-  mp.pointCloudFromObject3D(0, msSurf, mtSurf, mapObjPC);
-
+  std::vector<pcl::PointCloud<pcl::PointNormal>::Ptr> clouds;
+  if (!useSLAMClass){
+    
+    // Generate point cloud from object - to use for localisation
+    mp.pointCloudFromObject3D(0, msSurf, mtSurf, mapObjPC);
+  }
+    
   bool showAlignment = true;
 
   Eigen::Vector3f rpy; // init vector to store output state
@@ -1089,33 +1130,48 @@ void testLocalizationSequenceWithOptions(int argc, char** argv){
     pcl::fromPCLPointCloud2 (*cloud_blob, *cloud); 
     cout << "converted PC" << endl;
 
-    // Reduce
-    mp.meshFromScan(cloudReduced, cloud);
-    cout << "Reduced PC" << endl;
-    
-    // Resize transformed
-    if (cloudReduced->height < mp.numRowsDesired){
-      pcl::common::deleteRows(*cloudTransformed, *cloudTransformed, std::max(1,(int)(1 + mp.numRowsDesired - cloudReduced->height)/2));
-    }
-    if (cloudReduced->width < mp.numColsDesired){
-      pcl::common::deleteCols(*cloudTransformed, *cloudTransformed, std::max(1,(int)(1 + mp.numColsDesired - cloudReduced->width)/2));
-    }
-    cout << "Resized cloudTransformed in localisation to: height: " << cloudTransformed->height << ", width: " << cloudTransformed->width << endl;
-    
+    if (useSLAMClass){
+      cout << "using SLAM class for localisation" << endl;
+      // load up clouds vector
+      clouds.push_back(cloud);
 
-    // Transform
-    pcl::transformPointCloud(*cloudReduced, *cloudTransformed, transform);
-    cout << "Transformed PC" << endl;
+      // Process scans
+      slam.processScans(clouds);
 
-    // Run alignment
-    if (option < 4){
-      alignmentTransform.matrix() = runAlignmentPreRejective(mapObjPC, cloudTransformed,option,normRange, featureRange, showAlignment);
-    } else{
-      alignmentTransform.matrix() = runKeypointAlignment(mapObjPC, cloudTransformed, normRange, featureRange, model_resolution, true);
+      // Get the state
+      transform = slam.getState();
+
+      // Empty cloud vector
+      clouds.clear();
+    }else{
+      // Reduce
+      mp.meshFromScan(cloudReduced, cloud);
+      cout << "Reduced PC" << endl;
+      
+      // Resize transformed
+      if (cloudReduced->height < mp.numRowsDesired){
+        pcl::common::deleteRows(*cloudTransformed, *cloudTransformed, std::max(1,(int)(1 + mp.numRowsDesired - cloudReduced->height)/2));
+      }
+      if (cloudReduced->width < mp.numColsDesired){
+        pcl::common::deleteCols(*cloudTransformed, *cloudTransformed, std::max(1,(int)(1 + mp.numColsDesired - cloudReduced->width)/2));
+      }
+      cout << "Resized cloudTransformed in localisation to: height: " << cloudTransformed->height << ", width: " << cloudTransformed->width << endl;
+      
+
+      // Transform
+      pcl::transformPointCloud(*cloudReduced, *cloudTransformed, transform);
+      cout << "Transformed PC" << endl;
+
+      // Run alignment
+      if (option < 4){
+        alignmentTransform.matrix() = runAlignmentPreRejective(mapObjPC, cloudTransformed,option,normRange, featureRange, showAlignment);
+      } else{
+        alignmentTransform.matrix() = runKeypointAlignment(mapObjPC, cloudTransformed, normRange, featureRange, model_resolution, true);
+      }
+
+      // Update transform estimate
+      transform = alignmentTransform * transform ;
     }
-
-    // Update transform estimate
-    transform = alignmentTransform * transform ;
 
     cout << "State transform is " << transform.matrix() << endl;
 
@@ -1130,18 +1186,19 @@ void testLocalizationSequenceWithOptions(int argc, char** argv){
     stateTrack(4,i) = rpy(1);
     stateTrack(5,i) = rpy(0);
 
-    // Resize cloud back to default
-    if (cloudReduced->height < mp.numRowsDesired){
-      pcl::common::mirrorRows(*cloudReduced, *cloudReduced, std::max(1,(int)(1 + mp.numRowsDesired - cloudReduced->height)/2));
-      pcl::common::mirrorRows(*cloudTransformed, *cloudTransformed, std::max(1,(int)(1 + mp.numRowsDesired - cloudReduced->height)/2));
+    if (!useSLAMClass){
+      // Resize cloud back to default
+      if (cloudReduced->height < mp.numRowsDesired){
+        pcl::common::mirrorRows(*cloudReduced, *cloudReduced, std::max(1,(int)(1 + mp.numRowsDesired - cloudReduced->height)/2));
+        pcl::common::mirrorRows(*cloudTransformed, *cloudTransformed, std::max(1,(int)(1 + mp.numRowsDesired - cloudReduced->height)/2));
 
+      }
+      if (cloudReduced->width < mp.numColsDesired){
+        pcl::common::mirrorColumns(*cloudReduced, *cloudReduced, std::max(1,(int)(1 + mp.numColsDesired - cloudReduced->width)/2));
+        pcl::common::mirrorRows(*cloudTransformed, *cloudTransformed, std::max(1,(int)(1 + mp.numColsDesired - cloudReduced->width)/2));
+      }
+      cout << "cloud size reset in localisation to: height: " << cloudReduced->height << ", width: " << cloudReduced->width << endl;
     }
-    if (cloudReduced->width < mp.numColsDesired){
-      pcl::common::mirrorColumns(*cloudReduced, *cloudReduced, std::max(1,(int)(1 + mp.numColsDesired - cloudReduced->width)/2));
-      pcl::common::mirrorRows(*cloudTransformed, *cloudTransformed, std::max(1,(int)(1 + mp.numColsDesired - cloudReduced->width)/2));
-    }
-    cout << "cloud size reset in localisation to: height: " << cloudReduced->height << ", width: " << cloudReduced->width << endl;
-    
 
   }
 

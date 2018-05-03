@@ -2412,7 +2412,7 @@ void Mapping3D::writeObjectPCDFile(const char* filename, const int objID, int ms
 */
 void Mapping3D::fillObject3DMessage(int objID, cans_msgs::Object3D& msg){
   
-  msg.ID = 0;
+  msg.ID = objID;
 
   // NURBS parameters
   msg.degU = objectMap[objID].degreeU();

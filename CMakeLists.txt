@@ -107,11 +107,11 @@ include_directories(
 ## Declare a C++ executable
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
-add_executable(test_mapping examples/test_mapping.cpp src/mapping3D.cpp src/object3D.cpp src/splitSurface.cpp)
+add_executable(test_mapping examples/test_mapping.cpp src/nurbSLAM.cpp src/mapping3D.cpp src/object3D.cpp src/splitSurface.cpp)
 # add_executable(crv_test examples/curveTesting.cpp src/mapping3D.cpp src/object3D.cpp src/splitSurface.cpp)
 # add_executable(srf_test examples/surfaceJoining.cpp src/mapping3D.cpp src/object3D.cpp src/splitSurface.cpp)
 # add_executable(pcl_test examples/pointCloudTesting.cpp src/mapping3D.cpp src/object3D.cpp src/splitSurface.cpp)
-add_executable(localize_test examples/localizationTesting.cpp src/mapping3D.cpp src/object3D.cpp src/splitSurface.cpp)
+add_executable(localize_test examples/localizationTesting.cpp src/nurbSLAM.cpp src/mapping3D.cpp src/object3D.cpp src/splitSurface.cpp)
 # add_executable(split_test examples/testingSplitSurface.cpp src/splitSurface.cpp)
 add_executable(cloud_publish examples/rosScanPublish.cpp)
 add_executable(tf_publish examples/tfPubTest.cpp)
@@ -122,6 +122,8 @@ add_executable(unreal_cans_timer examples/rosUnrealTimer.cpp src/mapping3D.cpp s
 add_executable(obstacles_test examples/obstacleRepresentation.cpp src/mapping3D.cpp src/object3D.cpp src/splitSurface.cpp)
 
 add_executable(slam_test examples/slamNURBS.cpp src/nurbSLAM.cpp src/mapping3D.cpp src/object3D.cpp src/splitSurface.cpp)
+
+add_executable(nurbslam_node examples/rosNURBSLAMNode.cpp src/nurbSLAM.cpp src/mapping3D.cpp src/object3D.cpp src/splitSurface.cpp)
 
 
 # add_definitions( -DMAGICKCORE_QUANTUM_DEPTH=16 )
@@ -152,7 +154,9 @@ target_link_libraries(unreal_cans_timer ${catkin_LIBRARIES} ${NURBS3_LIBRARIES})
 
 target_link_libraries(obstacles_test ${catkin_LIBRARIES} ${NURBS3_LIBRARIES}) 
 
-target_link_libraries(slam_test ${catkin_LIBRARIES} ${NURBS3_LIBRARIES}) 
+target_link_libraries(slam_test ${catkin_LIBRARIES} ${NURBS3_LIBRARIES})
+
+target_link_libraries(nurbslam_node ${catkin_LIBRARIES} ${NURBS3_LIBRARIES})
 
 #############
 ## Install ##
@@ -226,6 +230,8 @@ if (CATKIN_ENABLE_TESTING)
   target_link_libraries(test_object3D ${catkin_LIBRARIES} ${NURBS3_LIBRARIES})
   catkin_add_gtest(test_splitSurface tests/test_splitSurface.cpp src/splitSurface.cpp)
   target_link_libraries(test_splitSurface ${catkin_LIBRARIES} ${NURBS3_LIBRARIES})
+  catkin_add_gtest(test_nurbSLAM tests/test_nurbSLAM.cpp src/nurbSLAM.cpp src/mapping3D.cpp src/object3D.cpp src/splitSurface.cpp)
+  target_link_libraries(test_nurbSLAM ${catkin_LIBRARIES} ${NURBS3_LIBRARIES})
 endif()
 
 ## Add folders to be run by python nosetests

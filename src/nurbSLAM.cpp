@@ -13,8 +13,8 @@ using namespace PLib;
 */
 NurbSLAM::NurbSLAM(): localisationOption(2), bShowAlignment(false),
     nSurfPointsFactor(3.0), pclNormalRadiusSetting(0.05), pclFeatureRadiusSetting(0.1),
-    bUseKeypoints(true), modelResolution(0.005), inlierMultiplier(0.1), validInlierTheshold(0.5),
-    inlierFraction(1.0)
+    bUseKeypoints(false), modelResolution(0.005), inlierMultiplier(0.1), validInlierTheshold(0.5),
+    inlierFraction(1.0), bMapUpdatedFromScan(false), bMappingModeOn(false), bLocalisationModeOn(false)
 {
   state = Eigen::Affine3f::Identity();
   transformDelta = Eigen::Affine3f::Identity();
@@ -52,10 +52,12 @@ void NurbSLAM::processScans(std::vector<pcl::PointCloud<pcl::PointNormal>::Ptr> 
   objectMeshList.clear();
   objIDList.clear();
   transformationList.clear();
+  bMapUpdatedFromScan = false; // reset to false
 
   float msSurf;
   float mtSurf;
 
+  
   // Initial Scan processing
   for (int i = 0; i < clouds.size(); i++){
 
@@ -66,36 +68,43 @@ void NurbSLAM::processScans(std::vector<pcl::PointCloud<pcl::PointNormal>::Ptr> 
 
     cout << "\n\n\t\t FINISHED PROCESSING SCAN " << i << "\n\n";
 
-    // Compute alignment for all matches
-    if (objIDList[i] != -1){
-      // Compute the loclisation transform for that object
-      if (bUseKeypoints){
-        transformationList.push_back(alignScanKeypointsWithMapObject(objIDList[i], objectMeshList[i]));
-      }else{
-        transformationList.push_back(alignScanWithMapObject(objIDList[i], objectMeshList[i]));
+    if (!bMappingModeOn){
+      // Compute alignment for all matches
+      if (objIDList[i] != -1){
+        // Compute the loclisation transform for that object
+        if (bUseKeypoints){
+          transformationList.push_back(alignScanKeypointsWithMapObject(objIDList[i], objectMeshList[i]));
+        }else{
+          transformationList.push_back(alignScanWithMapObject(objIDList[i], objectMeshList[i]));
+        }
+        if (inlierFraction < validInlierTheshold){
+          cout << "inlier fraction of " << inlierFraction << " is below valid threshold: " << validInlierTheshold << ". Ignoring match." << endl;
+          // Reject match - set to ignore flag
+          objIDList[i] = -1;
+          // Remove transformation
+          transformationList.pop_back();
+        }
       }
-      if (inlierFraction < validInlierTheshold){
-        cout << "inlier fraction of " << inlierFraction << " is below valid threshold: " << validInlierTheshold << ". Ignoring match." << endl;
-        // Reject match - set to ignore flag
-        objIDList[i] = -1;
-        // Remove transformation
-        transformationList.pop_back();
-      }// TODO - to set as a new obstacle
+    }else{
+      cout << "Mapping mode on, no alignment performed" << endl;
     }
   }
+
 
   cout << "Starting filter update" << endl;
   // Perform the SLAM update with the computed transformations
   if (transformationList.size() > 0){
     updateSLAMFilter(); // updates state
   }
-
   cout << "Updated filter" << endl;
 
-  // Update the map
-  alignAndUpdateMeshes(); // uses the global lists
 
-  cout << "Updated mesh" << endl;
+  if (!bLocalisationModeOn){
+    // Update the map
+    alignAndUpdateMeshes(); // uses the global lists
+
+    cout << "Updated mesh" << endl;
+  }
   
 }
 
@@ -252,7 +261,7 @@ Eigen::Matrix4f NurbSLAM::alignScanKeypointsWithMapObject(int objID, pcl::PointC
   transformOut = align.getFinalTransformation ();
 
   if (align.hasConverged()){
-    cout << " Successfully converged" << endl;
+    cout << "Successfully converged" << endl;
   }else {
     cout << "Alignment FAILED to converge" << endl;
   }
@@ -456,12 +465,16 @@ void NurbSLAM::alignAndUpdateMeshes(){
 
   std::vector<float> searchMetrics;
 
-  int updateID;
+  int updateID = -1;
 
-  cout << "In Align and update Meshes. TransformDelta is: " << transformDelta.matrix() << endl;
+  cout << "In Align and update Meshes. TransformDelta is:\n" << transformDelta.matrix() << endl;
 
-  cout << "Object mesh list has values cloud at [0] of size: " << objectMeshList[0]->size() << endl;
-  cout << "and at (0,0) = " << objectMeshList[0]->at(0,0) << endl;
+  if (objIDList.size() > 0){
+    cout << "Object mesh list has values cloud at [0] of size: " << objectMeshList[0]->size() << endl;
+    cout << "and at (0,0) = " << objectMeshList[0]->at(0,0) << endl;
+  }else{
+    cout << "There are no objects to udpate" << endl;
+  }
 
   for (int i = 0; i < objIDList.size(); i++){
     if (objIDList[i] == -2){
@@ -500,8 +513,15 @@ void NurbSLAM::alignAndUpdateMeshes(){
       }
       
     }
-    // Update mesh and feature for the items in the map
-    updatePointCloudAndFeaturesInMap(updateID);
+
+    if (!bMappingModeOn){
+      // Update mesh and feature for the items in the map
+      updatePointCloudAndFeaturesInMap(updateID);
+    }else{
+      cout << "In Mapping mode. data points or map features for localisation to be computed" << endl;
+      // Set flag that there have been updates
+      bMapUpdatedFromScan = true;
+    }
   }
 }
 
@@ -534,7 +554,7 @@ void NurbSLAM::updatePointCloudAndFeaturesInMap(int objID){
     mapMeshList.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr (new pcl::PointCloud<pcl::PointNormal>(mtSurf, msSurf, pcl::PointNormal())));
     mapFeatureList.push_back(pcl::PointCloud<pcl::FPFHSignature33>::Ptr (new pcl::PointCloud<pcl::FPFHSignature33>));
   }else{
-    // write a new over the old
+    // write a new object over the old
     cout << "update object - replace the mesh and features" << endl;
     mapMeshList[objID] = pcl::PointCloud<pcl::PointNormal>::Ptr (new pcl::PointCloud<pcl::PointNormal>(mtSurf, msSurf, pcl::PointNormal()));
     mapFeatureList[objID] = pcl::PointCloud<pcl::FPFHSignature33>::Ptr (new pcl::PointCloud<pcl::FPFHSignature33>);
@@ -565,17 +585,24 @@ void NurbSLAM::updatePointCloudAndFeaturesInMap(int objID){
   fest.compute (*mapFeatureList[objID]);
   cout << "Features have been computed for map cloud" << endl;
 
+  // Set flag that there have been updates
+  bMapUpdatedFromScan = true;
+
 }
 
 /*! 
-  \brief  Initialise the state (if not starting at zero)
+  \brief  Sets the state
+  
+  Used for initialisation (if not starting at zero)
+  Also used in mapping paradigms
 
   \author Benjamin Morrell
   \date 30 April 2018
 */
-void NurbSLAM::initState(Eigen::Affine3f startingState){
-  this->state = startingState;
+void NurbSLAM::setState(Eigen::Affine3f inputState){
+  this->state = inputState;
 }
+
 
 /*! 
   \brief  Get the current state
@@ -586,3 +613,50 @@ void NurbSLAM::initState(Eigen::Affine3f startingState){
 Eigen::Affine3f NurbSLAM::getState(){
   return state;
 }
+
+/*! 
+  \brief Turns on mapping mode
+
+  \warning only one mode is on at a time
+
+  \author Benjamin Morrell
+  \date 30 April 2018
+*/
+void NurbSLAM::activateMappingMode(){
+  bMappingModeOn = true;
+  bLocalisationModeOn = false;
+}
+
+/*! 
+  \brief Turns on mapping mode
+
+  \warning only one mode is on at a time
+  \warning Need to load an object for this to work
+
+  \author Benjamin Morrell
+  \date 30 April 2018
+*/
+void NurbSLAM::activateLocalisationMode(){
+  bLocalisationModeOn = true;
+  bMappingModeOn = false;
+}
+
+/*! 
+  \brief Loads object into the map
+
+  \author Benjamin Morrell
+  \date 30 April 2018
+*/
+void NurbSLAM::loadObjectIntoMap(std::string filename){
+  
+  // Add object to the map
+  mp.addObjectFromFile(filename.c_str());
+
+  // Get the object ID for the new object
+  int objID = mp.objectMap.size() - 1;
+
+  // Process the point clouds for the new object
+  updatePointCloudAndFeaturesInMap(objID);
+
+}
+

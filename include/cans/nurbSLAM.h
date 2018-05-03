@@ -53,6 +53,10 @@ class NurbSLAM {
     float inlierFraction;
     float validInlierTheshold;
 
+    // Options
+    bool bMappingModeOn;
+    bool bLocalisationModeOn;
+
   public:
 
     NurbSLAM();
@@ -72,14 +76,27 @@ class NurbSLAM {
     void alignAndUpdateMeshes();
     void updatePointCloudAndFeaturesInMap(int objID);
 
-    void initState(Eigen::Affine3f startingState);
-
+    void setState(Eigen::Affine3f startingState);
     Eigen::Affine3f getState();
+
+    // Changing modes
+    void activateMappingMode();
+    void activateLocalisationMode();
+
+    bool isMappingModeActive(){return bMappingModeOn;}
+    bool isLocalisationModeActive(){return bLocalisationModeOn;}
+
+    // Load in map
+    void loadObjectIntoMap(std::string filename);
 
     // Map + Mapping functions
     Mapping3D mp;
 
-    bool bShowAlignment;
+    // Options
+    bool bShowAlignment;    
+
+    // Flags
+    bool bMapUpdatedFromScan; // Flag for ros node to know if the map has changed
 
     // Localisation settings
     float nSurfPointsFactor;// - factor multiplied by the number of control points to get the number of surface samples

@@ -14,6 +14,7 @@
 #include "cans/mapping3D.h"
 #include "cans/object3D.h"
 #include "cans/splitSurface.h"
+#include "cans/nurbSLAM.h"
 
 using namespace std;
 using namespace PLib;
@@ -549,15 +550,21 @@ void testBlenderSequence2(int argc, char ** argv){
   int dataSet;
   int scanSteps;
   int nData;
+  bool useSLAMClass = false;
 
   if (argc < 3){
-    cout << "Error: need to use at least 2 arugments: int dataset, int numberOfScans, float filename (optional)" << endl;
+    cout << "Error: need to use at least 2 arugments: int dataset, int numberOfScans, int useSLAMClass (optional) float filename (optional)" << endl;
     return;
   }else{
     dataSet = atoi(argv[1]);
     numberOfScans = atoi(argv[2]);
+    if (argc > 3){
+      if (atoi(argv[3]) == 1){
+        useSLAMClass = true;
+      }
+    }
   }
-  
+
   // Initialise
   std::string filename;
   std::string outFilename;
@@ -675,24 +682,46 @@ void testBlenderSequence2(int argc, char ** argv){
   Eigen::Array<float,6,Eigen::Dynamic> state = readPathTextFile(pathFilename.c_str(),nData);
   cout << "State is:\n" << state << endl;
 
-  // Init Mapping class
+  // Init classes
   Mapping3D mp;
-  mp.numRowsDesired = 95;
-  mp.numColsDesired = 95;
-  mp.maxNanAllowed = 10;
-  mp.removeNanBuffer = 2;
-  mp.nCtrlDefault[0] = 17;
-  mp.nCtrlDefault[1] = 17;
+  NurbSLAM slam;
 
-  mp.newRowColBuffer = 10; // How many non new points in a row or column are permissible
+  if (useSLAMClass){
+    
+    slam.mp.numRowsDesired = 95;
+    slam.mp.numColsDesired = 95;
+    slam.mp.maxNanAllowed = 10;
+    slam.mp.removeNanBuffer = 2;
+    slam.mp.nCtrlDefault[0] = 17;
+    slam.mp.nCtrlDefault[1] = 17;
 
-  // New extension method
-  mp.useNonRectData = true;
+    slam.mp.newRowColBuffer = 10; // How many non new points in a row or column are permissible
+
+    // New extension method
+    slam.mp.useNonRectData = true;
+
+    slam.activateMappingMode();
+  }else{
+    // Init Mapping class
+    
+    mp.numRowsDesired = 95;
+    mp.numColsDesired = 95;
+    mp.maxNanAllowed = 10;
+    mp.removeNanBuffer = 2;
+    mp.nCtrlDefault[0] = 17;
+    mp.nCtrlDefault[1] = 17;
+
+    mp.newRowColBuffer = 10; // How many non new points in a row or column are permissible
+
+    // New extension method
+    mp.useNonRectData = true;
+  }
 
   pcl::PCDReader reader;
 
   pcl::PCLPointCloud2::Ptr cloud_blob (new pcl::PCLPointCloud2);
   pcl::PointCloud<pcl::PointNormal>::Ptr cloud (new pcl::PointCloud<pcl::PointNormal>); 
+  std::vector<pcl::PointCloud<pcl::PointNormal>::Ptr> clouds;
 
   for (int i = 0; i < numberOfScans; i += scanSteps){
     cout << "Processing Scan " << i << endl;
@@ -736,16 +765,38 @@ void testBlenderSequence2(int argc, char ** argv){
 
     cout << "transform is " << transform.matrix() << endl;
 
-    // Process Scan
-    res = mp.processScan(cloud,transform);
+    if (useSLAMClass){
+      // Set the state from the transform
+      slam.setState(transform);
 
-    // Save Scan
-    outFilename = outFilestem + static_cast<ostringstream*>( &(ostringstream() << (i+1)) )->str() + ".wrl";
-    mp.objectMap[0].writeVRML(outFilename.c_str(),Color(255,100,255),50,80);  
+      // load up clouds vector
+      clouds.push_back(cloud);
 
+      // Process scans
+      slam.processScans(clouds);
+
+      // Empty cloud vector
+      clouds.clear();
+
+      // Save Scan
+      outFilename = outFilestem + static_cast<ostringstream*>( &(ostringstream() << (i+1)) )->str() + ".wrl";
+      slam.mp.objectMap[0].writeVRML(outFilename.c_str(),Color(255,100,255),50,80);  
+    }else{
+
+      // Process Scan
+      res = mp.processScan(cloud,transform);
+
+      // Save Scan
+      outFilename = outFilestem + static_cast<ostringstream*>( &(ostringstream() << (i+1)) )->str() + ".wrl";
+      mp.objectMap[0].writeVRML(outFilename.c_str(),Color(255,100,255),50,80);  
+    }
     
   }
 
+
+  if (useSLAMClass){
+    mp.objectMap = slam.mp.objectMap;
+  }
   cout << "\nSize of Object map is: " << mp.objectMap.size() << endl;
   
   // Write result to pcd
@@ -755,12 +806,12 @@ void testBlenderSequence2(int argc, char ** argv){
   mp.objectMap[0].write((outFilestem + "final_obj.obj").c_str());
 
   // Write object 3D to file if argument given
-  if (argc > 3){
-    mp.objectMap[0].write(argv[3]);
+  if (argc > 4){
+    mp.objectMap[0].write(argv[4]);
     cout << "Starting centre is: " << mp.objectMap[0].getCentre() << ", and centre: " << mp.objectMap[0].getObjSize() << endl;
 
     Object3D obj;
-    obj.readObject3D(argv[3]);
+    obj.readObject3D(argv[4]);
     // obj.read("testSaveObject");
     // obj.computeSizeFromControlPoints();
     // obj.computeCentreFromControlPoints(); // TODO - color

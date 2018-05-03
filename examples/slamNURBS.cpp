@@ -72,13 +72,18 @@ void runSLAM(int argc,char ** argv){
   int dataSet;
   int scanSteps;
   int nData;
+  int nurbSLAMMode;
 
   if (argc < 3){
-    cout << "Error: need to use at least 2 arugments: int dataset, int numberOfScans (optional) int localisationMethod" << endl;
+    cout << "Error: need to use at least 2 arugments: int dataset, int numberOfScans (optional) mode {0, SLAM (default), 1, mapping, 2 localisation}" << endl;
     return;
   }else{
     dataSet = atoi(argv[1]);
     numberOfScans = atoi(argv[2]);
+    if (argc > 3){
+      nurbSLAMMode = atoi(argv[3]);
+    }
+    
   }
 
   // Initialise
@@ -217,6 +222,28 @@ void runSLAM(int argc,char ** argv){
   // slam.mp.numRowsDesired = 95;
   // slam.mp.numColsDesired = 95;
 
+  switch (nurbSLAMMode){
+    case 0:
+      cout << "\n\n\t\tACTIVATING SLAM MODE\n\n" << endl;
+      break;
+    case 1:
+      slam.activateMappingMode();
+      cout << "\n\n\t\tACTIVATING PURE MAPPING MODE\n\n" << endl;
+      break;
+    case 2:
+      slam.activateLocalisationMode();
+      cout << "\n\n\t\tACTIVATING PURE LOCALISATION MODE\n\n" << endl;
+      // load object
+      try{
+        slam.loadObjectIntoMap((outFilestem + "_0_final_obj.obj").c_str());
+        // TODO may need to update this to load multiple objects
+      }catch(...){
+        cout << "\n\nNo object found to use for localisation. Exiting." << endl;
+        return;
+      }
+      break;
+  }
+
 
   // Load true state
   Eigen::Array<float,6,Eigen::Dynamic> state = readPathTextFile(pathFilename.c_str(),nData);
@@ -238,7 +265,7 @@ void runSLAM(int argc,char ** argv){
   state.setZero(state.rows(),state.cols());
 
   // INITIALISE STATE
-  slam.initState(transform);
+  slam.setState(transform);
 
   Eigen::Vector3f rpy; // init vector to store output state
 
