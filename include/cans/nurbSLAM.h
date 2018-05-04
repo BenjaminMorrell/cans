@@ -27,6 +27,9 @@
 #include <pcl/segmentation/sac_segmentation.h>
 
 #include <pcl/keypoints/iss_3d.h>
+#include <pcl/keypoints/harris_3d.h>
+#include <pcl/keypoints/harris_6d.h>
+#include <pcl/keypoints/smoothed_surfaces_keypoint.h>
 
 // May not need..
 #include <pcl/visualization/pcl_visualizer.h>
@@ -51,7 +54,7 @@ class NurbSLAM {
     std::vector<Eigen::Matrix4f> transformationList;
 
     float inlierFraction;
-    float validInlierTheshold;
+    
 
     // Options
     bool bMappingModeOn;
@@ -68,8 +71,10 @@ class NurbSLAM {
 
     int processSingleScan(pcl::PointCloud<pcl::PointNormal>::Ptr cloud, pcl::PointCloud<pcl::PointNormal>::Ptr cloudTransformed);
 
-    Eigen::Matrix4f alignScanKeypointsWithMapObject(int objID, pcl::PointCloud<pcl::PointNormal>::Ptr obsObjPC);
+    Eigen::Matrix4f alignScanKeypointsWithMapObjectKeypoints(int objID, pcl::PointCloud<pcl::PointNormal>::Ptr obsObjPC);
+    Eigen::Matrix4f alignScanKeypointsWithMapObjectDense(int objID, pcl::PointCloud<pcl::PointNormal>::Ptr obsObjPC);
     Eigen::Matrix4f alignScanWithMapObject(int objID, pcl::PointCloud<pcl::PointNormal>::Ptr obsObjPC);
+    void computeKeypoints(pcl::PointCloud<pcl::PointNormal>::Ptr cloud, pcl::search::KdTree<pcl::PointNormal>::Ptr search_method_, pcl::PointCloud<pcl::PointNormal>::Ptr keypoints);
 
     void updateSLAMFilter();
 
@@ -102,10 +107,23 @@ class NurbSLAM {
     float nSurfPointsFactor;// - factor multiplied by the number of control points to get the number of surface samples
     float pclNormalRadiusSetting; // size to search for normal estimation.
     float pclFeatureRadiusSetting; // size to search for feature estimation.
-    float modelResolution; // Setting for keypoint extraction
-    float inlierMultiplier; // Setting that affects the size of the inlier threshold
-    bool bUseKeypoints;
+    float validInlierTheshold;
+    
+    int alignmentOption;
     int localisationOption;
+
+    float modelResolutionKeypoints; // Setting for keypoint extraction
+    int minNeighboursKeypoints;
+
+    float ransac_inlierMultiplier; // Setting that affects the size of the inlier threshold
+    int ransac_maximumIterations;
+    int ransac_numberOfSamples;
+    int ransac_correspondenceRandomness;
+    float ransac_similarityThreshold;
+    float ransac_inlierFraction;
+
+
+    int keypointOption;
 };
 
 

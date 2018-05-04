@@ -53,15 +53,15 @@ class nurbSLAMNode {
       transformTruth = Eigen::Affine3d::Identity();
 
       slam.bShowAlignment = false;
-      slam.bUseKeypoints = false;
+      slam.alignmentOption = 0; // 0 - dense to dense, 1 - keypoints to dense, 2 - keypoints to keypoints
       slam.pclNormalRadiusSetting = 0.05;
       slam.pclFeatureRadiusSetting = 0.1;
       slam.nSurfPointsFactor = 5.0; // default is 3.0
       slam.localisationOption = 2;// Option for localisation method (0 - PCL, 1 - RANSAC IA, 2 - Prerejective RANSAC)
 
       // Other settings
-      slam.inlierMultiplier = 0.1; // for the RANSAC inlier threshold
-      slam.modelResolution = 0.005; // For localisation
+      slam.ransac_inlierMultiplier = 0.1; // for the RANSAC inlier threshold
+      slam.modelResolutionKeypoints = 0.005; // For localisation
 
       transformTF.child_frame_id_ = "nurb_cam";
       transformTF.frame_id_ = "starting_cam";
@@ -200,6 +200,46 @@ class nurbSLAMNode {
       
       return transformTF;
     }
+
+    void setSLAMParameters(ros::NodeHandle& nh){
+
+      cout << "Inside set parameters" << endl;
+      // OPTIONS
+      nh.param("alignmentOption", slam.alignmentOption, slam.alignmentOption);
+      nh.param("bShowAlignment", slam.bShowAlignment, slam.bShowAlignment);
+      nh.param("localisationOption", slam.localisationOption, slam.localisationOption);
+      nh.param("keypointOption", slam.keypointOption, slam.keypointOption);
+
+      // Localisation
+      nh.param("/keypoints/modelResolution", slam.modelResolutionKeypoints, slam.modelResolutionKeypoints);
+      nh.param("/keypoints/minNeighbours", slam.minNeighboursKeypoints, slam.minNeighboursKeypoints);
+
+      nh.param("pclNormalRadiusSetting", slam.pclNormalRadiusSetting, slam.pclNormalRadiusSetting);
+      nh.param("pclFeatureRadiusSetting", slam.pclFeatureRadiusSetting, slam.pclFeatureRadiusSetting);
+
+      nh.param("/ransac/inlierMultiplier", slam.ransac_inlierMultiplier, slam.ransac_inlierMultiplier);
+      nh.param("/ransac/maximumIterations", slam.ransac_maximumIterations, slam.ransac_maximumIterations);
+      nh.param("/ransac/numberOfSamples", slam.ransac_numberOfSamples, slam.ransac_numberOfSamples);
+      nh.param("/ransac/correspondenceRandomness", slam.ransac_correspondenceRandomness, slam.ransac_correspondenceRandomness);
+      nh.param("/ransac/similarityThreshold", slam.ransac_similarityThreshold, slam.ransac_similarityThreshold);
+      nh.param("/ransac/inlierFraction", slam.ransac_inlierFraction, slam.ransac_inlierFraction);
+
+      nh.param("validInlierThreshold", slam.validInlierTheshold, slam.validInlierTheshold);
+      nh.param("nSurfPointsFactor", slam.nSurfPointsFactor, slam.nSurfPointsFactor);
+
+      // Mapping
+      nh.param("/meshing/numRowsDesired", slam.mp.numRowsDesired, slam.mp.numRowsDesired);
+      nh.param("/meshing/numColsDesired", slam.mp.numColsDesired, slam.mp.numColsDesired);
+      nh.param("/meshing/maxNanAllowed", slam.mp.maxNanAllowed, slam.mp.maxNanAllowed);
+      nh.param("/meshing/removeNanBuffer", slam.mp.removeNanBuffer, slam.mp.removeNanBuffer);
+      nh.param("/meshing/newRowColBuffer", slam.mp.newRowColBuffer, slam.mp.newRowColBuffer);
+      nh.param("/meshing/useNonRectData", slam.mp.useNonRectData, slam.mp.useNonRectData);
+      nh.param("/meshing/nCtrlDefaultS", slam.mp.nCtrlDefault[0], slam.mp.nCtrlDefault[0]); // This main fail...
+      nh.param("/meshing/nCtrlDefaultT", slam.mp.nCtrlDefault[1], slam.mp.nCtrlDefault[1]);
+
+      cout << "Finished setting SLAM parameters" << endl;
+
+    }
 };
 
 int
@@ -211,6 +251,7 @@ main (int argc, char** argv)
 
   // Initialise the class
   nurbSLAMNode nurbnode;
+  nurbnode.setSLAMParameters(nh);
 
   if (argc > 1){
     int slamMode = atoi(argv[1]);

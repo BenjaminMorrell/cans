@@ -602,7 +602,7 @@ Matrix_Point3Df Object3D::getSurfacePoints(int ms, int mt){
     val += step;
   }
 
-  cout << "params are: " << paramsS << "\n\n" << paramsT << endl;
+  // cout << "params are: " << paramsS << "\n\n" << paramsT << endl;
 
   // Fill matrix
   for (int i = 0; i < ms; i++){

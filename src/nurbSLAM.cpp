@@ -11,10 +11,18 @@ using namespace PLib;
   \author Benjamin Morrell
   \date 30 April 2018
 */
-NurbSLAM::NurbSLAM(): localisationOption(2), bShowAlignment(false),
-    nSurfPointsFactor(3.0), pclNormalRadiusSetting(0.05), pclFeatureRadiusSetting(0.1),
-    bUseKeypoints(false), modelResolution(0.005), inlierMultiplier(0.1), validInlierTheshold(0.5),
-    inlierFraction(1.0), bMapUpdatedFromScan(false), bMappingModeOn(false), bLocalisationModeOn(false)
+NurbSLAM::NurbSLAM(): 
+    localisationOption(2), 
+    alignmentOption(0),
+    keypointOption(0),
+    bShowAlignment(false),
+    bMapUpdatedFromScan(false), bMappingModeOn(false), bLocalisationModeOn(false),
+    nSurfPointsFactor(5.0), 
+    pclNormalRadiusSetting(0.05), pclFeatureRadiusSetting(0.1),
+    ransac_inlierMultiplier(0.1), validInlierTheshold(0.5),inlierFraction(1.0), 
+    modelResolutionKeypoints(0.005), minNeighboursKeypoints(5),
+    ransac_maximumIterations(5000), ransac_numberOfSamples(3),
+    ransac_correspondenceRandomness(3), ransac_similarityThreshold(0.9), ransac_inlierFraction(0.25)
 {
   state = Eigen::Affine3f::Identity();
   transformDelta = Eigen::Affine3f::Identity();
@@ -72,11 +80,17 @@ void NurbSLAM::processScans(std::vector<pcl::PointCloud<pcl::PointNormal>::Ptr> 
       // Compute alignment for all matches
       if (objIDList[i] != -1){
         // Compute the loclisation transform for that object
-        if (bUseKeypoints){
-          transformationList.push_back(alignScanKeypointsWithMapObject(objIDList[i], objectMeshList[i]));
-        }else{
+        if (alignmentOption == 0){
+          // Dense to dense alignment
           transformationList.push_back(alignScanWithMapObject(objIDList[i], objectMeshList[i]));
+        }else if (alignmentOption == 1){
+          // Keypoint to dense alignment
+          transformationList.push_back(alignScanKeypointsWithMapObjectDense(objIDList[i], objectMeshList[i]));
+        }else{
+          // Keypoint to keypoint
+          transformationList.push_back(alignScanKeypointsWithMapObjectKeypoints(objIDList[i], objectMeshList[i]));
         }
+
         if (inlierFraction < validInlierTheshold){
           cout << "inlier fraction of " << inlierFraction << " is below valid threshold: " << validInlierTheshold << ". Ignoring match." << endl;
           // Reject match - set to ignore flag
@@ -176,7 +190,7 @@ int NurbSLAM::processSingleScan(pcl::PointCloud<pcl::PointNormal>::Ptr cloud, pc
   \author Benjamin Morrell
   \date 30 April 2018
 */
-Eigen::Matrix4f NurbSLAM::alignScanKeypointsWithMapObject(int objID, pcl::PointCloud<pcl::PointNormal>::Ptr obsObjPC){
+Eigen::Matrix4f NurbSLAM::alignScanKeypointsWithMapObjectKeypoints(int objID, pcl::PointCloud<pcl::PointNormal>::Ptr obsObjPC){
 
   pcl::PointCloud<pcl::PointNormal>::Ptr mapObjPC_keypoints (new pcl::PointCloud<pcl::PointNormal>);
   pcl::PointCloud<pcl::PointNormal>::Ptr obsObjPC_keypoints (new pcl::PointCloud<pcl::PointNormal>);
@@ -199,22 +213,26 @@ Eigen::Matrix4f NurbSLAM::alignScanKeypointsWithMapObject(int objID, pcl::PointC
   pcl::search::KdTree<pcl::PointNormal>::Ptr search_method_(new pcl::search::KdTree<pcl::PointNormal>);
   
   // Extract keypoints
-  pcl::ISSKeypoint3D<pcl::PointNormal, pcl::PointNormal> iss_detector;
-
-  iss_detector.setSearchMethod(search_method_);
-  iss_detector.setSalientRadius (6 * modelResolution);
-  iss_detector.setNonMaxRadius (4 * modelResolution);
-  iss_detector.setThreshold21 (0.975);
-  iss_detector.setThreshold32 (0.975);
-  iss_detector.setMinNeighbors (5);
-  iss_detector.setNumberOfThreads (4);
-  iss_detector.setInputCloud (mapMeshList[objID]);
-  iss_detector.compute (*mapObjPC_keypoints);
+  computeKeypoints(obsObjPC, search_method_, obsObjPC_keypoints);
   cout << "computed keypoints for cloud 1. have " << mapObjPC_keypoints->size() << endl;
-  iss_detector.setInputCloud (obsObjPC);
-  iss_detector.compute (*obsObjPC_keypoints);
+  computeKeypoints(mapMeshList[objID], search_method_, mapObjPC_keypoints);
   cout << "computed keypoints for cloud 2. have " << obsObjPC_keypoints->size() << endl;
-    
+  // pcl::ISSKeypoint3D<pcl::PointNormal, pcl::PointNormal> iss_detector;
+
+  // iss_detector.setSearchMethod(search_method_);
+  // iss_detector.setSalientRadius (6 * modelResolutionKeypoints);
+  // iss_detector.setNonMaxRadius (4 * modelResolutionKeypoints);
+  // iss_detector.setThreshold21 (0.975);
+  // iss_detector.setThreshold32 (0.975);
+  // iss_detector.setMinNeighbors (minNeighboursKeypoints);
+  // iss_detector.setNumberOfThreads (4);
+  // iss_detector.setInputCloud (mapMeshList[objID]);
+  // iss_detector.compute (*mapObjPC_keypoints);
+  
+  // iss_detector.setInputCloud (obsObjPC);
+  // iss_detector.compute (*obsObjPC_keypoints);
+  
+  
   // Estimate normals
   pcl::NormalEstimation<pcl::PointNormal, pcl::PointNormal> nest;
   nest.setRadiusSearch(pclNormalRadiusSetting);
@@ -249,12 +267,12 @@ Eigen::Matrix4f NurbSLAM::alignScanKeypointsWithMapObject(int objID, pcl::PointC
   align.setInputTarget(mapObjPC_keypoints);
   align.setTargetFeatures(mapObjPC_features);
   //Settings
-  align.setMaximumIterations (5000); // Number of RANSAC iterations
-  align.setNumberOfSamples (3); // Number of points to sample for generating/prerejecting a pose
-  align.setCorrespondenceRandomness (3); // Number of nearest features to use
-  align.setSimilarityThreshold (0.9f); // Polygonal edge length similarity threshold
-  align.setMaxCorrespondenceDistance (2.5f * inlierMultiplier);// Inlier threshold
-  align.setInlierFraction (0.25f); // Required inlier fraction for accepting a pose hypothesis
+  align.setMaximumIterations (ransac_maximumIterations); // Number of RANSAC iterations
+  align.setNumberOfSamples (ransac_numberOfSamples); // Number of points to sample for generating/prerejecting a pose
+  align.setCorrespondenceRandomness (ransac_correspondenceRandomness); // Number of nearest features to use
+  align.setSimilarityThreshold (ransac_similarityThreshold); // Polygonal edge length similarity threshold
+  align.setMaxCorrespondenceDistance (2.5f * ransac_inlierMultiplier);// Inlier threshold
+  align.setInlierFraction (ransac_inlierFraction); // Required inlier fraction for accepting a pose hypothesis
 
   align.align(*obsObjPC_aligned);
 
@@ -276,6 +294,112 @@ Eigen::Matrix4f NurbSLAM::alignScanKeypointsWithMapObject(int objID, pcl::PointC
     visu.addPointCloud (obsObjPC_aligned, ColorHandlerT (obsObjPC_aligned, 0.0, 0.0, 255.0), "obsObjPC_alignedKP");
     visu.addPointCloud (obsObjPC, ColorHandlerT (obsObjPC, 255.0, 0.0, 0.0), "obsObjPC");
     visu.addPointCloud (mapObjPC_keypoints, ColorHandlerT (mapObjPC_keypoints, 0.0, 255.0, 255.0), "mapObjPCKP");
+    visu.addPointCloud (obsObjPC_keypoints, ColorHandlerT (obsObjPC_keypoints, 255.0, 0.0, 255.0), "obsObjPCKP");
+    visu.spin ();
+  }
+
+  return transformOut;
+}
+
+/*! 
+  \brief  Compute the transform to match the scan to the map object using keypoints only from the obsection
+
+  \author Benjamin Morrell
+  \date 30 April 2018
+*/
+Eigen::Matrix4f NurbSLAM::alignScanKeypointsWithMapObjectDense(int objID, pcl::PointCloud<pcl::PointNormal>::Ptr obsObjPC){
+
+  pcl::PointCloud<pcl::PointNormal>::Ptr obsObjPC_keypoints (new pcl::PointCloud<pcl::PointNormal>);
+  pcl::PointCloud<pcl::FPFHSignature33>::Ptr obsObjPC_features (new pcl::PointCloud<pcl::FPFHSignature33>);
+  pcl::PointCloud<pcl::PointNormal>::Ptr obsObjPC_aligned (new pcl::PointCloud<pcl::PointNormal>);
+
+  // Not use if this is needed
+  // mapObjPC->is_dense = false;
+  // obsObjPC->is_dense = false;
+
+  std::cerr << "PointCloud1 dimensions, W: " << mapMeshList[objID]->width << "\tH: " << mapMeshList[objID]->height << "\t is dense? " << mapMeshList[objID]->is_dense << std::endl;
+  std::cerr << "PointCloud2 dimensions, W: " << obsObjPC->width << "\tH: " << obsObjPC->height << "\t is dense? " << obsObjPC->is_dense << std::endl;
+
+  cout << "Map obj at (0,0) is: " << mapMeshList[objID]->at(0,0) << endl;
+  cout << "Obs obj at (0,0) is: " << obsObjPC->at(0,0) << endl;
+
+  Eigen::Matrix4f transformOut;
+
+  pcl::search::KdTree<pcl::PointNormal>::Ptr search_method_(new pcl::search::KdTree<pcl::PointNormal>);
+  
+  // Extract keypoints
+  computeKeypoints(obsObjPC, search_method_, obsObjPC_keypoints);
+
+  // pcl::ISSKeypoint3D<pcl::PointNormal, pcl::PointNormal> iss_detector;
+
+  // iss_detector.setSearchMethod(search_method_);
+  // iss_detector.setSalientRadius (6 * modelResolutionKeypoints);
+  // iss_detector.setNonMaxRadius (4 * modelResolutionKeypoints);
+  // iss_detector.setThreshold21 (0.975);
+  // iss_detector.setThreshold32 (0.975);
+  // iss_detector.setMinNeighbors (minNeighboursKeypoints);
+  // iss_detector.setNumberOfThreads (4);
+  // iss_detector.setInputCloud (obsObjPC);
+  // iss_detector.compute (*obsObjPC_keypoints);
+  cout << "computed keypoints for observation. have " << obsObjPC_keypoints->size() << endl;
+    
+  // Estimate normals
+  pcl::NormalEstimation<pcl::PointNormal, pcl::PointNormal> nest;
+  nest.setRadiusSearch(pclNormalRadiusSetting);
+  // nest.setKSearch(7);
+  nest.setSearchMethod(search_method_);
+  nest.setInputCloud(obsObjPC);
+  nest.compute(*obsObjPC);
+  cout << "computed normals for cloud observation" << endl;
+  
+  // Estimate features
+  pcl::FPFHEstimationOMP<pcl::PointNormal,pcl::PointNormal,pcl::FPFHSignature33> fest;
+  fest.setRadiusSearch(pclFeatureRadiusSetting);
+  // fest.setKSearch(7);
+  fest.setSearchMethod(search_method_);
+  fest.setSearchSurface(obsObjPC);
+  fest.setInputCloud(obsObjPC_keypoints);
+  fest.setInputNormals(obsObjPC);
+  fest.compute (*obsObjPC_features);
+  cout << "Features have been computed" << endl;
+  
+
+  //Perform alignment
+  // Prerejective RANSAC
+  // SampleConsensusPrerejective_Exposed<pcl::PointNormal,pcl::PointNormal,pcl::FPFHSignature33> align;
+  pcl::SampleConsensusPrerejective<pcl::PointNormal,pcl::PointNormal,pcl::FPFHSignature33> align;
+  align.setInputSource(obsObjPC_keypoints);
+  align.setSourceFeatures(obsObjPC_features);
+  align.setInputTarget(mapMeshList[objID]);
+  align.setTargetFeatures(mapFeatureList[objID]);
+  //Settings
+  align.setMaximumIterations (ransac_maximumIterations); // Number of RANSAC iterations
+  align.setNumberOfSamples (ransac_numberOfSamples); // Number of points to sample for generating/prerejecting a pose
+  align.setCorrespondenceRandomness (ransac_correspondenceRandomness); // Number of nearest features to use
+  align.setSimilarityThreshold (ransac_similarityThreshold); // Polygonal edge length similarity threshold
+  align.setMaxCorrespondenceDistance (2.5f * ransac_inlierMultiplier);// Inlier threshold
+  align.setInlierFraction (ransac_inlierFraction); // Required inlier fraction for accepting a pose hypothesis
+
+  align.align(*obsObjPC_aligned);
+
+  transformOut = align.getFinalTransformation ();
+
+  if (align.hasConverged()){
+    cout << "Successfully converged" << endl;
+  }else {
+    cout << "Alignment FAILED to converge" << endl;
+  }
+  
+  inlierFraction = (float)align.getInliers().size()/(float)(obsObjPC_keypoints->width*obsObjPC_keypoints->height);
+
+  cout << "Completed alignment" << endl;
+  cout << "Transform matrix out is: " << transformOut << endl;
+  if (bShowAlignment){
+    // Show alignment
+    pcl::visualization::PCLVisualizer visu("Alignment");
+    visu.addPointCloud (mapMeshList[objID], ColorHandlerT (mapMeshList[objID], 0.0, 255.0, 0.0), "mapObjPC");
+    visu.addPointCloud (obsObjPC_aligned, ColorHandlerT (obsObjPC_aligned, 0.0, 0.0, 255.0), "obsObjPC_alignedKP");
+    visu.addPointCloud (obsObjPC, ColorHandlerT (obsObjPC, 255.0, 0.0, 0.0), "obsObjPC");
     visu.addPointCloud (obsObjPC_keypoints, ColorHandlerT (obsObjPC_keypoints, 255.0, 0.0, 255.0), "obsObjPCKP");
     visu.spin ();
   }
@@ -318,7 +442,7 @@ Eigen::Matrix4f NurbSLAM::alignScanWithMapObject(int objID, pcl::PointCloud<pcl:
     // Set the max correspondence distance to 5cm (e.g., correspondences with higher distances will be ignored)
     icp.setMaxCorrespondenceDistance (0.5);
     // Set the maximum number of iterations (criterion 1)
-    icp.setMaximumIterations (500);
+    icp.setMaximumIterations (ransac_maximumIterations);
     // Set the transformation epsilon (criterion 2)
     icp.setTransformationEpsilon (1e-8);
     // Set the euclidean distance difference epsilon (criterion 3)
@@ -362,8 +486,8 @@ Eigen::Matrix4f NurbSLAM::alignScanWithMapObject(int objID, pcl::PointCloud<pcl:
       align.setInputTarget(mapMeshList[objID]);
       align.setTargetFeatures(mapFeatureList[objID]);
       //Settings
-      align.setMaximumIterations (500); // Number of RANSAC iterations (1000 is default)
-      align.setNumberOfSamples (3); // Number of points to sample for generating/prerejecting a pose (3 is default)
+      align.setMaximumIterations (ransac_maximumIterations); // Number of RANSAC iterations (1000 is default)
+      align.setNumberOfSamples (ransac_numberOfSamples); // Number of points to sample for generating/prerejecting a pose (3 is default)
       align.setCorrespondenceRandomness (20); // Number of nearest features to use (default is 10)
       align.setMaxCorrespondenceDistance (0.1f);// Inlier threshold
 
@@ -388,12 +512,12 @@ Eigen::Matrix4f NurbSLAM::alignScanWithMapObject(int objID, pcl::PointCloud<pcl:
       align.setInputTarget(mapMeshList[objID]);
       align.setTargetFeatures(mapFeatureList[objID]);
       //Settings
-      align.setMaximumIterations (5000); // Number of RANSAC iterations
-      align.setNumberOfSamples (3); // Number of points to sample for generating/prerejecting a pose
-      align.setCorrespondenceRandomness (3); // Number of nearest features to use
-      align.setSimilarityThreshold (0.9f); // Polygonal edge length similarity threshold
-      align.setMaxCorrespondenceDistance (2.5f * 0.01f);// Inlier threshold
-      align.setInlierFraction (0.25f); // Required inlier fraction for accepting a pose hypothesis
+      align.setMaximumIterations (ransac_maximumIterations); // Number of RANSAC iterations
+      align.setNumberOfSamples (ransac_numberOfSamples); // Number of points to sample for generating/prerejecting a pose
+      align.setCorrespondenceRandomness (ransac_correspondenceRandomness); // Number of nearest features to use
+      align.setSimilarityThreshold (ransac_similarityThreshold); // Polygonal edge length similarity threshold
+      align.setMaxCorrespondenceDistance (2.5f * ransac_inlierMultiplier);// Inlier threshold
+      align.setInlierFraction (ransac_inlierFraction); // Required inlier fraction for accepting a pose hypothesis
 
       align.align(*obsObjPC_aligned);
 
@@ -426,6 +550,68 @@ Eigen::Matrix4f NurbSLAM::alignScanWithMapObject(int objID, pcl::PointCloud<pcl:
   return transformOut;
 }
 
+/*! 
+  \brief  Compute the keypoints for a given scan
+
+  \param cloud            input cloud
+  \param search_method_   input search tree
+  \param keypoints        output keypoints
+
+  \author Benjamin Morrell
+  \date 05 May 2018
+*/
+void NurbSLAM::computeKeypoints(pcl::PointCloud<pcl::PointNormal>::Ptr cloud, pcl::search::KdTree<pcl::PointNormal>::Ptr search_method_, pcl::PointCloud<pcl::PointNormal>::Ptr keypoints){
+   
+  switch (keypointOption){
+    case 0:
+      {
+      cout << "Computing Keypoints with an ISS detector" << endl;
+      // Extract keypoints
+      pcl::ISSKeypoint3D<pcl::PointNormal, pcl::PointNormal> iss_detector;
+      iss_detector.setSearchMethod(search_method_);
+      iss_detector.setSalientRadius (6 * modelResolutionKeypoints);
+      iss_detector.setNonMaxRadius (4 * modelResolutionKeypoints);
+      iss_detector.setThreshold21 (0.975);
+      iss_detector.setThreshold32 (0.975);
+      iss_detector.setMinNeighbors (minNeighboursKeypoints);
+      iss_detector.setNumberOfThreads (4);
+      iss_detector.setInputCloud (cloud);
+      iss_detector.compute (*keypoints);
+      }
+      break;
+    case 1:
+      {
+      cout << "NOT Computing Keypoints with a Harris3D detector - NOT IMPLEMENTED" << endl;
+      // pcl::HarrisKeypoint6D<pcl::PointNormal, pcl::PointNormal, pcl::Normal> harris_detector;
+      // harris_detector.setSearchMethod(search_method_);
+      // harris_detector.setRadius(pclNormalRadiusSetting);
+      // harris_detector.setNumberOfThreads (4);
+      // // harris_detector.setNonMaxSupression(false);
+      // // harris_detector.setThreshold(0.0);
+      // harris_detector.setInputCloud (cloud);
+      // // harris_detector.setNormals (cloud);
+      // harris_detector.compute (*keypoints);
+      }
+      break;
+    case 2:
+      {
+      cout << "Computing Keypoints with a Smoothed Surfaces detector" << endl;
+      pcl::SmoothedSurfacesKeypoint<pcl::PointNormal, pcl::PointNormal> ss_detector;
+      ss_detector.setSearchMethod(search_method_);
+      ss_detector.setInputCloud(cloud);
+      // ss_detector.setNormals(cloud);
+      ss_detector.setNeighborhoodConstant(0.5);
+      // ss_detector.setInputScale(0.0);
+      }
+      break;
+    default :
+      break;
+  }
+
+  // Others - harris6D...
+  
+  
+}
 
 //-------------------------------------------------------------------
 // ------------- SLAM FUNCTIONS  -----------------------------

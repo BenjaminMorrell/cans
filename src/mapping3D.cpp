@@ -1224,9 +1224,9 @@ bool Mapping3D::averageOutNans(pcl::PointCloud<pcl::PointNormal>::Ptr cloud, Eig
       // Flag meaning that those terms are not valid (not used), but are not at the end
       continue;
     }
-    cout << "Before: " << cloud->at(nanIndices(1,i),nanIndices(0,i)) << endl;
+    // cout << "Before: " << cloud->at(nanIndices(1,i),nanIndices(0,i)) << endl;
     regionAverageSimple(cloud,nanIndices(0,i),nanIndices(1,i));
-    cout << "After:  " << cloud->at(nanIndices(1,i),nanIndices(0,i)) << endl;
+    // cout << "After:  " << cloud->at(nanIndices(1,i),nanIndices(0,i)) << endl;
     if (!pcl::isFinite(cloud->at(nanIndices(1,i),nanIndices(0,i)) )){
       // Still nan, keep as flag
       noNans = false;

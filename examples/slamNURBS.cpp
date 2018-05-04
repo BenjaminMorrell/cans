@@ -65,8 +65,47 @@ Eigen::Array<float,6,Eigen::Dynamic> readPathTextFile(const char * filename, int
 
 }
 
+void setSLAMParameters(NurbSLAM& slam, ros::NodeHandle nh){
 
-void runSLAM(int argc,char ** argv){
+  cout << "Inside set parameters" << endl;
+  // OPTIONS
+  nh.param("alignmentOption", slam.alignmentOption, slam.alignmentOption);
+  nh.param("bShowAlignment", slam.bShowAlignment, slam.bShowAlignment);
+  nh.param("localisationOption", slam.localisationOption, slam.localisationOption);
+  nh.param("keypointOption", slam.keypointOption, slam.keypointOption);
+
+  // Localisation
+  nh.param("/keypoints/modelResolution", slam.modelResolutionKeypoints, slam.modelResolutionKeypoints);
+  nh.param("/keypoints/minNeighbours", slam.minNeighboursKeypoints, slam.minNeighboursKeypoints);
+
+  nh.param("pclNormalRadiusSetting", slam.pclNormalRadiusSetting, slam.pclNormalRadiusSetting);
+  nh.param("pclFeatureRadiusSetting", slam.pclFeatureRadiusSetting, slam.pclFeatureRadiusSetting);
+
+  nh.param("/ransac/inlierMultiplier", slam.ransac_inlierMultiplier, slam.ransac_inlierMultiplier);
+  nh.param("/ransac/maximumIterations", slam.ransac_maximumIterations, slam.ransac_maximumIterations);
+  nh.param("/ransac/numberOfSamples", slam.ransac_numberOfSamples, slam.ransac_numberOfSamples);
+  nh.param("/ransac/correspondenceRandomness", slam.ransac_correspondenceRandomness, slam.ransac_correspondenceRandomness);
+  nh.param("/ransac/similarityThreshold", slam.ransac_similarityThreshold, slam.ransac_similarityThreshold);
+  nh.param("/ransac/inlierFraction", slam.ransac_inlierFraction, slam.ransac_inlierFraction);
+
+  nh.param("validInlierThreshold", slam.validInlierTheshold, slam.validInlierTheshold);
+  nh.param("nSurfPointsFactor", slam.nSurfPointsFactor, slam.nSurfPointsFactor);
+
+  // Mapping
+  nh.param("/meshing/numRowsDesired", slam.mp.numRowsDesired, slam.mp.numRowsDesired);
+  nh.param("/meshing/numColsDesired", slam.mp.numColsDesired, slam.mp.numColsDesired);
+  nh.param("/meshing/maxNanAllowed", slam.mp.maxNanAllowed, slam.mp.maxNanAllowed);
+  nh.param("/meshing/removeNanBuffer", slam.mp.removeNanBuffer, slam.mp.removeNanBuffer);
+  nh.param("/meshing/newRowColBuffer", slam.mp.newRowColBuffer, slam.mp.newRowColBuffer);
+  nh.param("/meshing/useNonRectData", slam.mp.useNonRectData, slam.mp.useNonRectData);
+  nh.param("/meshing/nCtrlDefaultS", slam.mp.nCtrlDefault[0], slam.mp.nCtrlDefault[0]); // This main fail...
+  nh.param("/meshing/nCtrlDefaultT", slam.mp.nCtrlDefault[1], slam.mp.nCtrlDefault[1]);
+
+  cout << "Finished setting SLAM parameters" << endl;
+
+}
+
+void runSLAM(int argc,char ** argv, ros::NodeHandle nh){
   // Init
   int numberOfScans;
   int dataSet;
@@ -104,7 +143,7 @@ void runSLAM(int argc,char ** argv){
   switch (dataSet){
     case 0: 
       // BLOB
-      cout << "Running Blob Dataset";
+      cout << "Running Blob Dataset\n";
       filestem = "/home/bjm/Dropbox/PhD_Code/Data/3D_Scans/Blensor/Scan01/BlobScan_Data00";
       outFilestem = "/home/bjm/Dropbox/PhD_Code/Results/blob/blob_scan_res_new_extend_";
       pathFilename = "/home/bjm/Dropbox/PhD_Code/Data/3D_Scans/Blensor/Scan01/BlobScan_Path.txt";
@@ -114,7 +153,7 @@ void runSLAM(int argc,char ** argv){
       break;
     case 1:
       // Longer Blob
-      cout << "Running Long Blob Dataset";
+      cout << "Running Long Blob Dataset\n";
       filestem = "/home/bjm/Dropbox/PhD_Code/Data/3D_Scans/Blensor/BlobLong/BlobScan_data00";
       outFilestem = "/home/bjm/Dropbox/PhD_Code/Results/BlobLong/blob_";
       pathFilename = "/home/bjm/Dropbox/PhD_Code/Data/3D_Scans/Blensor/BlobLong/BlobScan_path.txt";
@@ -124,7 +163,7 @@ void runSLAM(int argc,char ** argv){
       break;
     case 2:
       // Cube
-      cout << "Running Cube Dataset";
+      cout << "Running Cube Dataset\n";
       // filestem = "/home/bjm/Dropbox/PhD_Code/Data/3D_Scans/Blensor/Scan02/BlockScan_data00";
       // outFilestem = "/home/bjm/Dropbox/PhD_Code/Results/Cube/cube_scan_res_";
       // pathFilename = "/home/bjm/Dropbox/PhD_Code/Data/3D_Scans/Blensor/Scan02/BlockScan_path.txt";
@@ -149,7 +188,7 @@ void runSLAM(int argc,char ** argv){
       break;
     case 4:
       // Sphere
-      cout << "Running Sphere Dataset";
+      cout << "Running Sphere Dataset\n";
       filestem = "/home/bjm/Dropbox/PhD_Code/Data/3D_Scans/Blensor/One_Object/SPHERE/oneObj_scan_data00";
       outFilestem = "/home/bjm/Dropbox/PhD_Code/Results/Sphere/sphere_scan_res_";
       pathFilename = "/home/bjm/Dropbox/PhD_Code/Data/3D_Scans/Blensor/One_Object/SPHERE/oneObj_scan_path.txt";
@@ -160,7 +199,7 @@ void runSLAM(int argc,char ** argv){
       break;
     case 5:
       // Sphere
-      cout << "Running Sphere Dataset";
+      cout << "Running Sphere Dataset\n";
       filestem = "/home/bjm/Dropbox/PhD_Code/Data/3D_Scans/Blensor/One_Object/SPHERE_DIAG/oneObj_scan_data00";
       outFilestem = "/home/bjm/Dropbox/PhD_Code/Results/Sphere/sphere_diag_scan_res_";
       pathFilename = "/home/bjm/Dropbox/PhD_Code/Data/3D_Scans/Blensor/One_Object/SPHERE_DIAG/oneObj_scan_path.txt";
@@ -171,7 +210,7 @@ void runSLAM(int argc,char ** argv){
       break;
     case 6:
       // Longer Blob 2 - no problematic square parts
-      cout << "Running Long Blob2 Dataset";
+      cout << "Running Long Blob2 Dataset\n";
       filestem = "/home/bjm/Dropbox/PhD_Code/Data/3D_Scans/Blensor/Blob2/BlobScan_data00";
       outFilestem = "/home/bjm/Dropbox/PhD_Code/Results/Blob2/blob_";
       pathFilename = "/home/bjm/Dropbox/PhD_Code/Data/3D_Scans/Blensor/Blob2/BlobScan_path.txt";
@@ -181,7 +220,7 @@ void runSLAM(int argc,char ** argv){
       break;
     case 7:
       // Blob Lateral - NOTE that the path may be wrong - so only use for SLAM...
-      cout << "Running Long BlobLat Dataset";
+      cout << "Running Long BlobLat Datasetn\n";
       filestem = "/home/bjm/Dropbox/PhD_Code/Data/3D_Scans/Blensor/BlobLat/BlobScan_data00";
       outFilestem = "/home/bjm/Dropbox/PhD_Code/Results/BlobLat/blob_";
       pathFilename = "/home/bjm/Dropbox/PhD_Code/Data/3D_Scans/Blensor/BlobLat/BlobScan_path.txt";
@@ -191,7 +230,7 @@ void runSLAM(int argc,char ** argv){
       break;
     case 99:
       // NEW BLOB
-      cout << "Running New Blob Dataset";
+      cout << "Running New Blob Dataset\n";
       filestem = "/home/bjm/Dropbox/PhD_Code/Data/3D_Scans/Blensor/newBlob/newblobScans00";
       outFilestem = "/home/bjm/Dropbox/PhD_Code/Results/newBlob/newblob_";
       pathFilename = "/home/bjm/Dropbox/PhD_Code/Data/3D_Scans/Blensor/newBlob/newblobTrack.txt";
@@ -204,8 +243,12 @@ void runSLAM(int argc,char ** argv){
   // Init SLAM class
   NurbSLAM slam;
 
-  slam.bShowAlignment = false;
-  slam.bUseKeypoints = false;
+  slam.bShowAlignment = true;
+  
+  // slam.alignmentOption = 0; // 0 - dense to dense, 1 - keypoints to dense, 2 - keypoints to keypoints
+  ros::param::get("alignmentOption", slam.alignmentOption);
+  cout << "SLAM alignment option is " << slam.alignmentOption << endl;
+
   slam.pclNormalRadiusSetting = 0.05;
   slam.pclFeatureRadiusSetting = 0.1;
   slam.nSurfPointsFactor = 5.0; // default is 3.0
@@ -215,8 +258,10 @@ void runSLAM(int argc,char ** argv){
   }
 
   // Other settings
-  slam.inlierMultiplier = 0.1; // for the RANSAC inlier threshold
-  slam.modelResolution = 0.005; // For localisation
+  // slam.ransac_inlierMultiplier = 0.1; // for the RANSAC inlier threshold
+  // slam.modelResolutionKeypoints = 0.005; // For localisation
+
+  setSLAMParameters(slam, nh);
 
   // Mapping settings
   // slam.mp.numRowsDesired = 95;
@@ -362,6 +407,7 @@ void runSLAM(int argc,char ** argv){
 }
 
 
+
 int
 main (int argc, char** argv)
 {
@@ -369,7 +415,7 @@ main (int argc, char** argv)
   ros::init (argc, argv, "nurbsSLAM_Testing");
   ros::NodeHandle nh;
 
-  runSLAM(argc, argv);
+  runSLAM(argc, argv, nh);
   // Spin
   // ros::spin ();
 }

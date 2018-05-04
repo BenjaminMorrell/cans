@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="ISO-8859-15"?>
+<launch>
+
+  <!-- Load Arguments -->
+  <arg name="dataset" default="0" />
+  <arg name="numberOfScans" default="2"/>
+  <arg name="slamMode" default="0"/>  
+
+  <!-- Load parameters -->
+  <rosparam command="load" file="$(find cans)/config/nurbslamParameters.yaml" />
+
+  <!-- Run node -->
+  <node pkg="cans" type="slam_test" name="nurbslam" args="$(arg dataset) $(arg numberOfScans) $(arg slamMode)" output="screen"/>
+  
+</launch>
