@@ -14,9 +14,9 @@ keypointOption: 0
 /keypoints/minNeighbours: 5
 
 # Normals
-pclNormalRadiusSetting: 1.0
+pclNormalRadiusSetting: 0.1
 # Features
-pclFeatureRadiusSetting: 4.0
+pclFeatureRadiusSetting: 0.5
 # RANSAC
 /ransac/inlierMultiplier: 0.1
 /ransac/maximumIterations: 5000
@@ -31,21 +31,21 @@ validInlierThreshold: 0.5
 
 
 # Number of data points
-nSurfPointsFactor: 5.0 # multiplier by the number of control points to get the number of surface points to sample
+nSurfPointsFactor: 7.0 # multiplier by the number of control points to get the number of surface points to sample
 
 
 # -----------------------------
 # Mapping
 # -----------------------------
 # Mesh processing
-/meshing/numRowsDesired: 95
-/meshing/numColsDesired: 95
-/meshing/maxNanAllowed: 10
-/meshing/removeNanBuffer: 2
+/meshing/numRowsDesired: 125
+/meshing/numColsDesired: 125
+/meshing/maxNanAllowed: 50
+/meshing/removeNanBuffer: 1
 /meshing/newRowColBuffer: 10
 
 # NURBS generation
 /mapping/useNonRectData: true # To use the new extension method
-/mapping/nCtrlDefaultS: 17
-/mapping/nCtrlDefaultR: 17
+/mapping/nCtrlDefaultS: 25
+/mapping/nCtrlDefaultR: 25
 

@@ -1469,6 +1469,7 @@ void Mapping3D::addObject(pcl::PointCloud<pcl::PointNormal>::Ptr cloud, std::vec
 
   // cout << "Mesh from cloud point (0,0) is: " << mesh(0,0) << endl;
   // cout << "Mesh from cloud point (5,5) is: " << mesh(5,5) << endl;
+  cout << "nCtrlDefault is: " << nCtrlDefault[0] << ", " << nCtrlDefault[1] << endl;
 
   // Compute number of control points (TDBM  - imrpove this)
   int nCtrl1 = std::min((int)cloud->height/2,nCtrlDefault[0]);
@@ -1919,7 +1920,7 @@ int Mapping3D::dataAssociation(std::vector<float> searchMetrics){
   distances.setZero(objectMap.size());
 
   Eigen::Array<bool, 1, Eigen::Dynamic> activeObjects(1,objectMap.size());
-  activeObjects.setOnes(objectMap.size());
+  activeObjects.setOnes(objectMap.size()); 
 
   // Search through each metric
   for (int j = 0; j < numberOfMetrics; j++){

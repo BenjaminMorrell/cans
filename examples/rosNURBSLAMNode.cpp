@@ -283,8 +283,13 @@ class nurbSLAMNode {
       nh.param("/meshing/removeNanBuffer", slam.mp.removeNanBuffer, slam.mp.removeNanBuffer);
       nh.param("/meshing/newRowColBuffer", slam.mp.newRowColBuffer, slam.mp.newRowColBuffer);
       nh.param("/meshing/useNonRectData", slam.mp.useNonRectData, slam.mp.useNonRectData);
-      nh.param("/meshing/nCtrlDefaultS", slam.mp.nCtrlDefault[0], slam.mp.nCtrlDefault[0]); // This main fail...
-      nh.param("/meshing/nCtrlDefaultT", slam.mp.nCtrlDefault[1], slam.mp.nCtrlDefault[1]);
+      int nCtrl;
+      nh.param("/meshing/nCtrlDefaultS", nCtrl, 25); // This main fail...
+      slam.mp.nCtrlDefault[0] = nCtrl;
+      nh.param("/meshing/nCtrlDefaultT", nCtrl, 25);
+      slam.mp.nCtrlDefault[1] = nCtrl;
+
+      cout << "nCtrlDefault is " << slam.mp.nCtrlDefault[0] << endl;
 
       cout << "Finished setting SLAM parameters" << endl;
 
