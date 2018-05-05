@@ -2,7 +2,7 @@
 # Options (maybe put as args)
 # -----------------------------
 alignmentOption: 0 # 0 - dense to dense, 1 - keypoints to dense, 2 - keypoints to keypoints
-bShowAlignment: true
+bShowAlignment: false
 localisationOption: 2 # Option for localisation method (0 - PCL, 1 - RANSAC IA, 2 - Prerejective RANSAC)
 keypointOption: 0
 
@@ -14,9 +14,9 @@ keypointOption: 0
 /keypoints/minNeighbours: 5
 
 # Normals
-pclNormalRadiusSetting: 0.05
+pclNormalRadiusSetting: 1.0
 # Features
-pclFeatureRadiusSetting: 0.1
+pclFeatureRadiusSetting: 4.0
 # RANSAC
 /ransac/inlierMultiplier: 0.1
 /ransac/maximumIterations: 5000

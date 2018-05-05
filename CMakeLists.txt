@@ -19,8 +19,6 @@ find_package(catkin REQUIRED COMPONENTS
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}")
 
-# find_package(ImageMagick COMPONENTS Magick++ REQUIRED)
-
 find_package(NURBS++ REQUIRED)
 
 if (EXISTS "${CMAKE_CURRENT_LIST_DIR}/../tools/pybind11/CMakeLists.txt")

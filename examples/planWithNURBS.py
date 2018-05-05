@@ -39,18 +39,21 @@ class Planner:
     self.averageVel = 0.07 # m/s
 
     # Times for replanning
-    self.replanHz = 0.1
+    self.replanHz = 0.2
     self.timeOfReplan = 0.0
     self.startDeltaT = 0.5 # Time ahead of current time to use as the start location
     self.firstPlan = True
 
     # Initialise the map
-    self.nurbs = cans.Object3D()
+    self.nurbs = []#cans.Object3D()
 
     # Init planner GCS object
     self.planner = torq_gcs.plan.astro_plan.QRPolyTrajGUI(self.global_dict,defer=True,curv_func=False)
 
     self.global_dict['fsp_out_map'] = None
+
+    self.planner.inflate_buffer = 0.0
+    self.planner.nurbs_weight = 1.0
 
   def initialisePlanner(self):
     # Waypoints
@@ -63,8 +66,6 @@ class Planner:
     # Set time to complete the trajectory
     self.computeTrajTime()
     self.planner.seed_times = np.array([self.tmax])
-
-    # self.planner.inflate_buffer = 0.0
     
     self.global_dict['disc_out_waypoints'] = waypoints
 
@@ -111,10 +112,11 @@ class Planner:
     # self.planner.load_nurbs_obstacle(self.nurbs)
     
     # Fixed weight
-    self.planner.load_nurbs_obstacle(self.nurbs,custom_weighting=False)
-    self.planner.nurbs_weight = 1e-12
-    self.planner.on_nurbs_weight_update_button_clicked()
-    # TODO(BM) find a more efficient way to update the NURBS for planning 
+    # for i in range(0,len(self.nurbs)):
+    #   self.planner.load_nurbs_obstacle(self.nurbs[i],custom_weighting=False)
+    #   self.planner.nurbs_weight = 1e-5#12
+    #   self.planner.on_nurbs_weight_update_button_clicked()
+      # TODO(BM) find a more efficient way to update the NURBS for planning 
 
   def resetGoalinClass(self):
     # Take goal from goal in the planner - if moved in the gui
@@ -123,14 +125,14 @@ class Planner:
 
   def planTrajectory(self):
     # Runs the optimisation and updates the trajectory 
-    self.planner.on_run_astro_button_click()
+    # self.planner.on_run_astro_button_click()
 
     self.planner.qr_polytraj.exit_on_feasible = True
-    self.planner.qr_polytraj.optimise(mutate_serial=3)
+    self.planner.qr_polytraj.optimise(mutate_serial=4)
     self.planner.qr_polytraj.get_trajectory()
     self.planner.update_path_markers()
     
-  def saveTrajectory(self,filename="/home/bjm/TORQ/gcs_ws/src/torq/torq_gcs/waypoints/test_traj.traj"):
+  def saveTrajectory(self,filename="test_traj.traj"):
 
     qrp_out = self.planner.qr_polytraj
 
@@ -142,10 +144,10 @@ class Planner:
 
     scipy.io.savemat('traj_opt.mat', qrp_out.state_combined)
 
-
-
   def readNURBSMessage(self,msg):
     
+    if not plan.firstPlan:
+      return
     # Print parameters
     print("ID: {}\nDegU: {}, DegV: {}\nnCtrl: ({}, {})".format(msg.ID,msg.degU,msg.degV,msg.nCtrlS,msg.nCtrlT))
 
@@ -160,25 +162,31 @@ class Planner:
 
     print("Knots are:\nU\n{}\nV\n{}\nControl points:\n{}\n\n".format(knotU,knotV,controlPoints))
     
-    # init
-    self.nurbs.updateObject3D(msg.degU,msg.degV,knotU,knotV,controlPoints,msg.nCtrlS,msg.nCtrlT)
+    # Update the object
+    if msg.ID >= len(self.nurbs):
+      print("Adding objects to map with received ID: {}, and existing map size: {}".format(msg.ID,len(self.nurbs)))
+      for i in range(0,msg.ID - len(self.nurbs)+1):
+        self.nurbs.append(cans.Object3D())
+    
+    self.nurbs[msg.ID].updateObject3D(msg.degU,msg.degV,knotU,knotV,controlPoints,msg.nCtrlS,msg.nCtrlT)
 
+    # import pdb; pdb.set_trace()
 
-    # Run planner
-    if self.time > 1/self.replanHz or self.firstPlan: # If the time since the last replan is more than the desired period
-      self.resetStartFromTraj()
-      print("\n\nTime to replan ({}): Running ASTRO\n\n".format(self.time))
-      self.time = 0.0 # Starting at the start of the new trajectory
-      self.updateNURBSObstacle()
-      self.planTrajectory()
-      print("\n\n\t\t COMPLETED TRAJECTORY PLAN \n\n")
+    # # Run planner
+    # if self.time > 1/self.replanHz or self.firstPlan: # If the time since the last replan is more than the desired period
+    #   self.resetStartFromTraj()
+    #   print("\n\nTime to replan ({}): Running ASTRO\n\n".format(self.time))
+    #   self.time = 0.0 # Starting at the start of the new trajectory
+    #   self.updateNURBSObstacle()
+    #   self.planTrajectory()
+    #   print("\n\n\t\t COMPLETED TRAJECTORY PLAN \n\n")
       
-      # Reset times:
-      # self.timeOfReplan = self.time
+    #   # Reset times:
+    #   # self.timeOfReplan = self.time
       
 
-      self.firstPlan = False
-      self.saveTrajectory()
+    #   self.firstPlan = False
+    #   self.saveTrajectory()
       
 
   def getSetpointAtTime(self):
@@ -227,6 +235,7 @@ class Planner:
     # Time to start replan
     startTime = self.time + self.startDeltaT
     
+    print("Getting start at time: {}".format(startTime))
     # State for the start
     self.start = self.planner.get_state_at_time(startTime)
     
@@ -247,6 +256,23 @@ class Planner:
     
 
     print("\n\nRESET: New duration is {}\nStart Location is: {}".format(self.tmax,self.start))
+
+
+  def setupAndRunTrajectory(self):
+    
+    self.resetStartFromTraj()
+    print("\n\nTime to replan ({}): Running ASTRO\n\n".format(self.time))
+    self.time = 0.0 # Starting at the start of the new trajectory
+    self.updateNURBSObstacle()
+    
+    self.planTrajectory()
+    print("\n\n\t\t COMPLETED TRAJECTORY PLAN \n\n")
+    
+    # Reset times:
+    # self.timeOfReplan = self.time
+
+    self.firstPlan = False
+    # self.saveTrajectory()
 
 if __name__ == '__main__':
 
@@ -275,21 +301,25 @@ if __name__ == '__main__':
   rospy.Subscriber("/object",Object3D,plan.readNURBSMessage)
 
   # pub = rospy.Publisher("topic",String,queue_size=1)
-  # setpoint_pub = rospy.Publisher("setpoint",PoseStamped,queue_size=1)
+  setpoint_pub = rospy.Publisher("setpoint",PoseStamped,queue_size=1)
 
   # Spin
-  rospy.spin()
+  # rospy.spin()
 
-  # rateHz = 5.0
+  rateHz = 5.0
 
-  # r = rospy.Rate(rateHz) # 10hz
-  # while not rospy.is_shutdown():
-  #     # pub.publish("hello")
-  #     msg = plan.getSetpointAtTime()
-  #     setpoint_pub.publish(msg)
-  #     # increment time
-  #     plan.time += 1.0/rateHz # TODO WARNING - this is not going to accurately track time
-  #     r.sleep()
+  r = rospy.Rate(rateHz) # 10hz
+  while not rospy.is_shutdown():
+      # pub.publish("hello")
+      msg = plan.getSetpointAtTime()
+      setpoint_pub.publish(msg)
+      # increment time
+      plan.time += 1.0/rateHz # TODO WARNING - this is not going to accurately track time
+      if plan.time > 1.0/ plan.replanHz:
+        plan.firstPlan = False
+        plan.setupAndRunTrajectory()
+        
+      r.sleep()
       
       
 

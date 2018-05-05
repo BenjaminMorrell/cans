@@ -40,14 +40,17 @@ class nurbSLAMNode {
     bool bNewState;
     bool bNewScanReceived;
 
+    char* stateFilename;
+
     int scanNumber;
 
+    
   public:
     //------------------------------------------
     // Constructor
     nurbSLAMNode(): runFlag(true), useTruthTransform(false), scanNumber(0), 
         bNewObjects(false), bNewState(false), cloud(new pcl::PointCloud<pcl::PointNormal>),
-        bNewScanReceived(false)
+        bNewScanReceived(false), stateFilename("/home/amme2/Development/unrealDataTrack.txt")
     {
       state = Eigen::Affine3f::Identity();
       transformTruth = Eigen::Affine3d::Identity();
@@ -65,6 +68,16 @@ class nurbSLAMNode {
 
       transformTF.child_frame_id_ = "nurb_cam";
       transformTF.frame_id_ = "starting_cam";
+
+      // Clear file
+      ofstream myfile;
+      myfile.open (stateFilename, std::ofstream::out | std::ofstream::trunc); // open and close to clear.
+      myfile.close();
+
+    }
+
+    ~nurbSLAMNode(){
+      ;
     }
 
     // Process a point cloud message 
@@ -118,8 +131,36 @@ class nurbSLAMNode {
 
         // Set flag that a new scan has been received
         bNewScanReceived = true;
+
+        pcl::PCDWriter writer;
+        writer.write<pcl::PointNormal> ("/home/amme2/Development/voxblox_ws/unreal_scan.pcd", *cloud, false);
         
       }
+    }
+
+    void updateStateFile(){
+
+      Eigen::Array<float, 1, 6> stateData(1,6);
+
+      // Update State for tracking
+      stateData[0] = (state.matrix()(0,3));
+      stateData[1] = (state.matrix()(1,3));
+      stateData[2] = (state.matrix()(2,3));
+      
+      Eigen::Vector3f rpy; // init vector to store output state
+
+      rpy = state.rotation().eulerAngles(2, 1, 0); // Check ordering
+
+      stateData[3] = (rpy(2));
+      stateData[4] = (rpy(1));
+      stateData[5] = (rpy(0));
+      
+
+      // Open file
+      ofstream myfile;
+      myfile.open (stateFilename, std::ios_base::app); // Append
+      myfile << stateData << "\n";
+      myfile.close();
     }
 
     //------------------------------------------
@@ -154,13 +195,21 @@ class nurbSLAMNode {
         bNewObjects = true; 
       }
 
+      // /home/amme2/Development/voxblox_ws/testNURBS_Unreal_6.wrl
+      for (int i=0; i < slam.mp.objectMap.size(); i++){
+        std::string filename = "/home/amme2/Development/Results/testNURBS_Unreal_" + static_cast<ostringstream*>( &(ostringstream() << (i)) )->str() + ".wrl";
+        slam.mp.objectMap[i].writeVRML(filename.c_str(),Color(255,100,255),50,80); 
+        filename = "/home/amme2/Development/Results/testNURBS_Unreal_" + static_cast<ostringstream*>( &(ostringstream() << (i)) )->str() + ".pcd";
+        slam.mp.writeObjectPCDFile(filename.c_str(), i, 125, 125);
+      }
       
-      std::string filename = "testNURBS_Unreal_" + static_cast<ostringstream*>( &(ostringstream() << (scanNumber)) )->str() + ".wrl";
-      slam.mp.objectMap[slam.mp.objectMap.size()-1].writeVRML(filename.c_str(),Color(255,100,255),50,80); 
-
       cout << "\nFinished Processing Scan " << scanNumber << ".\n\n";
       scanNumber ++;
+
+      // Store state
+      updateStateFile();
     }
+
 
     //------------------------------------------
     // Fill object message for a give ID to send as a ROS message
@@ -178,8 +227,8 @@ class nurbSLAMNode {
       // Fill message
       slam.mp.fillObject3DMessage(objID, msg);
 
-      // Set flag back to false - objects are no longer new
-      bNewObjects = false;
+      // Set flag back to false - objects are no longer new (will still loop through all in the map)
+      // bNewObjects = false;
 
       return msg;
     }
@@ -268,11 +317,15 @@ main (int argc, char** argv)
         cout << "\n\n\t\tACTIVATING PURE LOCALISATION MODE\n\n" << endl;
         // load object
         try{
-          throw 1;
-          // nurbnode.slam.loadObjectIntoMap((outFilestem + "_0_final_obj.obj").c_str());
+          nurbnode.slam.loadObjectIntoMap("/home/amme2/Development/voxblox_ws/src/cans/data/blob_0_final_obj.obj");
+          nurbnode.slam.loadObjectIntoMap("/home/amme2/Development/voxblox_ws/src/cans/data/blob_1_final_obj.obj");
+          nurbnode.slam.loadObjectIntoMap("/home/amme2/Development/voxblox_ws/src/cans/data/blob_2_final_obj.obj");
+          nurbnode.slam.loadObjectIntoMap("/home/amme2/Development/voxblox_ws/src/cans/data/blob_3_final_obj.obj");
+
+          nurbnode.bNewObjects = true;
           // TODO may need to update this to load multiple objects
         }catch(...){
-          cout << "\n\nLocalisation not yet implemented... No object found to use for localisation. Exiting." << endl;
+          cout << "\n\nFiles not present to do localistion" << endl;//Localisation not yet implemented... No object found to use for localisation. Exiting." << endl;
           return -1;
         }
         break;
@@ -293,18 +346,23 @@ main (int argc, char** argv)
   // Spin
   // ros::spin ();
   
-  ros::Rate r(2);// Adjust this 
+  ros::Rate r(1);// Adjust this 
+  int counter = 0;
   while (nh.ok()){
-    if (nurbnode.bNewObjects){
+    if (counter%5 == 0){//nurbnode.bNewObjects){
       // If the objects have been updated
       for (int i = 0; i < nurbnode.slam.mp.objectMap.size(); i++){
         // for each object - fill a message and publish it
+        cout << "Publishing message for object with ID: " << i << endl;
         mapPub.publish(nurbnode.fillObject3DMessageForID(i));
       }
+      // nurbnode.bNewObjects = false;
     }
     if (true || nurbnode.bNewState){ // Or just publish on every loop
       tf_br.sendTransform(nurbnode.getCurrentTransform());
     }
+
+    counter++;
     
     ros::spinOnce();
     r.sleep();

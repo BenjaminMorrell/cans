@@ -1915,8 +1915,8 @@ int Mapping3D::dataAssociation(std::vector<float> searchMetrics){
   }
 
   // Distances array
-  Eigen::Array<float, 1, Eigen::Dynamic> distances(1,numberOfMetrics);
-  distances.setZero(numberOfMetrics);
+  Eigen::Array<float, 1, Eigen::Dynamic> distances(1,objectMap.size());
+  distances.setZero(objectMap.size());
 
   Eigen::Array<bool, 1, Eigen::Dynamic> activeObjects(1,objectMap.size());
   activeObjects.setOnes(objectMap.size());
