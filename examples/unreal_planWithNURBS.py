@@ -47,7 +47,7 @@ class Planner:
     self.startDeltaT = 0.5 # Time ahead of current time to use as the start location
     self.firstPlan = True
 
-    self.delayTime = 10.0 # time to wait until reading in obstacles
+    self.blockUpdate = False
 
     # Initialise the map
     self.nurbs = []#cans.Object3D()
@@ -155,7 +155,7 @@ class Planner:
 
   def readNURBSMessage(self,msg):
     
-    if not plan.firstPlan:
+    if not plan.firstPlan or self.blockUpdate:
       return
     # Print parameters
     print("ID: {}\nDegU: {}, DegV: {}\nnCtrl: ({}, {})".format(msg.ID,msg.degU,msg.degV,msg.nCtrlS,msg.nCtrlT))
@@ -270,6 +270,9 @@ class Planner:
     print("\n\nRESET: New duration is {}\nStart Location is: {}".format(self.tmax,self.start))
 
   def goalCallback(self, msg):
+
+    if self.blockUpdate:
+      return
     # Reads a call message from Unreal and resets the goal, then replans
     self.goal['x'][0] = msg.pose.position.x
     self.goal['y'][0] = msg.pose.position.y
@@ -316,6 +319,8 @@ class Planner:
 
 
   def setupAndRunTrajectory(self):
+
+    self.blockUpdate = True
     
     self.resetStartFromTraj()
     print("\n\nTime to replan ({}): Running ASTRO\n\n".format(self.time))
@@ -333,6 +338,8 @@ class Planner:
 
     self.firstPlan = False
     # self.saveTrajectory()
+
+    self.blockUpdate = False
 
 if __name__ == '__main__':
 

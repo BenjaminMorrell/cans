@@ -360,11 +360,11 @@ main (int argc, char** argv)
         try{
           std::string filename = ros::package::getPath("cans")+"/data/blob_0_final_obj.obj";
           nurbnode.slam.loadObjectIntoMap(filename.c_str());
-          // filename = ros::package::getPath("cans")+"/data/blob_1_final_obj.obj";
-          // nurbnode.slam.loadObjectIntoMap(filename.c_str());
-          // filename = ros::package::getPath("cans")+"/data/blob_2_final_obj.obj";
-          // nurbnode.slam.loadObjectIntoMap(filename.c_str());
-          // filename = ros::package::getPath("cans")+"/data/blob_3_final_obj.obj";
+          filename = ros::package::getPath("cans")+"/data/blob_1_final_obj.obj";
+          nurbnode.slam.loadObjectIntoMap(filename.c_str());
+          filename = ros::package::getPath("cans")+"/data/blob_2_final_obj.obj";
+          nurbnode.slam.loadObjectIntoMap(filename.c_str());
+          filename = ros::package::getPath("cans")+"/data/blob_3_final_obj.obj";
 
           nurbnode.bNewObjects = true;
           // TODO may need to update this to load multiple objects
