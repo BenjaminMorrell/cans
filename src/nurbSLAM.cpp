@@ -736,7 +736,7 @@ void NurbSLAM::updatePointCloudAndFeaturesInMap(int objID){
   // Initialise
   if (mapMeshList.size() <= objID){
     // New object
-    cout << "new object - fist mesh to generate" << endl;
+    cout << "new object - first mesh to generate" << endl;
     mapMeshList.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr (new pcl::PointCloud<pcl::PointNormal>(mtSurf, msSurf, pcl::PointNormal())));
     mapFeatureList.push_back(pcl::PointCloud<pcl::FPFHSignature33>::Ptr (new pcl::PointCloud<pcl::FPFHSignature33>));
   }else{

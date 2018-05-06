@@ -6,6 +6,8 @@ bShowAlignment: false
 localisationOption: 2 # Option for localisation method (0 - PCL, 1 - RANSAC IA, 2 - Prerejective RANSAC)
 keypointOption: 0
 
+bPublishNurbsPointCloud: false # whether or not to publish the point cloud for visualuisation in Rviz
+
 # -----------------------------
 # Localisation
 # -----------------------------

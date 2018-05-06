@@ -39,7 +39,7 @@ class Planner:
     self.averageVel = 0.07 # m/s
 
     # Times for replanning
-    self.replanHz = 0.2
+    self.replanHz = 0.1
     self.timeOfReplan = 0.0
     self.startDeltaT = 0.5 # Time ahead of current time to use as the start location
     self.firstPlan = True
@@ -53,7 +53,7 @@ class Planner:
     self.global_dict['fsp_out_map'] = None
 
     self.planner.inflate_buffer = 0.0
-    self.planner.nurbs_weight = 1.0
+    self.planner.nurbs_weight = 1e-10
 
   def initialisePlanner(self):
     # Waypoints
@@ -71,6 +71,9 @@ class Planner:
 
     # Initial guess to load waypoints and initialise planner
     self.planner.on_disc_updated_signal()
+
+    # Set mutation strength
+    self.planner.qr_polytraj.mutation_strength = 1e-15
 
   def computeTrajTime(self):
     if not'x' in self.start.keys():
@@ -112,10 +115,10 @@ class Planner:
     # self.planner.load_nurbs_obstacle(self.nurbs)
     
     # Fixed weight
-    # for i in range(0,len(self.nurbs)):
-    #   self.planner.load_nurbs_obstacle(self.nurbs[i],custom_weighting=False)
-    #   self.planner.nurbs_weight = 1e-5#12
-    #   self.planner.on_nurbs_weight_update_button_clicked()
+    for i in range(0,len(self.nurbs)):
+      self.planner.load_nurbs_obstacle(self.nurbs[i],sum_func=True,custom_weighting=False)
+      # self.planner.nurbs_weight = 1e-5#12
+      # self.planner.on_nurbs_weight_update_button_clicked()
       # TODO(BM) find a more efficient way to update the NURBS for planning 
 
   def resetGoalinClass(self):
@@ -128,7 +131,7 @@ class Planner:
     # self.planner.on_run_astro_button_click()
 
     self.planner.qr_polytraj.exit_on_feasible = True
-    self.planner.qr_polytraj.optimise(mutate_serial=4)
+    self.planner.qr_polytraj.optimise(mutate_serial=10)
     self.planner.qr_polytraj.get_trajectory()
     self.planner.update_path_markers()
     
@@ -171,6 +174,8 @@ class Planner:
     self.nurbs[msg.ID].updateObject3D(msg.degU,msg.degV,knotU,knotV,controlPoints,msg.nCtrlS,msg.nCtrlT)
 
     # import pdb; pdb.set_trace()
+
+    self.updateNURBSObstacle()
 
     # # Run planner
     # if self.time > 1/self.replanHz or self.firstPlan: # If the time since the last replan is more than the desired period
@@ -307,6 +312,7 @@ if __name__ == '__main__':
   # rospy.spin()
 
   rateHz = 5.0
+  timer = 0.0
 
   r = rospy.Rate(rateHz) # 10hz
   while not rospy.is_shutdown():
@@ -314,10 +320,12 @@ if __name__ == '__main__':
       msg = plan.getSetpointAtTime()
       setpoint_pub.publish(msg)
       # increment time
-      plan.time += 1.0/rateHz # TODO WARNING - this is not going to accurately track time
-      if plan.time > 1.0/ plan.replanHz:
+      # plan.time += 1.0/rateHz # TODO WARNING - this is not going to accurately track time
+      timer += 1.0/rateHz 
+      if timer > 1.0/ plan.replanHz:
         plan.firstPlan = False
         plan.setupAndRunTrajectory()
+        timer = 0.0
         
       r.sleep()
       

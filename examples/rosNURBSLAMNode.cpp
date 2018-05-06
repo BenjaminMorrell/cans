@@ -1,4 +1,5 @@
 #include <ros/ros.h>
+#include <ros/package.h>
 #include <iostream>
 #include <fstream>
 
@@ -234,6 +235,38 @@ class nurbSLAMNode {
     }
 
     //------------------------------------------
+    // Fill object point cloud message for a give ID to send as a ROS message
+    sensor_msgs::PointCloud2 fillPointCloudMessageForID(int objID){
+
+      // Initialise message
+      sensor_msgs::PointCloud2 msg;
+
+      if (objID >= slam.mp.objectMap.size()){
+        cout << "Error, objID is larger than map size. Returning empty message" << endl;
+        return msg;
+      }
+
+      // Number of data points
+      int ms = 30;
+      int mt = 50;
+      // Init point cloud
+      pcl::PointCloud<pcl::PointNormal>::Ptr cloud(new pcl::PointCloud<pcl::PointNormal>(mt, ms, pcl::PointNormal()));
+
+      // Get point cloud from object
+      slam.mp.pointCloudFromObject3D(objID, ms, mt, cloud);
+      
+      // Convert to ROS message (http://docs.ros.org/hydro/api/pcl_conversions/html/namespacepcl.html#af2c39730f92ade1603c55d45265e386d)
+      pcl::toROSMsg(*cloud, msg);
+
+      // Set frame ID
+      msg.header.frame_id = "local_origin";
+      msg.header.seq = objID;
+      msg.header.stamp = ros::Time::now();
+
+      return msg;
+    }
+
+    //------------------------------------------
     // Fill transform to then send
     tf::StampedTransform getCurrentTransform(){
       // transformTF is a member variable with frames already defined
@@ -307,6 +340,9 @@ main (int argc, char** argv)
   nurbSLAMNode nurbnode;
   nurbnode.setSLAMParameters(nh);
 
+  bool bPublishNurbsPointCloud = false;
+  nh.param("bPublishNurbsPointCloud", bPublishNurbsPointCloud, bPublishNurbsPointCloud);
+
   if (argc > 1){
     int slamMode = atoi(argv[1]);
     switch (slamMode){
@@ -322,10 +358,13 @@ main (int argc, char** argv)
         cout << "\n\n\t\tACTIVATING PURE LOCALISATION MODE\n\n" << endl;
         // load object
         try{
-          nurbnode.slam.loadObjectIntoMap("/home/amme2/Development/voxblox_ws/src/cans/data/blob_0_final_obj.obj");
-          nurbnode.slam.loadObjectIntoMap("/home/amme2/Development/voxblox_ws/src/cans/data/blob_1_final_obj.obj");
-          nurbnode.slam.loadObjectIntoMap("/home/amme2/Development/voxblox_ws/src/cans/data/blob_2_final_obj.obj");
-          nurbnode.slam.loadObjectIntoMap("/home/amme2/Development/voxblox_ws/src/cans/data/blob_3_final_obj.obj");
+          std::string filename = ros::package::getPath("cans")+"/data/blob_0_final_obj.obj";
+          nurbnode.slam.loadObjectIntoMap(filename.c_str());
+          // filename = ros::package::getPath("cans")+"/data/blob_1_final_obj.obj";
+          // nurbnode.slam.loadObjectIntoMap(filename.c_str());
+          // filename = ros::package::getPath("cans")+"/data/blob_2_final_obj.obj";
+          // nurbnode.slam.loadObjectIntoMap(filename.c_str());
+          // filename = ros::package::getPath("cans")+"/data/blob_3_final_obj.obj";
 
           nurbnode.bNewObjects = true;
           // TODO may need to update this to load multiple objects
@@ -345,6 +384,7 @@ main (int argc, char** argv)
   
   // Publisher for the NURBS objects
   ros::Publisher mapPub = nh.advertise<cans_msgs::Object3D>("object",1,false);
+  ros::Publisher mapPCPub = nh.advertise<sensor_msgs::PointCloud2>("object_point_cloud",1,false);
 
   tf::TransformBroadcaster tf_br;
 
@@ -360,9 +400,14 @@ main (int argc, char** argv)
         // for each object - fill a message and publish it
         cout << "Publishing message for object with ID: " << i << endl;
         mapPub.publish(nurbnode.fillObject3DMessageForID(i));
+
+        if (bPublishNurbsPointCloud){
+          mapPCPub.publish(nurbnode.fillPointCloudMessageForID(i));
+        }
       }
       // nurbnode.bNewObjects = false;
     }
+
     if (true || nurbnode.bNewState){ // Or just publish on every loop
       tf_br.sendTransform(nurbnode.getCurrentTransform());
     }
