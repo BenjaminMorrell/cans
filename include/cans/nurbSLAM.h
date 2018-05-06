@@ -23,6 +23,7 @@
 // #include <pcl/registration/sample_consensus_prerejective.h>
 // #include <pcl/registration/correspondence_estimation_normal_shooting.h>
 // #include <pcl/registration/correspondence_rejection_distance.h>
+#include <pcl/filters/extract_indices.h>
 #include <pcl/registration/ia_ransac.h>
 #include <pcl/segmentation/sac_segmentation.h>
 
@@ -75,6 +76,7 @@ class NurbSLAM {
     Eigen::Matrix4f alignScanKeypointsWithMapObjectDense(int objID, pcl::PointCloud<pcl::PointNormal>::Ptr obsObjPC);
     Eigen::Matrix4f alignScanWithMapObject(int objID, pcl::PointCloud<pcl::PointNormal>::Ptr obsObjPC);
     void computeKeypoints(pcl::PointCloud<pcl::PointNormal>::Ptr cloud, pcl::search::KdTree<pcl::PointNormal>::Ptr search_method_, pcl::PointCloud<pcl::PointNormal>::Ptr keypoints);
+    void rejectNonOverlappingPoints(pcl::PointCloud<pcl::PointNormal>::Ptr mapObjPC, pcl::PointCloud<pcl::PointNormal>::Ptr obsObjPC, pcl::PointCloud<pcl::PointNormal>::Ptr obsPCFilt);
 
     void updateSLAMFilter();
 
@@ -108,6 +110,9 @@ class NurbSLAM {
     float pclNormalRadiusSetting; // size to search for normal estimation.
     float pclFeatureRadiusSetting; // size to search for feature estimation.
     float validInlierTheshold;
+
+    bool bRejectNonOverlappingInAlign; // To reject points that don't overlap before alignment
+    float maxDistanceOverlap;
     
     int alignmentOption;
     int localisationOption;
@@ -121,6 +126,8 @@ class NurbSLAM {
     int ransac_correspondenceRandomness;
     float ransac_similarityThreshold;
     float ransac_inlierFraction;
+
+
 
 
     int keypointOption;

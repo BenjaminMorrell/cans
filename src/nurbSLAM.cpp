@@ -15,6 +15,8 @@ NurbSLAM::NurbSLAM():
     localisationOption(2), 
     alignmentOption(0),
     keypointOption(0),
+    bRejectNonOverlappingInAlign(false),
+    maxDistanceOverlap(0.2),
     bShowAlignment(false),
     bMapUpdatedFromScan(false), bMappingModeOn(false), bLocalisationModeOn(false),
     nSurfPointsFactor(5.0), 
@@ -417,6 +419,7 @@ Eigen::Matrix4f NurbSLAM::alignScanWithMapObject(int objID, pcl::PointCloud<pcl:
   
   pcl::PointCloud<pcl::FPFHSignature33>::Ptr obsObjPC_features (new pcl::PointCloud<pcl::FPFHSignature33>);
   pcl::PointCloud<pcl::PointNormal>::Ptr obsObjPC_aligned (new pcl::PointCloud<pcl::PointNormal>);
+  pcl::PointCloud<pcl::PointNormal>::Ptr obsObjPC_filtered (new pcl::PointCloud<pcl::PointNormal>);
 
   // Not use if this is needed - is_dense means that there are no nans
   // mapObjPC->is_dense = false;
@@ -466,12 +469,21 @@ Eigen::Matrix4f NurbSLAM::alignScanWithMapObject(int objID, pcl::PointCloud<pcl:
 
     cout << "Normals have been estimated" << endl;
 
+
+    if (bRejectNonOverlappingInAlign){
+      rejectNonOverlappingPoints( mapMeshList[objID], obsObjPC, obsObjPC_filtered);
+    }else{
+      obsObjPC_filtered = obsObjPC;
+    }
+
+
     // Estimate features
     pcl::FPFHEstimationOMP<pcl::PointNormal,pcl::PointNormal,pcl::FPFHSignature33> fest;
     fest.setRadiusSearch(pclFeatureRadiusSetting);
     // fest.setKSearch(7);
     fest.setSearchMethod(search_method_);
-    fest.setInputCloud(obsObjPC);
+    fest.setInputCloud(obsObjPC_filtered);
+    fest.setSearchSurface(obsObjPC);
     fest.setInputNormals(obsObjPC);
     fest.compute (*obsObjPC_features);
     cout << "Features have been computed for observation" << endl;
@@ -481,7 +493,7 @@ Eigen::Matrix4f NurbSLAM::alignScanWithMapObject(int objID, pcl::PointCloud<pcl:
     if (localisationOption == 1){
       // RANSAC Initial Alignment
       pcl::SampleConsensusInitialAlignment<pcl::PointNormal,pcl::PointNormal,pcl::FPFHSignature33> align;
-      align.setInputSource(obsObjPC);
+      align.setInputSource(obsObjPC_filtered);
       align.setSourceFeatures(obsObjPC_features);
       align.setInputTarget(mapMeshList[objID]);
       align.setTargetFeatures(mapFeatureList[objID]);
@@ -507,7 +519,7 @@ Eigen::Matrix4f NurbSLAM::alignScanWithMapObject(int objID, pcl::PointCloud<pcl:
       // Prerejective RANSAC
       // SampleConsensusPrerejective_Exposed<pcl::PointNormal,pcl::PointNormal,pcl::FPFHSignature33> align;
       pcl::SampleConsensusPrerejective<pcl::PointNormal,pcl::PointNormal,pcl::FPFHSignature33> align;
-      align.setInputSource(obsObjPC);
+      align.setInputSource(obsObjPC_filtered);
       align.setSourceFeatures(obsObjPC_features);
       align.setInputTarget(mapMeshList[objID]);
       align.setTargetFeatures(mapFeatureList[objID]);
@@ -524,15 +536,15 @@ Eigen::Matrix4f NurbSLAM::alignScanWithMapObject(int objID, pcl::PointCloud<pcl:
       transformOut = align.getFinalTransformation ();
 
       if (align.hasConverged()){
-        cout << " Successfully converged" << endl;
+        cout << "Successfully converged" << endl;
       }else {
         cout << "Alignment FAILED to converge" << endl;
       }
 
-      cout << "\n\n\t\t NUMBER OF INLIERS IS: " << align.getInliers().size() << "/ " << obsObjPC->width*obsObjPC->height << "\n\n\n";
-      cout << "\n\n\t\t INLIER FRACTION IS: " << (float)align.getInliers().size()/(float)(obsObjPC->width*obsObjPC->height) << "\n\n\n";
+      cout << "\n\n\t\t NUMBER OF INLIERS IS: " << align.getInliers().size() << "/ " << obsObjPC_filtered->width*obsObjPC_filtered->height << "\n\n\n";
+      cout << "\n\n\t\t INLIER FRACTION IS: " << (float)align.getInliers().size()/(float)(obsObjPC_filtered->width*obsObjPC_filtered->height) << "\n\n\n";
 
-      inlierFraction = (float)align.getInliers().size()/(float)(obsObjPC->width*obsObjPC->height);
+      inlierFraction = (float)align.getInliers().size()/(float)(obsObjPC_filtered->width*obsObjPC_filtered->height);
     }
     
   }
@@ -543,7 +555,7 @@ Eigen::Matrix4f NurbSLAM::alignScanWithMapObject(int objID, pcl::PointCloud<pcl:
     pcl::visualization::PCLVisualizer visu("Alignment");
     visu.addPointCloud (mapMeshList[objID], ColorHandlerT (mapMeshList[objID], 0.0, 255.0, 0.0), "mapObjPC");
     visu.addPointCloud (obsObjPC_aligned, ColorHandlerT (obsObjPC_aligned, 0.0, 0.0, 255.0), "obsObjPC_aligned");
-    visu.addPointCloud (obsObjPC, ColorHandlerT (obsObjPC, 255.0, 0.0, 0.0), "obsObjPC");
+    visu.addPointCloud (obsObjPC_filtered, ColorHandlerT (obsObjPC_filtered, 255.0, 0.0, 0.0), "obsObjPC");
     visu.spin ();
   }
 
@@ -613,6 +625,77 @@ void NurbSLAM::computeKeypoints(pcl::PointCloud<pcl::PointNormal>::Ptr cloud, pc
   
 }
 
+/*! 
+  \brief  Extract overlapping observation points 
+
+  \author Benjamin Morrell
+  \date 06 May 2018
+*/
+void NurbSLAM::rejectNonOverlappingPoints(pcl::PointCloud<pcl::PointNormal>::Ptr mapObjPC, pcl::PointCloud<pcl::PointNormal>::Ptr obsObjPC, pcl::PointCloud<pcl::PointNormal>::Ptr obsPCFilt){
+  
+  // EXPECT THERE TO BE NORMALS ALREADY ESTIMATED
+  cout << "In rejectNonOverlappingPoints" << endl;
+  pcl::CorrespondencesPtr correspondences (new pcl::Correspondences);
+  pcl::CorrespondencesPtr corr_filtPtr (new pcl::Correspondences);
+
+  // Estimate correspondences
+  // bool doNormalShooting = true;
+
+  // if (doNormalShooting){
+  pcl::registration::CorrespondenceEstimationNormalShooting<pcl::PointNormal, pcl::PointNormal, pcl::PointNormal> corrEst;
+  corrEst.setInputSource (obsObjPC);// Gets a corresponding point for every point in the Source
+  corrEst.setSourceNormals (obsObjPC);
+  corrEst.setInputTarget (mapObjPC); // Target for the source to find corresponding points in
+  // Test the first 10 correspondences for each point in source, and return the best
+  corrEst.setKSearch (10);
+  cout << "Set up correspondences" << endl;
+  corrEst.determineCorrespondences (*correspondences);
+  // } else{
+  //   pcl::registration::CorrespondenceEstimation<pcl::PointNormal, pcl::PointNormal, pcl::PointNormal> corrEst;
+  //   corrEst.setInputSource (obsObjPC);// Gets a corresponding point for every point in the Source
+  //   corrEst.setInputTarget (mapObjPC);
+  //   corrEst.determineCorrespondences (*correspondences);
+  // } 
+  // #include <pcl/registration/correspondence_rejection_one_to_one.h>
+  // pcl::registration::CorrespondenceRejectorOneToOne corrRej;
+  // corrRej.applyRejection(*correspondences);
+
+  cout << "estimated correspondences" << endl;
+
+  // Correspondence rejection
+  pcl::registration::CorrespondenceRejectorDistance corrRej;
+  corrRej.setMaximumDistance( maxDistanceOverlap); 
+  corrRej.setInputCorrespondences( correspondences);
+  corrRej.getCorrespondences( *corr_filtPtr);
+
+  pcl::Correspondences& corr_filt = *corr_filtPtr;
+
+  // cout << "Corr filt is: " << corr_filt << endl;
+  cout << "Rejected correspondences" << endl;
+
+  // Get indices
+  // std::vector<int> indices;
+  pcl::PointIndices::Ptr inliers (new pcl::PointIndices ());
+  for (int i = 0; i < corr_filt.size(); i++){
+    if (corr_filt[i].index_match >= 0){
+      inliers->indices.push_back(corr_filt[i].index_query);       
+    }
+  }
+
+  // cout << "Indices are: " << indices << endl;
+  cout << "Made inliers object. Size of inliers is: " <<  inliers->indices.size() << endl;
+
+  // Extract a cloud
+  pcl::ExtractIndices<pcl::PointNormal> extract;
+  extract.setInputCloud (obsObjPC);
+  extract.setIndices (inliers);
+  // extract.setIndices (corr_filt);
+  extract.setNegative (false);
+  extract.filter (*obsPCFilt);
+
+  
+  cout << "Extracted cloud. Size of output cloud is: " << obsPCFilt->width*obsPCFilt->height << endl;
+}
 //-------------------------------------------------------------------
 // ------------- SLAM FUNCTIONS  -----------------------------
 //-------------------------------------------------------------------

@@ -2,11 +2,13 @@
 # Options (maybe put as args)
 # -----------------------------
 alignmentOption: 0 # 0 - dense to dense, 1 - keypoints to dense, 2 - keypoints to keypoints
-bShowAlignment: false
+bShowAlignment: true
 localisationOption: 2 # Option for localisation method (0 - PCL, 1 - RANSAC IA, 2 - Prerejective RANSAC)
 keypointOption: 0
 
-bPublishNurbsPointCloud: true # whether or not to publish the point cloud for visualuisation in Rviz
+bRejectNonOverlappingInAlign: true # whether or not to reject non-overlapping points before alignment
+
+bPublishNurbsPointCloud: false # whether or not to publish the point cloud for visualuisation in Rviz
 
 # -----------------------------
 # Localisation
@@ -16,38 +18,52 @@ bPublishNurbsPointCloud: true # whether or not to publish the point cloud for vi
 /keypoints/minNeighbours: 5
 
 # Normals
-pclNormalRadiusSetting: 0.1
+pclNormalRadiusSetting: 0.6
 # Features
-pclFeatureRadiusSetting: 0.5
+pclFeatureRadiusSetting: 1.2
 # RANSAC
-/ransac/inlierMultiplier: 0.1
+/ransac/inlierMultiplier: 0.05
 /ransac/maximumIterations: 5000
 
 # POSSIBLY USE
 /ransac/numberOfSamples: 3
 /ransac/correspondenceRandomness: 3
 /ransac/similarityThreshold: 0.9
-/ransac/inlierFraction: 0.25
+/ransac/inlierFraction: 0.6
 
-validInlierThreshold: 0.5
+validInlierThreshold: 0.6
+
+maxDistanceOverlap: 0.3 #0.2
 
 
 # Number of data points
 nSurfPointsFactor: 7.0 # multiplier by the number of control points to get the number of surface points to sample
+# Was 7.0
 
 
 # -----------------------------
 # Mapping
 # -----------------------------
 # Mesh processing
-/meshing/numRowsDesired: 125
-/meshing/numColsDesired: 125
-/meshing/maxNanAllowed: 50
-/meshing/removeNanBuffer: 1
+/meshing/numRowsDesired: 95
+/meshing/numColsDesired: 95
+/meshing/maxNanAllowed: 5
+/meshing/removeNanBuffer: 4
 /meshing/newRowColBuffer: 10
 
 # NURBS generation
 /mapping/useNonRectData: true # To use the new extension method
-/mapping/nCtrlDefaultS: 25
-/mapping/nCtrlDefaultR: 25
+/mapping/nCtrlDefaultS: 20
+/mapping/nCtrlDefaultT: 20
+# # Mesh processing
+# /meshing/numRowsDesired: 125
+# /meshing/numColsDesired: 125
+# /meshing/maxNanAllowed: 50
+# /meshing/removeNanBuffer: 1
+# /meshing/newRowColBuffer: 10
+
+# # NURBS generation
+# /mapping/useNonRectData: true # To use the new extension method
+# /mapping/nCtrlDefaultS: 25
+# /mapping/nCtrlDefaultR: 25
 

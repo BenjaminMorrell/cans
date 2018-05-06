@@ -553,8 +553,6 @@ Object3D Mapping3D::joinSurfaces(Object3D& srf1, Object3D& srf2, std::string ext
           knotInsertionAlongSeam(srf2, extendDirection, srf1.ctrlPnts().rows() - n_ctrlCheck2);
           cout << "Srf1 dimensions are: (" << srf1.ctrlPnts().rows() << ", " << srf1.ctrlPnts().cols() << ")\n";
           cout << "Srf2 dimensions are: (" << srf2.ctrlPnts().rows() << ", " << srf2.ctrlPnts().cols() << ")\n";
-          srfOut = new Object3D();
-          return *srfOut;
         }
 
         n_ctrl1 = srf1.ctrlPnts().cols();
@@ -662,8 +660,6 @@ Object3D Mapping3D::joinSurfaces(Object3D& srf1, Object3D& srf2, std::string ext
           knotInsertionAlongSeam(srf2, extendDirection, srf1.ctrlPnts().cols() - n_ctrlCheck2);
           cout << "Srf1 dimensions are: (" << srf1.ctrlPnts().rows() << ", " << srf1.ctrlPnts().cols() << ")\n";
           cout << "Srf2 dimensions are: (" << srf2.ctrlPnts().rows() << ", " << srf2.ctrlPnts().cols() << ")\n";
-          srfOut = new Object3D();
-          return *srfOut;
         }
 
         n_ctrl1 = srf1.ctrlPnts().rows();
