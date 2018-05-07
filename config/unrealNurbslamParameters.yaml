@@ -6,7 +6,7 @@ bShowAlignment: true
 localisationOption: 2 # Option for localisation method (0 - PCL, 1 - RANSAC IA, 2 - Prerejective RANSAC)
 keypointOption: 0
 
-bRejectNonOverlappingInAlign: true # whether or not to reject non-overlapping points before alignment
+bRejectNonOverlappingInAlign: false # whether or not to reject non-overlapping points before alignment
 
 bPublishNurbsPointCloud: false # whether or not to publish the point cloud for visualuisation in Rviz
 
@@ -37,7 +37,7 @@ maxDistanceOverlap: 0.3 #0.2
 
 
 # Number of data points
-nSurfPointsFactor: 7.0 # multiplier by the number of control points to get the number of surface points to sample
+nSurfPointsFactor: 5.0 # multiplier by the number of control points to get the number of surface points to sample
 # Was 7.0
 
 

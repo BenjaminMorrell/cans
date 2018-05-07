@@ -2,11 +2,11 @@
 # Options (maybe put as args)
 # -----------------------------
 alignmentOption: 0 # 0 - dense to dense, 1 - keypoints to dense, 2 - keypoints to keypoints
-bShowAlignment: true
+bShowAlignment: false
 localisationOption: 2 # Option for localisation method (0 - PCL, 1 - RANSAC IA, 2 - Prerejective RANSAC)
 keypointOption: 0
 
-bPublishNurbsPointCloud: true # whether or not to publish the point cloud for visualuisation in Rviz
+bPublishNurbsPointCloud: false # whether or not to publish the point cloud for visualuisation in Rviz
 
 # -----------------------------
 # Localisation

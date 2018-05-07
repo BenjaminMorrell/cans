@@ -3,6 +3,7 @@
 // This guards the headers so you don't accidently include them twice
 
 #include "cans/mapping3D.h"
+#include <chrono>
 
 //PCL includes
 #include <Eigen/Core>
@@ -127,7 +128,8 @@ class NurbSLAM {
     float ransac_similarityThreshold;
     float ransac_inlierFraction;
 
-
+    std::vector<double> processTimes; // Vector that is 5 values long. 1) Mesh processing, 2) Data association, 3) Alignment, 4) pose update, 5) Update map
+    // For a given process Scan call, this is cumulative for the number of scans
 
 
     int keypointOption;

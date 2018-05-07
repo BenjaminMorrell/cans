@@ -24,7 +24,8 @@ NurbSLAM::NurbSLAM():
     ransac_inlierMultiplier(0.1), validInlierTheshold(0.5),inlierFraction(1.0), 
     modelResolutionKeypoints(0.005), minNeighboursKeypoints(5),
     ransac_maximumIterations(5000), ransac_numberOfSamples(3),
-    ransac_correspondenceRandomness(3), ransac_similarityThreshold(0.9), ransac_inlierFraction(0.25)
+    ransac_correspondenceRandomness(3), ransac_similarityThreshold(0.9), ransac_inlierFraction(0.25),
+    processTimes(5)
 {
   state = Eigen::Affine3f::Identity();
   transformDelta = Eigen::Affine3f::Identity();
@@ -62,10 +63,16 @@ void NurbSLAM::processScans(std::vector<pcl::PointCloud<pcl::PointNormal>::Ptr> 
   objectMeshList.clear();
   objIDList.clear();
   transformationList.clear();
+  processTimes.clear();
+  for (int i = 0; i < 5; i++){processTimes.push_back(0.0);}// reset to zero
   bMapUpdatedFromScan = false; // reset to false
 
   float msSurf;
   float mtSurf;
+
+  std::chrono::high_resolution_clock::time_point t1;
+  std::chrono::high_resolution_clock::time_point t2;
+  std::chrono::duration<double, std::milli> dur;
 
   
   // Initial Scan processing
@@ -78,7 +85,10 @@ void NurbSLAM::processScans(std::vector<pcl::PointCloud<pcl::PointNormal>::Ptr> 
 
     cout << "\n\n\t\t FINISHED PROCESSING SCAN " << i << "\n\n";
 
+    
+
     if (!bMappingModeOn){
+      t1 = std::chrono::high_resolution_clock::now();
       // Compute alignment for all matches
       if (objIDList[i] != -1){
         // Compute the loclisation transform for that object
@@ -101,25 +111,56 @@ void NurbSLAM::processScans(std::vector<pcl::PointCloud<pcl::PointNormal>::Ptr> 
           transformationList.pop_back();
         }
       }
+
+      t2 = std::chrono::high_resolution_clock::now();
+
+      dur = t2-t1;
+      processTimes[2] += dur.count();
+      cout << "Duration for alignment is: " << dur.count() << "ms" << endl;
+
     }else{
       cout << "Mapping mode on, no alignment performed" << endl;
+      processTimes[2] = -1.0; // Flag that there is no time
     }
   }
 
-
-  cout << "Starting filter update" << endl;
+  cout << "Starting filter update" << endl;  
   // Perform the SLAM update with the computed transformations
   if (transformationList.size() > 0){
+    t1 = std::chrono::high_resolution_clock::now();
+    
+
     updateSLAMFilter(); // updates state
+
+
+    t2 = std::chrono::high_resolution_clock::now();
+    dur = t2-t1;
+    processTimes[3] += dur.count();
+    cout << "Duration for SLAM update filter is: " << dur.count() << "ms" << endl;
+
+  }else{
+    processTimes[3] = -1.0;
   }
   cout << "Updated filter" << endl;
-
-
+  
   if (!bLocalisationModeOn){
+    // Start time
+    t1 = std::chrono::high_resolution_clock::now();
+    
+
     // Update the map
     alignAndUpdateMeshes(); // uses the global lists
 
+
     cout << "Updated mesh" << endl;
+
+    // Timing
+    t2 = std::chrono::high_resolution_clock::now();
+    dur = t2-t1;
+    processTimes[4] += dur.count();
+    cout << "Duration for Map update is: " << dur.count() << "ms" << endl;
+  }else{
+    processTimes[4] = -1.0;
   }
   
 }
@@ -150,6 +191,8 @@ int NurbSLAM::processSingleScan(pcl::PointCloud<pcl::PointNormal>::Ptr cloud, pc
   std::vector<float> searchMetrics;
   int objID; 
 
+  std::chrono::high_resolution_clock::time_point t1 = std::chrono::high_resolution_clock::now();
+
   // Process Scan to get mesh
   mp.meshFromScan(cloudReduced, cloud);
 
@@ -161,12 +204,17 @@ int NurbSLAM::processSingleScan(pcl::PointCloud<pcl::PointNormal>::Ptr cloud, pc
     pcl::common::deleteCols(*cloudTransformed, *cloudTransformed, std::max(1,(int)(1 + mp.numColsDesired - cloudReduced->width)/2));
   }
 
-  cout << "transform is: " << state.matrix() << endl;
-
   // Transform with current state
   pcl::transformPointCloud(*cloudReduced, *cloudTransformed, state);
 
   cout << "Transformed point cloud" << endl;
+
+  std::chrono::high_resolution_clock::time_point t2 = std::chrono::high_resolution_clock::now();
+  std::chrono::duration<double, std::milli> dur = t2-t1;
+  processTimes[0] += dur.count();
+  cout << "Duration for mesh processing is: " << dur.count() << "ms" << endl;
+
+  cout << "transform is: " << state.matrix() << endl;
 
   // Compute Metrics
   searchMetrics = mp.computeSearchMetrics(cloudTransformed);
@@ -178,6 +226,11 @@ int NurbSLAM::processSingleScan(pcl::PointCloud<pcl::PointNormal>::Ptr cloud, pc
   objID = mp.dataAssociation(searchMetrics);
 
   cout << "Completed data association" << endl;
+
+  t1 = std::chrono::high_resolution_clock::now();
+  dur = t1-t2;
+  processTimes[1] += dur.count();
+  cout << "Duration for data association is: " << dur.count() << "ms" << endl;
 
   return objID;
 }

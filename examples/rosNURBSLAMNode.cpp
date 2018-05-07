@@ -51,7 +51,7 @@ class nurbSLAMNode {
     // Constructor
     nurbSLAMNode(): runFlag(true), useTruthTransform(false), scanNumber(0), 
         bNewObjects(false), bNewState(false), cloud(new pcl::PointCloud<pcl::PointNormal>),
-        bNewScanReceived(false), stateFilename("/home/amme2/Development/unrealDataTrack.txt")
+        bNewScanReceived(false), stateFilename("/home/bjm/SpaceCRAFT/unrealDataTrack.txt")
     {
       state = Eigen::Affine3f::Identity();
       transformTruth = Eigen::Affine3d::Identity();
@@ -133,8 +133,8 @@ class nurbSLAMNode {
         // Set flag that a new scan has been received
         bNewScanReceived = true;
 
-        pcl::PCDWriter writer;
-        writer.write<pcl::PointNormal> ("/home/amme2/Development/voxblox_ws/unreal_scan.pcd", *cloud, false);
+        // pcl::PCDWriter writer;
+        // writer.write<pcl::PointNormal> ("/home/amme2/Development/voxblox_ws/unreal_scan.pcd", *cloud, false);
         
       }
     }
@@ -197,12 +197,13 @@ class nurbSLAMNode {
       }
 
       // /home/amme2/Development/voxblox_ws/testNURBS_Unreal_6.wrl
-      for (int i=0; i < slam.mp.objectMap.size(); i++){
-        std::string filename = "/home/amme2/Development/Results/testNURBS_Unreal_" + static_cast<ostringstream*>( &(ostringstream() << (i)) )->str() + ".wrl";
-        slam.mp.objectMap[i].writeVRML(filename.c_str(),Color(255,100,255),50,80); 
-        filename = "/home/amme2/Development/Results/testNURBS_Unreal_" + static_cast<ostringstream*>( &(ostringstream() << (i)) )->str() + ".pcd";
-        slam.mp.writeObjectPCDFile(filename.c_str(), i, 125, 125);
-      }
+      // TODO - wrap this in an if statement
+      // for (int i=0; i < slam.mp.objectMap.size(); i++){
+      //   std::string filename = "/home/amme2/Development/Results/testNURBS_Unreal_" + static_cast<ostringstream*>( &(ostringstream() << (i)) )->str() + ".wrl";
+      //   slam.mp.objectMap[i].writeVRML(filename.c_str(),Color(255,100,255),50,80); 
+      //   filename = "/home/amme2/Development/Results/testNURBS_Unreal_" + static_cast<ostringstream*>( &(ostringstream() << (i)) )->str() + ".pcd";
+      //   slam.mp.writeObjectPCDFile(filename.c_str(), i, 125, 125);
+      // }
       
       cout << "\nFinished Processing Scan " << scanNumber << ".\n\n";
       scanNumber ++;

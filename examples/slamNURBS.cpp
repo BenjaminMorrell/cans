@@ -1,5 +1,7 @@
 #include <ros/ros.h>
+#include <ros/package.h>
 #include <iostream>
+#include <fstream>
 
 //PCL includes
 #include <Eigen/Core>
@@ -73,6 +75,7 @@ void setSLAMParameters(NurbSLAM& slam, ros::NodeHandle nh){
   nh.param("bShowAlignment", slam.bShowAlignment, slam.bShowAlignment);
   nh.param("localisationOption", slam.localisationOption, slam.localisationOption);
   nh.param("keypointOption", slam.keypointOption, slam.keypointOption);
+  nh.param("bRejectNonOverlappingInAlign", slam.bRejectNonOverlappingInAlign, slam.bRejectNonOverlappingInAlign);
 
   // Localisation
   nh.param("/keypoints/modelResolution", slam.modelResolutionKeypoints, slam.modelResolutionKeypoints);
@@ -87,9 +90,10 @@ void setSLAMParameters(NurbSLAM& slam, ros::NodeHandle nh){
   nh.param("/ransac/correspondenceRandomness", slam.ransac_correspondenceRandomness, slam.ransac_correspondenceRandomness);
   nh.param("/ransac/similarityThreshold", slam.ransac_similarityThreshold, slam.ransac_similarityThreshold);
   nh.param("/ransac/inlierFraction", slam.ransac_inlierFraction, slam.ransac_inlierFraction);
-
   nh.param("validInlierThreshold", slam.validInlierTheshold, slam.validInlierTheshold);
   nh.param("nSurfPointsFactor", slam.nSurfPointsFactor, slam.nSurfPointsFactor);
+
+  nh.param("maxDistanceOverlap", slam.maxDistanceOverlap, slam.maxDistanceOverlap);
 
   // Mapping
   nh.param("/meshing/numRowsDesired", slam.mp.numRowsDesired, slam.mp.numRowsDesired);
@@ -97,9 +101,12 @@ void setSLAMParameters(NurbSLAM& slam, ros::NodeHandle nh){
   nh.param("/meshing/maxNanAllowed", slam.mp.maxNanAllowed, slam.mp.maxNanAllowed);
   nh.param("/meshing/removeNanBuffer", slam.mp.removeNanBuffer, slam.mp.removeNanBuffer);
   nh.param("/meshing/newRowColBuffer", slam.mp.newRowColBuffer, slam.mp.newRowColBuffer);
-  nh.param("/meshing/useNonRectData", slam.mp.useNonRectData, slam.mp.useNonRectData);
-  nh.param("/meshing/nCtrlDefaultS", slam.mp.nCtrlDefault[0], slam.mp.nCtrlDefault[0]); // This main fail...
-  nh.param("/meshing/nCtrlDefaultT", slam.mp.nCtrlDefault[1], slam.mp.nCtrlDefault[1]);
+  nh.param("/mapping/useNonRectData", slam.mp.useNonRectData, slam.mp.useNonRectData);
+  nh.param("/mapping/nCtrlDefaultS", slam.mp.nCtrlDefault[0], slam.mp.nCtrlDefault[0]); 
+  nh.param("/mapping/nCtrlDefaultT", slam.mp.nCtrlDefault[1], slam.mp.nCtrlDefault[1]);
+
+  cout << "nCtrlDefaultS is " << slam.mp.nCtrlDefault[0] << endl;
+  cout << "nCtrlDefaultT is " << slam.mp.nCtrlDefault[1] << endl;
 
   cout << "Finished setting SLAM parameters" << endl;
 
@@ -322,6 +329,18 @@ void runSLAM(int argc,char ** argv, ros::NodeHandle nh){
   pcl::PointCloud<pcl::PointNormal>::Ptr cloud (new pcl::PointCloud<pcl::PointNormal>); 
   std::vector<pcl::PointCloud<pcl::PointNormal>::Ptr> clouds;
 
+  // init timers
+  std::chrono::high_resolution_clock::time_point startTime;
+  std::chrono::high_resolution_clock::time_point endTime;
+  std::chrono::duration<double, std::milli> runtimeDuration;
+  std::vector<double> processTimesVec(6);
+  std::string timingFilename = ros::package::getPath("cans")+"/data/nurbsTimes.txt";
+ 
+  // Clear file
+  ofstream myfile;
+  myfile.open (timingFilename.c_str(), std::ofstream::out | std::ofstream::trunc); // open and close to clear.
+  myfile.close();
+
   // Run sequence of scans 
   for (int i = 0; i < numberOfScans; i += scanSteps){
     cout << "Processing Scan " << i << endl;
@@ -357,8 +376,17 @@ void runSLAM(int argc,char ** argv, ros::NodeHandle nh){
     // Put in vector (if we had multiple objects)
     clouds.push_back(cloud);
 
+    // Start timer
+    startTime = std::chrono::high_resolution_clock::now(); 
+
     // Process scans
     slam.processScans(clouds);
+
+    // End time and duraction
+    endTime = std::chrono::high_resolution_clock::now();
+    runtimeDuration = endTime - startTime;
+    for (int i = 0; i < 5; i++){processTimesVec[i] = slam.processTimes[i];}
+    processTimesVec[5] = runtimeDuration.count();
 
     // Get the state
     transform = slam.getState();
@@ -376,13 +404,18 @@ void runSLAM(int argc,char ** argv, ros::NodeHandle nh){
 
     // Empty cloud vector
     clouds.clear();
+
+    // Write timing information
+    myfile.open (timingFilename.c_str(), std::ios_base::app); // Append
+    for (int i=0; i < 6; i++){myfile << processTimesVec[i] << ", ";}
+    myfile << "\n";
+    myfile.close();
   }
 
   // Print final state
   cout << "Final state set is: " << state << endl;
 
   // Write to file
-  ofstream myfile;
   myfile.open ((outFilestem + "state_track_slam.txt").c_str());
   myfile << state;
   myfile.close();
