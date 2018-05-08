@@ -35,7 +35,6 @@ private:
     int numberOfMetrics;
 
 
-
 public:
     Mapping3D() ;
     // Other constructors here?
@@ -108,6 +107,7 @@ public:
 
     bool bFilterZ;
     int nPointsZLim;
+    bool bRejectScan;
 
     int msSurf;
     int mtSurf;

@@ -83,9 +83,13 @@ void NurbSLAM::processScans(std::vector<pcl::PointCloud<pcl::PointNormal>::Ptr> 
     // Process the scan and perform data association
     objIDList.push_back(processSingleScan(clouds[i], objectMeshList[i]));
 
+    
     cout << "\n\n\t\t FINISHED PROCESSING SCAN " << i << "\n\n";
 
-    
+    if (objIDList[i] == -9){
+      cout << "Rejecting scan because of too many Nans (in NurbSLAM::processScans" << endl;
+      continue;
+    }
 
     if (!bMappingModeOn){
       t1 = std::chrono::high_resolution_clock::now();
@@ -195,6 +199,11 @@ int NurbSLAM::processSingleScan(pcl::PointCloud<pcl::PointNormal>::Ptr cloud, pc
 
   // Process Scan to get mesh
   mp.meshFromScan(cloudReduced, cloud);
+
+  if (mp.bRejectScan){
+    cout << "Rejecting scan because of too many Nans" << endl;
+    return -9;
+  }
 
   // Resize cloudTransformed from size of cloudReduced
   if (cloudReduced->height < mp.numRowsDesired){
@@ -793,7 +802,7 @@ void NurbSLAM::alignAndUpdateMeshes(){
 
   cout << "In Align and update Meshes. TransformDelta is:\n" << transformDelta.matrix() << endl;
 
-  if (objIDList.size() > 0){
+  if (objectMeshList.size() > 0){
     cout << "Object mesh list has values cloud at [0] of size: " << objectMeshList[0]->size() << endl;
     cout << "and at (0,0) = " << objectMeshList[0]->at(0,0) << endl;
   }else{
@@ -804,6 +813,10 @@ void NurbSLAM::alignAndUpdateMeshes(){
     if (objIDList[i] == -2){
       // Ignore this scan
       cout << "ignoring scan due to bad alignment" << endl;
+      continue;
+    }else if (objIDList[i] == -9){
+      // Ignore this scan
+      cout << "ignoring scan due to too many Nans" << endl;
       continue;
     }
     // Align scans with new transformation delta (delat from existing transform)

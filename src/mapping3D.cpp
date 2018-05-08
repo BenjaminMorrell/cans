@@ -16,7 +16,7 @@ Mapping3D::Mapping3D():
     searchThresh(7), numRowsDesired(45), numColsDesired(45),
     maxNanAllowed(10), removeNanBuffer(0), numberOfMetrics(7), msSurf(125), mtSurf(125),
     knotInsertionFlag(true), numInsert(3), deltaKnotInsert(1e-2), newRowColBuffer(0), useNonRectData(false),
-    bFilterZ(false), nPointsZLim(400)
+    bFilterZ(false), nPointsZLim(400), bRejectScan(false)
 {
   searchThresh[0] = 7.75;
   searchThresh[1] = 7.75;
@@ -43,11 +43,17 @@ int Mapping3D::processScan(pcl::PointCloud<pcl::PointNormal>::Ptr cloud, Eigen::
   // Search parameters
   std::vector<float> searchMetrics;
   int objID; 
+  bRejectScan = false;
 
   // cout << "cloud in at (0,0): " << cloud->at(0,0) << endl;
 
   // Process Scan 1
   meshFromScan(cloudReduced, cloud);
+
+  if (bRejectScan){
+    cout << "Exiting without processsing" << endl;
+    return -1;
+  }
 
   // cout << "cloudReduced at (0,0): " << cloudReduced->at(0,0) << endl;
 
@@ -868,6 +874,7 @@ void Mapping3D::meshFromScan(pcl::PointCloud<pcl::PointNormal>::Ptr cloudOut, pc
   // Initialise Nan array
   Eigen::Array<bool, Eigen::Dynamic, Eigen::Dynamic> nanArray(cloudIn->height,cloudIn->width);
   nanArray.setZero(cloudIn->height,cloudIn->width);
+  bRejectScan = false;
 
   std::cerr << "PointCloud before filtering: W: " << cloudIn->width << "\tH: " << cloudIn->height << "\tdata points." << std::endl;
 
@@ -875,6 +882,12 @@ void Mapping3D::meshFromScan(pcl::PointCloud<pcl::PointNormal>::Ptr cloudOut, pc
   getNanMatrixFromPointCloud(nanArray, cloudIn);
 
   cout << "Number of Nans: " << nanArray.count() << endl;
+
+  if ((float)nanArray.count()/(float)(cloudIn->width*cloudIn->height) > 0.95){
+    cout << "Too many Nans in the scan. Rejecting" << endl;
+    bRejectScan = true;
+    return;
+  } 
 
   bool exitFlag = false;
 

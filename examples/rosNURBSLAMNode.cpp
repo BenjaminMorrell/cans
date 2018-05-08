@@ -213,12 +213,14 @@ class nurbSLAMNode {
 
       // /home/amme2/Development/voxblox_ws/testNURBS_Unreal_6.wrl
       // TODO - wrap this in an if statement
-      // for (int i=0; i < slam.mp.objectMap.size(); i++){
-      //   std::string filename = "/home/amme2/Development/Results/testNURBS_Unreal_" + static_cast<ostringstream*>( &(ostringstream() << (i)) )->str() + ".wrl";
-      //   slam.mp.objectMap[i].writeVRML(filename.c_str(),Color(255,100,255),50,80); 
-      //   filename = "/home/amme2/Development/Results/testNURBS_Unreal_" + static_cast<ostringstream*>( &(ostringstream() << (i)) )->str() + ".pcd";
-      //   slam.mp.writeObjectPCDFile(filename.c_str(), i, 125, 125);
-      // }
+      for (int i=0; i < slam.mp.objectMap.size(); i++){
+        // std::string filename = "/home/amme2/Development/Results/testNURBS_Unreal_" + static_cast<ostringstream*>( &(ostringstream() << (i)) )->str() + ".wrl";
+        std::string filename = "/home/bjm/SpaceCRAFT/Results/testNURBS_Unreal_" + static_cast<ostringstream*>( &(ostringstream() << (i)) )->str() + ".wrl";
+        slam.mp.objectMap[i].writeVRML(filename.c_str(),Color(255,100,255),50,80); 
+        // filename = "/home/amme2/Development/Results/testNURBS_Unreal_" + static_cast<ostringstream*>( &(ostringstream() << (i)) )->str() + ".pcd";
+        filename = "/home/bjm/SpaceCRAFT//Results/testNURBS_Unreal_" + static_cast<ostringstream*>( &(ostringstream() << (i)) )->str() + ".pcd";
+        slam.mp.writeObjectPCDFile(filename.c_str(), i, 125, 125);
+      }
       
       cout << "\nFinished Processing Scan " << scanNumber << ".\n\n";
       scanNumber ++;

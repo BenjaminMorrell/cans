@@ -1414,7 +1414,7 @@ TEST_F (object3DJoiningTest, testAsymDDAddAlongSeam){
 class meshFromScanTest : public ::testing::Test{
     protected:
         meshFromScanTest() : cloud(new pcl::PointCloud<pcl::PointNormal>(10,10)), nanArray(10,10), expectNanArray(10,10),
-                rowFlags(10,1), colFlags(1,10)
+                rowFlags(10,1), colFlags(1,10), cloud_nan(new pcl::PointCloud<pcl::PointNormal>(10,10))
         {
         
             int n_points = 10;
@@ -1440,6 +1440,9 @@ class meshFromScanTest : public ::testing::Test{
                         cloud->at(j,i).y = (float)i/(n_points-1);
                         cloud->at(j,i).z = 0.0;//(float)i*2.0f - (float)j*5.0f;
                     }
+                    cloud_nan->at(j,i).x = NAN;
+                    cloud_nan->at(j,i).y = NAN;
+                    cloud_nan->at(j,i).z = NAN;
                     nanFlag = false;
                 } 
             }
@@ -1456,6 +1459,7 @@ class meshFromScanTest : public ::testing::Test{
         }
 
         pcl::PointCloud<pcl::PointNormal>::Ptr cloud;
+        pcl::PointCloud<pcl::PointNormal>::Ptr cloud_nan;
 
         Eigen::Array<bool, 10, 10> expectNanArray;
 
@@ -1807,6 +1811,17 @@ TEST_F (meshFromScanTest, tooFewCols){
 
     EXPECT_EQ(6,cloudOut->height);
     EXPECT_EQ(7,cloudOut->width);
+
+}
+
+TEST_F (meshFromScanTest, allNans){
+
+    pcl::PointCloud<pcl::PointNormal>::Ptr cloudOut (new pcl::PointCloud<pcl::PointNormal>(mp.numColsDesired,mp.numRowsDesired));
+
+    // Mesh from scan
+    mp.meshFromScan(cloudOut, cloud_nan);
+
+    EXPECT_TRUE(mp.bRejectScan);
 
 }
 
@@ -3816,6 +3831,7 @@ TEST_F (nurbsDataFromPCNonRect, testMultipleIndices){
 
     }
 }
+
 
 } // namespace
 
