@@ -2,7 +2,7 @@
 # Options (maybe put as args)
 # -----------------------------
 alignmentOption: 0 # 0 - dense to dense, 1 - keypoints to dense, 2 - keypoints to keypoints
-bShowAlignment: true
+bShowAlignment: false
 localisationOption: 2 # Option for localisation method (0 - PCL, 1 - RANSAC IA, 2 - Prerejective RANSAC)
 keypointOption: 0
 
@@ -23,7 +23,7 @@ pclNormalRadiusSetting: 0.6
 pclFeatureRadiusSetting: 1.2
 # RANSAC
 /ransac/inlierMultiplier: 0.05
-/ransac/maximumIterations: 5000
+/ransac/maximumIterations: 500
 
 # POSSIBLY USE
 /ransac/numberOfSamples: 3
@@ -45,16 +45,21 @@ nSurfPointsFactor: 5.0 # multiplier by the number of control points to get the n
 # Mapping
 # -----------------------------
 # Mesh processing
-/meshing/numRowsDesired: 95
-/meshing/numColsDesired: 95
+/meshing/numRowsDesired: 115
+/meshing/numColsDesired: 115
 /meshing/maxNanAllowed: 5
 /meshing/removeNanBuffer: 4
 /meshing/newRowColBuffer: 10
 
+/meshing/bFilterZ: true
+/meshing/nPointsZLim: 400
+
 # NURBS generation
 /mapping/useNonRectData: true # To use the new extension method
-/mapping/nCtrlDefaultS: 20
-/mapping/nCtrlDefaultT: 20
+/mapping/nCtrlDefaultS: 25
+/mapping/nCtrlDefaultT: 25
+
+
 # # Mesh processing
 # /meshing/numRowsDesired: 125
 # /meshing/numColsDesired: 125

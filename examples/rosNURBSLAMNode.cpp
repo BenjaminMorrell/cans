@@ -45,13 +45,16 @@ class nurbSLAMNode {
 
     int scanNumber;
 
+    float staticErrorTrack;
+
     
   public:
     //------------------------------------------
     // Constructor
     nurbSLAMNode(): runFlag(true), useTruthTransform(false), scanNumber(0), 
         bNewObjects(false), bNewState(false), cloud(new pcl::PointCloud<pcl::PointNormal>),
-        bNewScanReceived(false), stateFilename("/home/bjm/SpaceCRAFT/unrealDataTrack.txt")
+        bNewScanReceived(false), stateFilename("/home/bjm/SpaceCRAFT/unrealDataTrack.txt"),
+        staticErrorTrack(0.0)
     {
       state = Eigen::Affine3f::Identity();
       transformTruth = Eigen::Affine3d::Identity();
@@ -87,7 +90,7 @@ class nurbSLAMNode {
       if (runFlag){
         // Set flag to false until finished
         runFlag = false;
-        cout << "\nProcessing Scan " << scanNumber << "./n/n";
+        cout << "\nProcessing Scan " << scanNumber << ".\n\n";
 
         // Empty cloud vector
         clouds.clear();
@@ -139,9 +142,19 @@ class nurbSLAMNode {
       }
     }
 
+    void updateStaticError(){
+
+      float newError = std::sqrt(std::pow(state.matrix()(0,3),2.0) + std::pow(state.matrix()(1,3),2.0) + std::pow(state.matrix()(2,3),2.0));
+
+      // Update error average
+      staticErrorTrack = newError;//(staticErrorTrack*(float)(scanNumber-1) + newError)/(float)scanNumber;
+
+      cout << "\n\n\n\tStatic Error is: " << staticErrorTrack << "\n\n\n";
+    }
+
     void updateStateFile(){
 
-      Eigen::Array<float, 1, 6> stateData(1,6);
+      Eigen::Array<float, 1, 7> stateData(1,7);
 
       // Update State for tracking
       stateData[0] = (state.matrix()(0,3));
@@ -155,6 +168,8 @@ class nurbSLAMNode {
       stateData[3] = (rpy(2));
       stateData[4] = (rpy(1));
       stateData[5] = (rpy(0));
+
+      stateData[6] = staticErrorTrack;
       
 
       // Open file
@@ -209,7 +224,9 @@ class nurbSLAMNode {
       scanNumber ++;
 
       // Store state
+      updateStaticError();
       updateStateFile();
+      
     }
 
 
@@ -318,6 +335,10 @@ class nurbSLAMNode {
       nh.param("/meshing/maxNanAllowed", slam.mp.maxNanAllowed, slam.mp.maxNanAllowed);
       nh.param("/meshing/removeNanBuffer", slam.mp.removeNanBuffer, slam.mp.removeNanBuffer);
       nh.param("/meshing/newRowColBuffer", slam.mp.newRowColBuffer, slam.mp.newRowColBuffer);
+      nh.param("/meshing/bFilterZ", slam.mp.bFilterZ, slam.mp.bFilterZ);
+      nh.param("/meshing/nPointsZLim", slam.mp.nPointsZLim, slam.mp.nPointsZLim);
+
+
       nh.param("/mapping/useNonRectData", slam.mp.useNonRectData, slam.mp.useNonRectData);
       nh.param("/mapping/nCtrlDefaultS", slam.mp.nCtrlDefault[0], slam.mp.nCtrlDefault[0]); 
       nh.param("/mapping/nCtrlDefaultT", slam.mp.nCtrlDefault[1], slam.mp.nCtrlDefault[1]);

@@ -6,6 +6,8 @@ bShowAlignment: false
 localisationOption: 2 # Option for localisation method (0 - PCL, 1 - RANSAC IA, 2 - Prerejective RANSAC)
 keypointOption: 0
 
+bRejectNonOverlappingInAlign: false # whether or not to reject non-overlapping points before alignment
+
 bPublishNurbsPointCloud: false # whether or not to publish the point cloud for visualuisation in Rviz
 
 # -----------------------------
@@ -45,6 +47,9 @@ nSurfPointsFactor: 5.0 # multiplier by the number of control points to get the n
 /meshing/maxNanAllowed: 10
 /meshing/removeNanBuffer: 2
 /meshing/newRowColBuffer: 10
+
+/meshing/bFilterZ: false
+/meshing/nPointsZLim: 400
 
 # NURBS generation
 /mapping/useNonRectData: true # To use the new extension method

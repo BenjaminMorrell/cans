@@ -607,8 +607,10 @@ Eigen::Matrix4f NurbSLAM::alignScanWithMapObject(int objID, pcl::PointCloud<pcl:
     // Show alignment
     pcl::visualization::PCLVisualizer visu("Alignment");
     visu.addPointCloud (mapMeshList[objID], ColorHandlerT (mapMeshList[objID], 0.0, 255.0, 0.0), "mapObjPC");
+    // visu.addPointCloudNormals (mapMeshList[objID], 100, 0.02, "mapObjPCNormals", 0);
     visu.addPointCloud (obsObjPC_aligned, ColorHandlerT (obsObjPC_aligned, 0.0, 0.0, 255.0), "obsObjPC_aligned");
     visu.addPointCloud (obsObjPC_filtered, ColorHandlerT (obsObjPC_filtered, 255.0, 0.0, 0.0), "obsObjPC");
+    // visu.addPointCloudNormals (obsObjPC_filtered, 100, 0.02, "obsObjPCNormals", 0);
     visu.spin ();
   }
 

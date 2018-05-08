@@ -15,7 +15,8 @@ Mapping3D::Mapping3D():
     nCtrlDefault{15,15}, order{3,3},
     searchThresh(7), numRowsDesired(45), numColsDesired(45),
     maxNanAllowed(10), removeNanBuffer(0), numberOfMetrics(7), msSurf(125), mtSurf(125),
-    knotInsertionFlag(true), numInsert(3), deltaKnotInsert(1e-2), newRowColBuffer(0), useNonRectData(false)
+    knotInsertionFlag(true), numInsert(3), deltaKnotInsert(1e-2), newRowColBuffer(0), useNonRectData(false),
+    bFilterZ(false), nPointsZLim(400)
 {
   searchThresh[0] = 7.75;
   searchThresh[1] = 7.75;
@@ -719,7 +720,7 @@ Object3D Mapping3D::joinSurfaces(Object3D& srf1, Object3D& srf2, std::string ext
                 // Use columns
                 
                 if (flipKnotParam){
-                    // take columns in different order - from the end first 
+                    // take points in the columns in different order - from the end first 
                     ctrlVec2 = getMatCol(srf2.ctrlPnts(),srf2.ctrlPnts().cols() - 1 - j, false); 
                 }else{
                     ctrlVec2 = getMatCol(srf2.ctrlPnts(),j, false);
@@ -1013,18 +1014,55 @@ void Mapping3D::meshFromScan(pcl::PointCloud<pcl::PointNormal>::Ptr cloudOut, pc
 */
 void Mapping3D::getNanMatrixFromPointCloud(Eigen::Array<bool, Eigen::Dynamic, Eigen::Dynamic>& nanArray, pcl::PointCloud<pcl::PointNormal>::Ptr cloud){
 
+  float zLimLow = -99999.9;
+  float zLimHigh = 99999.9;
+
+
+  if (bFilterZ){
+    // Compute mean and covariance
+    std::vector<int> indices;
+    int nPoints = nPointsZLim; // TODO - make this a parameter
+    int nData = cloud->width*cloud->height;
+    for (int i = 0; i < nData; i = i + nData/nPoints){indices.push_back(i);}
+
+    Eigen::Matrix<float, 3, 3> covarianceMatrix;
+    Eigen::Matrix<float, 4, 1> centroid;
+
+    pcl::computeMeanAndCovarianceMatrix(*cloud, indices, covarianceMatrix, centroid);
+
+    cout << "Covariance matrix is: " << covarianceMatrix << endl;
+    cout << "Centroid is: " << centroid << endl;
+    // TODO reuse these for computing metrics?
+
+    float threeSigZ = std::sqrt(covarianceMatrix(2,2))*3.0;
+
+    zLimLow = centroid(2) - threeSigZ;
+    zLimHigh = centroid(2) + threeSigZ/30.0;
+  }
+
+  cout << "Zlow is: " << zLimLow << ", Zhigh is: " << zLimHigh << endl;
+
    // Loop through Point cloud 
   for (int i = 0; i < cloud->height; i++){
     for (int j = 0; j < cloud->width; j++){
       // If nan value
       if (!pcl::isFinite(cloud->at(j,i))){ // cloud->at(col,row)
         nanArray(i,j) = true;
+      }else if (cloud->at(j,i).z > zLimHigh){
+        nanArray(i,j) = true;
+        cout << "Capping Z high at value: " << cloud->at(j,i).z << endl;
+      }else if (cloud->at(j,i).z < zLimLow){
+        nanArray(i,j) = true;
+        cout << "Capping Z low at value: " << cloud->at(j,i).z << endl;
       }else{
         nanArray(i,j) = false;
       }
     }
   }
 }
+
+
+
 
 /*! 
   \brief  Removes rows as being actively selected, and then clears out nanArray to no longer consider that row
@@ -2083,12 +2121,14 @@ Matrix_Point3Df Mapping3D::nurbsDataFromPointCloud(pcl::PointCloud<pcl::PointNor
 */
 Matrix_Point3Df Mapping3D::nurbsDataFromPointCloud(pcl::PointCloud<pcl::PointNormal>::Ptr cloud, Eigen::Array<int, Eigen::Dynamic, 2>& newRowIndices, Eigen::Array<int, Eigen::Dynamic, 2>& newColIndices){
 
-  int nRowOrCol = newRowIndices.rows();
+  int nRowOrCol = newRowIndices.rows(); // NUmber of points with indices
   int nPoints;
   int ms;
   int mt;
+  int nMeshi;
   bool expandRowsNotCols;
-  int lastVal;
+  bool bCountBack;
+  int lastVal = -1;
 
   // Find required size of mesh - smallest size
   if (newRowIndices(0,0) == newRowIndices(0,1)){
@@ -2099,23 +2139,36 @@ Matrix_Point3Df Mapping3D::nurbsDataFromPointCloud(pcl::PointCloud<pcl::PointNor
     // Get number of unique points - the number of rows to take
     // nRowOrCol 
 
+    // Flag for whether to count backward with mesh_i
+    if (newRowIndices(0,0)>newRowIndices(nRowOrCol-1,0)){
+      bCountBack = true;
+    }else{
+      bCountBack = false;
+    }
+
     ms = getNumberOfUniquePoints(newRowIndices);
     mt = nPoints;
+    nMeshi = ms;
 
-    lastVal = newRowIndices(0,0);
-    
   }else if (newColIndices(0,0) == newColIndices(0,1)) {
     // Constant col - expanding cols
     expandRowsNotCols = false;
     nPoints = (newRowIndices.col(1) - newRowIndices.col(0)).minCoeff()+1;// Minimum difference between start and end
+    
 
     // Get number of unique points - the number of cols to take
     // nRowOrCol = getNumberOfUniquePoints(newColIndices);
 
+    // Flag for whether to count backward with mesh_i
+    if (newColIndices(0,0)>newColIndices(nRowOrCol-1,0)){
+      bCountBack = true;
+    }else{
+      bCountBack = false;
+    }
+
     ms = nPoints;
     mt = getNumberOfUniquePoints(newColIndices);
-
-    lastVal = newColIndices(0,0);
+    nMeshi = mt;
 
   }else{
     cout << "Error in indices, need row or column to be fixed" << endl;
@@ -2135,12 +2188,17 @@ Matrix_Point3Df Mapping3D::nurbsDataFromPointCloud(pcl::PointCloud<pcl::PointNor
 
   int ii;
   int jj;
-  int mesh_i = 0;
+  int mesh_i;
+  if (bCountBack){
+    mesh_i = nMeshi - 1;
+  }else{
+    mesh_i = 0;
+  }
 
   float stepS;
   float stepT;
 
-  bool newPoint = true;
+  bool newPoint = false;
 
   // Loop through each row or col
   for (int i = 0; i < nRowOrCol; i++){
@@ -2189,7 +2247,11 @@ Matrix_Point3Df Mapping3D::nurbsDataFromPointCloud(pcl::PointCloud<pcl::PointNor
         }
       }
       cout << "Mesh_i is: " << mesh_i << endl;
-      mesh_i++;
+      if (bCountBack){
+        mesh_i -= 1;
+      }else{
+        mesh_i++;
+      }
     }
     newPoint = false;
   }

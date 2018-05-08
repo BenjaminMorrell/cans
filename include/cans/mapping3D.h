@@ -106,6 +106,9 @@ public:
 
     bool useNonRectData;
 
+    bool bFilterZ;
+    int nPointsZLim;
+
     int msSurf;
     int mtSurf;
 
