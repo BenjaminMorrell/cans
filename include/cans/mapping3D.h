@@ -24,7 +24,7 @@ class Mapping3D {
 
 private:
     
-    int order[2]; 
+    
 
     std::vector<float> searchThresh;
 
@@ -102,12 +102,15 @@ public:
     int maxNanAllowed;
     int removeNanBuffer;
     int nCtrlDefault[2];
+    int order[2]; 
 
     bool useNonRectData;
 
     bool bFilterZ;
     int nPointsZLim;
+    float zThreshMultiplier;
     bool bRejectScan;
+    
 
     int msSurf;
     int mtSurf;

@@ -40,6 +40,7 @@ class nurbSLAMNode {
     bool bNewObjects;
     bool bNewState;
     bool bNewScanReceived;
+    bool bTestMapGeneration;
 
     char* stateFilename;
 
@@ -218,12 +219,17 @@ class nurbSLAMNode {
         std::string filename = "/home/bjm/SpaceCRAFT/Results/testNURBS_Unreal_" + static_cast<ostringstream*>( &(ostringstream() << (i)) )->str() + ".wrl";
         slam.mp.objectMap[i].writeVRML(filename.c_str(),Color(255,100,255),50,80); 
         // filename = "/home/amme2/Development/Results/testNURBS_Unreal_" + static_cast<ostringstream*>( &(ostringstream() << (i)) )->str() + ".pcd";
-        filename = "/home/bjm/SpaceCRAFT//Results/testNURBS_Unreal_" + static_cast<ostringstream*>( &(ostringstream() << (i)) )->str() + ".pcd";
+        filename = "/home/bjm/SpaceCRAFT/Results/testNURBS_Unreal_" + static_cast<ostringstream*>( &(ostringstream() << (i)) )->str() + ".pcd";
         slam.mp.writeObjectPCDFile(filename.c_str(), i, 125, 125);
       }
       
       cout << "\nFinished Processing Scan " << scanNumber << ".\n\n";
       scanNumber ++;
+
+      if (bTestMapGeneration){
+        slam.mp.objectMap.clear();
+        slam.mp.objectMetrics.clear();
+      }
 
       // Store state
       updateStaticError();
@@ -313,6 +319,8 @@ class nurbSLAMNode {
       nh.param("keypointOption", slam.keypointOption, slam.keypointOption);
       nh.param("bRejectNonOverlappingInAlign", slam.bRejectNonOverlappingInAlign, slam.bRejectNonOverlappingInAlign);
 
+      nh.param("bTestMapGeneration",bTestMapGeneration,bTestMapGeneration);
+
       // Localisation
       nh.param("/keypoints/modelResolution", slam.modelResolutionKeypoints, slam.modelResolutionKeypoints);
       nh.param("/keypoints/minNeighbours", slam.minNeighboursKeypoints, slam.minNeighboursKeypoints);
@@ -339,11 +347,15 @@ class nurbSLAMNode {
       nh.param("/meshing/newRowColBuffer", slam.mp.newRowColBuffer, slam.mp.newRowColBuffer);
       nh.param("/meshing/bFilterZ", slam.mp.bFilterZ, slam.mp.bFilterZ);
       nh.param("/meshing/nPointsZLim", slam.mp.nPointsZLim, slam.mp.nPointsZLim);
-
+      nh.param("/meshing/zThreshMultiplier", slam.mp.zThreshMultiplier, slam.mp.zThreshMultiplier);
 
       nh.param("/mapping/useNonRectData", slam.mp.useNonRectData, slam.mp.useNonRectData);
       nh.param("/mapping/nCtrlDefaultS", slam.mp.nCtrlDefault[0], slam.mp.nCtrlDefault[0]); 
       nh.param("/mapping/nCtrlDefaultT", slam.mp.nCtrlDefault[1], slam.mp.nCtrlDefault[1]);
+      nh.param("/mapping/degree", slam.mp.order[0], slam.mp.order[0]);
+      nh.param("/mapping/degree", slam.mp.order[1], slam.mp.order[1]);
+
+      
 
       cout << "nCtrlDefaultS is " << slam.mp.nCtrlDefault[0] << endl;
       cout << "nCtrlDefaultT is " << slam.mp.nCtrlDefault[1] << endl;
@@ -372,6 +384,7 @@ main (int argc, char** argv)
     switch (slamMode){
       case 0:
         cout << "\n\n\t\tACTIVATING SLAM MODE (default)\n\n" << endl;
+        nurbnode.bTestMapGeneration = false;
         break;
       case 1:
         nurbnode.slam.activateMappingMode();
@@ -380,6 +393,7 @@ main (int argc, char** argv)
       case 2:
         nurbnode.slam.activateLocalisationMode();
         cout << "\n\n\t\tACTIVATING PURE LOCALISATION MODE\n\n" << endl;
+        nurbnode.bTestMapGeneration = false;
         // load object
         try{
           std::string filename = ros::package::getPath("cans")+"/data/blob_0_final_obj.obj";

@@ -16,7 +16,7 @@ Mapping3D::Mapping3D():
     searchThresh(7), numRowsDesired(45), numColsDesired(45),
     maxNanAllowed(10), removeNanBuffer(0), numberOfMetrics(7), msSurf(125), mtSurf(125),
     knotInsertionFlag(true), numInsert(3), deltaKnotInsert(1e-2), newRowColBuffer(0), useNonRectData(false),
-    bFilterZ(false), nPointsZLim(400), bRejectScan(false)
+    bFilterZ(false), nPointsZLim(400), zThreshMultiplier(0.03), bRejectScan(false)
 {
   searchThresh[0] = 7.75;
   searchThresh[1] = 7.75;
@@ -883,7 +883,7 @@ void Mapping3D::meshFromScan(pcl::PointCloud<pcl::PointNormal>::Ptr cloudOut, pc
 
   cout << "Number of Nans: " << nanArray.count() << endl;
 
-  if ((float)nanArray.count()/(float)(cloudIn->width*cloudIn->height) > 0.95){
+  if ((float)nanArray.count()/(float)(cloudIn->width*cloudIn->height) > 0.98){
     cout << "Too many Nans in the scan. Rejecting" << endl;
     bRejectScan = true;
     return;
@@ -1050,7 +1050,7 @@ void Mapping3D::getNanMatrixFromPointCloud(Eigen::Array<bool, Eigen::Dynamic, Ei
     float threeSigZ = std::sqrt(covarianceMatrix(2,2))*3.0;
 
     zLimLow = centroid(2) - threeSigZ;
-    zLimHigh = centroid(2) + threeSigZ/30.0;
+    zLimHigh = centroid(2) + threeSigZ*zThreshMultiplier;
   }
 
   cout << "Zlow is: " << zLimLow << ", Zhigh is: " << zLimHigh << endl;
@@ -1522,7 +1522,7 @@ void Mapping3D::addObject(pcl::PointCloud<pcl::PointNormal>::Ptr cloud, std::vec
   int nCtrl1 = std::min((int)cloud->height/2,nCtrlDefault[0]);
   int nCtrl2 = std::min((int)cloud->width/2,nCtrlDefault[1]);
   cout << "Number of control points computed is: (" << nCtrl1 << ", " << nCtrl2 << ")\n";
-  Object3D obj(mesh, 3, 3, nCtrl1, nCtrl2);
+  Object3D obj(mesh, order[0], order[1], nCtrl1, nCtrl2);
 
   // cout << "object point (0,0) " << obj(0.0,0.0) << endl;
   // cout << "object point (0.4,0.4) " << obj(0.4,0.4) << endl;

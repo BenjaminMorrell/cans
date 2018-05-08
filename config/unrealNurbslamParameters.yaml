@@ -6,9 +6,11 @@ bShowAlignment: false
 localisationOption: 2 # Option for localisation method (0 - PCL, 1 - RANSAC IA, 2 - Prerejective RANSAC)
 keypointOption: 0
 
-bRejectNonOverlappingInAlign: false # whether or not to reject non-overlapping points before alignment
+bRejectNonOverlappingInAlign: true # whether or not to reject non-overlapping points before alignment
 
 bPublishNurbsPointCloud: false # whether or not to publish the point cloud for visualuisation in Rviz
+
+bTestMapGeneration: false
 
 # -----------------------------
 # Localisation
@@ -33,7 +35,7 @@ pclFeatureRadiusSetting: 1.2
 
 validInlierThreshold: 0.6
 
-maxDistanceOverlap: 0.3 #0.2
+maxDistanceOverlap: 0.4 #0.2
 
 
 # Number of data points
@@ -52,12 +54,14 @@ nSurfPointsFactor: 5.0 # multiplier by the number of control points to get the n
 /meshing/newRowColBuffer: 10
 
 /meshing/bFilterZ: true
-/meshing/nPointsZLim: 400
+/meshing/nPointsZLim: 1000
+/meshing/zThreshMultiplier: 0.01
 
 # NURBS generation
 /mapping/useNonRectData: true # To use the new extension method
 /mapping/nCtrlDefaultS: 25
 /mapping/nCtrlDefaultT: 25
+/mapping/degree: 2
 
 
 # # Mesh processing
