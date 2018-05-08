@@ -3323,8 +3323,15 @@ TEST_F (nurbsDataFromPCNonRect, testRightSurfUpdate){
 
     pcl::PointCloud<pcl::PointNormal>::Ptr cloud(new pcl::PointCloud<pcl::PointNormal>(45,45,pcl::PointNormal()));
 
+    std::string filename = "/home/bjm/SpaceCRAFT/Results/nurbs_overlap_initial.pcd";
+    mp.writeObjectPCDFile(filename.c_str(), 1, 10, 10);
+
+    pcl::PCDWriter writer;
+    filename = "/home/bjm/SpaceCRAFT/Results/nurbs_overlap_new_data.pcd";
+    writer.write<pcl::PointNormal> (filename, *data_r[0], false);
+
     // Get the indices
-    for (int j = 0; j < 3; j++){
+    for (int j = 0; j < 1; j++){
         
         // UPdate object 2
         mp.updateObject(1, data_r[j]);
@@ -3352,6 +3359,11 @@ TEST_F (nurbsDataFromPCNonRect, testRightSurfUpdate){
         EXPECT_FLOAT_EQ(data->at(0,data->height-1).y,mp.objectMap[1](1.0,0.0).y());
         EXPECT_FLOAT_EQ(data->at(0,data->height-1).z,mp.objectMap[1](1.0,0.0).z());
         
+        Matrix_Point3Df mesh = mp.nurbsDataFromPointCloud(data_r[j]);
+        Object3D objd(mesh);
+
+
+        EXPECT_FLOAT_EQ(objd.ctrlPnts()(0,9).x(),mp.objectMap[1].ctrlPnts()(0,mp.objectMap[1].ctrlPnts().cols()-1).x());
 
         // Test generating data - to test it doesn't break. 
         mp.pointCloudFromObject3D(1,45,45,cloud);
@@ -3363,16 +3375,21 @@ TEST_F (nurbsDataFromPCNonRect, testRightSurfUpdate){
         }
         EXPECT_TRUE(bIsnoNan);
         // Write to file
-        // if (j == 0){
-        //     mp.objectMap[1].writeVRML("UpdatedSurf0.wrl",Color(255,100,255),50,80);
-        // }else if (j == 1){
-        //     mp.objectMap[1].writeVRML("UpdatedSurf1.wrl",Color(255,100,255),50,80);
-        // }
+        if (j == 0){
+            mp.objectMap[1].writeVRML("UpdatedSurf0.wrl",Color(255,100,255),50,80);
+            filename = "/home/bjm/SpaceCRAFT/Results/nurbs_overlap_final.pcd";
+            mp.writeObjectPCDFile(filename.c_str(), 1, 125, 155);
+        }else if (j == 1){
+            mp.objectMap[1].writeVRML("UpdatedSurf1.wrl",Color(255,100,255),50,80);
+        }else if (j == 2){
+            filename = "/home/bjm/SpaceCRAFT/Results/nurbs_overlap_final.pcd";
+            mp.writeObjectPCDFile(filename.c_str(), 1, 25, 55);
+        }
         // Reset object
         mp.updateObjectInMap(1, objC);
     }
 }
-
+/*
 TEST_F (nurbsDataFromPCNonRect, testLeftSurfUpdate){
     // Just to make sure it doesn't crash
     // TODO -some tests on the output object?
@@ -3832,7 +3849,7 @@ TEST_F (nurbsDataFromPCNonRect, testMultipleIndices){
     }
 }
 
-
+*/
 } // namespace
 
 int main (int argc,char ** argv){

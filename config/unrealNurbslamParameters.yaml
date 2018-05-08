@@ -35,7 +35,7 @@ pclFeatureRadiusSetting: 1.2
 
 validInlierThreshold: 0.6
 
-maxDistanceOverlap: 0.4 #0.2
+maxDistanceOverlap: 0.35 # maximum allowed distance away from existing surface to not be classes as new data
 
 
 # Number of data points
@@ -55,7 +55,7 @@ nSurfPointsFactor: 5.0 # multiplier by the number of control points to get the n
 
 /meshing/bFilterZ: true
 /meshing/nPointsZLim: 1000
-/meshing/zThreshMultiplier: 0.01
+/meshing/zThreshMultiplier: 0.005
 
 # NURBS generation
 /mapping/useNonRectData: true # To use the new extension method

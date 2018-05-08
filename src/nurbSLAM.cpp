@@ -624,6 +624,12 @@ Eigen::Matrix4f NurbSLAM::alignScanWithMapObject(int objID, pcl::PointCloud<pcl:
     visu.spin ();
   }
 
+  bool bSaveAlignmentData = false;
+
+  if (bSaveAlignmentData){
+
+  }
+
   return transformOut;
 }
 

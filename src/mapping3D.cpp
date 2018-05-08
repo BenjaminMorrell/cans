@@ -234,6 +234,8 @@ NurbsCurvef Mapping3D::joinCurves(NurbsCurvef& crv1, NurbsCurvef& crv2, bool new
         }
     }
 
+    // cout << "Output knots are: " << knots_out << endl;
+
     // Create NURBS Curve
     NurbsCurvef crv_out(ctrl_out,knots_out,deg);
 
@@ -610,7 +612,7 @@ Object3D Mapping3D::joinSurfaces(Object3D& srf1, Object3D& srf2, std::string ext
                 
                 if (flipKnotParam){
                     // take rows in different order - from the end first 
-                    ctrlVec2 = getMatRow(srf2.ctrlPnts(),srf2.ctrlPnts().rows() - 1 - i);    
+                    ctrlVec2 = getMatRow(srf2.ctrlPnts(),srf2.ctrlPnts().rows() - 1 - i);
                 }else{
                     ctrlVec2 = getMatRow(srf2.ctrlPnts(),i);
                 }
@@ -1063,10 +1065,10 @@ void Mapping3D::getNanMatrixFromPointCloud(Eigen::Array<bool, Eigen::Dynamic, Ei
         nanArray(i,j) = true;
       }else if (cloud->at(j,i).z > zLimHigh){
         nanArray(i,j) = true;
-        cout << "Capping Z high at value: " << cloud->at(j,i).z << endl;
+        // cout << "Capping Z high at value: " << cloud->at(j,i).z << endl;
       }else if (cloud->at(j,i).z < zLimLow){
         nanArray(i,j) = true;
-        cout << "Capping Z low at value: " << cloud->at(j,i).z << endl;
+        // cout << "Capping Z low at value: " << cloud->at(j,i).z << endl;
       }else{
         nanArray(i,j) = false;
       }
@@ -1677,6 +1679,12 @@ void Mapping3D::updateObject(int objID, pcl::PointCloud<pcl::PointNormal>::Ptr o
   //   // CHECK OBJECT:
   obj.writeVRML("newSurf.wrl",Color(255,100,255),50,80);
 
+  // Get point cloud from NURBS object
+  pcl::PointCloud<pcl::PointNormal>::Ptr objPC(new pcl::PointCloud<pcl::PointNormal>(10, 10, pcl::PointNormal()));
+  obj.getSurfacePointCloud(objPC, 10, 10);
+  pcl::PCDWriter writer;
+  writer.write<pcl::PointNormal> ("newSurf.pcd", *objPC, false);
+
   //   // Test generating data
   //   int nPoints = 25;
     
@@ -1704,6 +1712,9 @@ void Mapping3D::updateObject(int objID, pcl::PointCloud<pcl::PointNormal>::Ptr o
     knotInsertionPreMerge(obj, ss.extendDirection);
   }
   
+  // Get point cloud from NURBS object
+  obj.getSurfacePointCloud(objPC, 10, 10);
+  writer.write<pcl::PointNormal> ("newSurf_knot_insert.pcd", *objPC, false);
 
 
   // Join Surfaces
@@ -1716,6 +1727,9 @@ void Mapping3D::updateObject(int objID, pcl::PointCloud<pcl::PointNormal>::Ptr o
   updateObjectInMap(objID, objJoin);
 
   objectMap[objID].writeVRML("updatedSurf.wrl",Color(255,100,255),50,80);
+
+  // Get point cloud from NURBS object
+  writeObjectPCDFile("updatedSurf.pcd", objID, 10, 10);
   
 }
 
@@ -2324,27 +2338,29 @@ void Mapping3D::pointCloudFromNurbsData(Matrix_Point3Df& data, pcl::PointCloud<p
 void Mapping3D::pointCloudFromObject3D(int objID, int ms, int mt, pcl::PointCloud<pcl::PointNormal>::Ptr cloud){
 
   // Get the data points
-  Matrix_Point3Df data = objectMap[objID].getSurfacePoints(ms, mt); 
+  objectMap[objID].getSurfacePointCloud(cloud, ms,  mt)
 
-  cout << "Size of data in pointCloudFromObject3D: (" << data.rows() << ", " << data.cols() << ")\n";
+  // Matrix_Point3Df data = objectMap[objID].getSurfacePoints(ms, mt); 
 
-  cout << "Data (0,0) = " << data(0,0) << endl;
+  // cout << "Size of data in pointCloudFromObject3D: (" << data.rows() << ", " << data.cols() << ")\n";
 
-  // Copy the data
-  for (int i = 0; i < data.rows(); i ++){
-    for (int j = 0; j < data.cols(); j++){
-      cloud->at(j,i).x = data(i,j).x(); // at(col,row)
-      cloud->at(j,i).y = data(i,j).y(); // at(col,row)
-      cloud->at(j,i).z = data(i,j).z(); // at(col,row)
-      // try {
-      //   if (!pcl::isFinite(cloud->at(j,i))){
-      //     throw 1;
-      //   }
-      // } catch(int e){
-      //   cout << "Non finite point taken from data in pointCloudFromObject3D" << endl;
-      // }
-    }
-  }
+  // cout << "Data (0,0) = " << data(0,0) << endl;
+
+  // // Copy the data
+  // for (int i = 0; i < data.rows(); i ++){
+  //   for (int j = 0; j < data.cols(); j++){
+  //     cloud->at(j,i).x = data(i,j).x(); // at(col,row)
+  //     cloud->at(j,i).y = data(i,j).y(); // at(col,row)
+  //     cloud->at(j,i).z = data(i,j).z(); // at(col,row)
+  //     // try {
+  //     //   if (!pcl::isFinite(cloud->at(j,i))){
+  //     //     throw 1;
+  //     //   }
+  //     // } catch(int e){
+  //     //   cout << "Non finite point taken from data in pointCloudFromObject3D" << endl;
+  //     // }
+  //   }
+  // }
 }
 
 

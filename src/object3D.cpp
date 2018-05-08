@@ -585,8 +585,8 @@ Matrix_Point3Df Object3D::getSurfacePoints(int ms, int mt){
 
   // Create parameter vectors
   Vector_FLOAT paramsS(ms);
-  float val(0.0001);
-  float step = (1.0-val)/ms;
+  float val(0.0000000000000);
+  float step = (1.0-val*2.0)/(float)(ms-2.0);
 
   for (int k = 0; k < ms; k++){
     paramsS[k] = val;
@@ -594,8 +594,8 @@ Matrix_Point3Df Object3D::getSurfacePoints(int ms, int mt){
   }
 
   Vector_FLOAT paramsT(mt);
-  val = 0.0001;
-  step = (1.0-val)/mt;
+  val = 0.0000000000000;
+  step = (1.0-val*2.0)/(float)(mt-2.0);
 
   for (int k = 0; k < mt; k++){
     paramsT[k] = val;
@@ -648,8 +648,8 @@ void Object3D::getSurfacePointCloud( pcl::PointCloud<pcl::PointNormal>::Ptr clou
 
   // Create parameter vectors
   Vector_FLOAT paramsS(ms);
-  float val(0.0001);
-  float step = (1.0-val*2.0)/(float)(ms-1.0);
+  float val(0.0000000000000);
+  float step = (1.0-val*2.0)/(float)(ms-2.0);
 
   for (int k = 0; k < ms; k++){
     paramsS[k] = val;
@@ -657,8 +657,8 @@ void Object3D::getSurfacePointCloud( pcl::PointCloud<pcl::PointNormal>::Ptr clou
   }
 
   Vector_FLOAT paramsT(mt);
-  val = 0.0001;
-  step = (1.0-val*2.0)/(float)(mt-1.0);
+  val = 0.0000000000000;
+  step = (1.0-val*2.0)/(float)(mt-2.0);
 
   for (int k = 0; k < mt; k++){
     paramsT[k] = val;
