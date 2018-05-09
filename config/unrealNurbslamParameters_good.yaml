@@ -63,6 +63,9 @@ nSurfPointsFactor: 6.0 # multiplier by the number of control points to get the n
 /mapping/nCtrlDefaultT: 25
 /mapping/degree: 2
 
+# Data association
+/mapping/searchThresh: 50.0 # capture everything for 67p
+
 
 # # Mesh processing
 # /meshing/numRowsDesired: 125

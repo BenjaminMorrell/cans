@@ -54,7 +54,7 @@ class nurbSLAMNode {
     // Constructor
     nurbSLAMNode(): runFlag(true), useTruthTransform(false), scanNumber(0), 
         bNewObjects(false), bNewState(false), cloud(new pcl::PointCloud<pcl::PointNormal>),
-        bNewScanReceived(false), stateFilename("/home/bjm/SpaceCRAFT/unrealDataTrack.txt"),
+        bNewScanReceived(false), stateFilename("/home/amme2/Development/unrealDataTrack.txt"),
         staticErrorTrack(0.0)
     {
       state = Eigen::Affine3f::Identity();
@@ -215,11 +215,11 @@ class nurbSLAMNode {
       // /home/amme2/Development/voxblox_ws/testNURBS_Unreal_6.wrl
       // TODO - wrap this in an if statement
       for (int i=0; i < slam.mp.objectMap.size(); i++){
-        // std::string filename = "/home/amme2/Development/Results/testNURBS_Unreal_" + static_cast<ostringstream*>( &(ostringstream() << (i)) )->str() + ".wrl";
-        std::string filename = "/home/bjm/SpaceCRAFT/Results/testNURBS_Unreal_" + static_cast<ostringstream*>( &(ostringstream() << (i)) )->str() + ".wrl";
+        std::string filename = "/home/amme2/Development/Results/testNURBS_Unreal_" + static_cast<ostringstream*>( &(ostringstream() << (i)) )->str() + ".wrl";
+        // std::string filename = "/home/bjm/SpaceCRAFT/Results/testNURBS_Unreal_" + static_cast<ostringstream*>( &(ostringstream() << (i)) )->str() + ".wrl";
         slam.mp.objectMap[i].writeVRML(filename.c_str(),Color(255,100,255),50,80); 
-        // filename = "/home/amme2/Development/Results/testNURBS_Unreal_" + static_cast<ostringstream*>( &(ostringstream() << (i)) )->str() + ".pcd";
-        filename = "/home/bjm/SpaceCRAFT/Results/testNURBS_Unreal_" + static_cast<ostringstream*>( &(ostringstream() << (i)) )->str() + ".pcd";
+        filename = "/home/amme2/Development/Results/testNURBS_Unreal_" + static_cast<ostringstream*>( &(ostringstream() << (i)) )->str() + ".pcd";
+        // filename = "/home/bjm/SpaceCRAFT/Results/testNURBS_Unreal_" + static_cast<ostringstream*>( &(ostringstream() << (i)) )->str() + ".pcd";
         slam.mp.writeObjectPCDFile(filename.c_str(), i, 125, 125);
       }
       

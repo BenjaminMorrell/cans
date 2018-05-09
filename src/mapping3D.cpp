@@ -921,7 +921,7 @@ void Mapping3D::meshFromScan(pcl::PointCloud<pcl::PointNormal>::Ptr cloudOut, pc
   cout << "Number of nans left: " << nanArray.count() << endl;
 
 
-  if ((float)nanArray.count()/(float)(numRowsDesired*numColsDesired) > 0.1){
+  if ((float)nanArray.count()/(float)(numRowsDesired*numColsDesired) > 0.8){
     cout << "Too many Nans in the scan after downsampling. Rejecting" << endl;
     bRejectScan = true;
     return;

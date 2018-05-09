@@ -1,8 +1,8 @@
 # -----------------------------
 # Options (maybe put as args)
 # -----------------------------
-alignmentOption: 1 # 0 - dense to dense, 1 - keypoints to dense, 2 - keypoints to keypoints
-bShowAlignment: true
+alignmentOption: 0 # 0 - dense to dense, 1 - keypoints to dense, 2 - keypoints to keypoints
+bShowAlignment: false
 localisationOption: 2 # Option for localisation method (0 - PCL, 1 - RANSAC IA, 2 - Prerejective RANSAC)
 keypointOption: 0 # 0 - ISS detector, 1: Smoothed surface (not good)
 
@@ -39,7 +39,7 @@ maxDistanceOverlap: 0.35 # maximum allowed distance away from existing surface t
 
 
 # Number of data points
-nSurfPointsFactor: 5.0 # multiplier by the number of control points to get the number of surface points to sample
+nSurfPointsFactor: 6.0 # multiplier by the number of control points to get the number of surface points to sample
 # Was 7.0
 
 

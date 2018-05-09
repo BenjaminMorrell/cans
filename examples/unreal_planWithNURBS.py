@@ -412,11 +412,11 @@ if __name__ == '__main__':
         plan.setupAndRunTrajectory()
         timer = 0.0
 
-      # if bUseTFToUpdateStart:
-      #   try:
-      #     (trans, rot) = tf_listener.lookupTransform('/world', '/body', rospy.Time(0)) # time argument just gets the latest
-      #   except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
-      #     continue
+      if bUseTFToUpdateStart:
+        try:
+          (trans, rot) = tf_listener.lookupTransform('/world', '/nurb_cam', rospy.Time(0)) # time argument just gets the latest
+        except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
+          continue
     
       #   plan.updateStartFromTF(trans,rot)
 
