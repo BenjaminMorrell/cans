@@ -472,10 +472,13 @@ Eigen::Matrix4f NurbSLAM::alignScanKeypointsWithMapObjectDense(int objID, pcl::P
   if (bShowAlignment){
     // Show alignment
     pcl::visualization::PCLVisualizer visu("Alignment");
+    // visu.setBackgroundColor (0, 0, 0);
     visu.addPointCloud (mapMeshList[objID], ColorHandlerT (mapMeshList[objID], 0.0, 255.0, 0.0), "mapObjPC");
+    visu.addPointCloudNormals<pcl::PointNormal> (mapMeshList[objID], 50, 1.0, "mapObjPCNormals", 0);
     visu.addPointCloud (obsObjPC_aligned, ColorHandlerT (obsObjPC_aligned, 0.0, 0.0, 255.0), "obsObjPC_alignedKP");
     visu.addPointCloud (obsObjPC, ColorHandlerT (obsObjPC, 255.0, 0.0, 0.0), "obsObjPC");
     visu.addPointCloud (obsObjPC_keypoints, ColorHandlerT (obsObjPC_keypoints, 255.0, 0.0, 255.0), "obsObjPCKP");
+    visu.addPointCloudNormals<pcl::PointNormal> (obsObjPC_aligned, 10, 0.2, "obsObjPCNormals", 0);
     visu.spin ();
   }
 
