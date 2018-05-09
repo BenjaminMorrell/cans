@@ -25,7 +25,7 @@ NurbSLAM::NurbSLAM():
     modelResolutionKeypoints(0.005), minNeighboursKeypoints(5),
     ransac_maximumIterations(5000), ransac_numberOfSamples(3),
     ransac_correspondenceRandomness(3), ransac_similarityThreshold(0.9), ransac_inlierFraction(0.25),
-    processTimes(5)
+    processTimes(5), bObjectNormalsComputed(false)
 {
   state = Eigen::Affine3f::Identity();
   transformDelta = Eigen::Affine3f::Identity();
@@ -77,6 +77,8 @@ void NurbSLAM::processScans(std::vector<pcl::PointCloud<pcl::PointNormal>::Ptr> 
   
   // Initial Scan processing
   for (int i = 0; i < clouds.size(); i++){
+
+    bObjectNormalsComputed = false;
 
     objectMeshList.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr (new pcl::PointCloud<pcl::PointNormal>(mp.numRowsDesired, mp.numColsDesired)));
 
@@ -298,27 +300,32 @@ Eigen::Matrix4f NurbSLAM::alignScanKeypointsWithMapObjectKeypoints(int objID, pc
   
   
   // Estimate normals
-  pcl::NormalEstimation<pcl::PointNormal, pcl::PointNormal> nest;
-  nest.setRadiusSearch(pclNormalRadiusSetting);
-  // nest.setKSearch(7);
-  nest.setSearchMethod(search_method_);
-  nest.setInputCloud(obsObjPC);
-  nest.compute(*obsObjPC);
+  computeNormals(obsObjPC);
+  // pcl::NormalEstimation<pcl::PointNormal, pcl::PointNormal> nest;
+  // nest.setRadiusSearch(pclNormalRadiusSetting);
+  // // nest.setKSearch(7);
+  // nest.setSearchMethod(search_method_);
+  // nest.setViewPoint(state.matrix()(0,3),state.matrix()(1,3),state.matrix()(2,3)); // Set the viewpoint to the current pose
+  // nest.setInputCloud(obsObjPC);
+  // nest.compute(*obsObjPC);
   cout << "computed normals for cloud observation" << endl;
+  bObjectNormalsComputed = true;
   
   // Estimate features
-  pcl::FPFHEstimationOMP<pcl::PointNormal,pcl::PointNormal,pcl::FPFHSignature33> fest;
-  fest.setRadiusSearch(pclFeatureRadiusSetting);
-  // fest.setKSearch(7);
-  fest.setSearchMethod(search_method_);
-  fest.setSearchSurface(mapMeshList[objID]);
-  fest.setInputCloud(mapObjPC_keypoints);
-  fest.setInputNormals(mapMeshList[objID]);
-  fest.compute (*mapObjPC_features);
-  fest.setSearchSurface(obsObjPC);
-  fest.setInputCloud(obsObjPC_keypoints);
-  fest.setInputNormals(obsObjPC);
-  fest.compute (*obsObjPC_features);
+  computeFeatures(mapObjPC_keypoints, mapMeshList[objID], mapObjPC_features);
+  computeFeatures(obsObjPC_keypoints, obsObjPC, obsObjPC_features);
+  // pcl::FPFHEstimationOMP<pcl::PointNormal,pcl::PointNormal,pcl::FPFHSignature33> fest;
+  // fest.setRadiusSearch(pclFeatureRadiusSetting);
+  // // fest.setKSearch(7);
+  // fest.setSearchMethod(search_method_);
+  // fest.setSearchSurface(mapMeshList[objID]);
+  // fest.setInputCloud(mapObjPC_keypoints);
+  // fest.setInputNormals(mapMeshList[objID]);
+  // fest.compute (*mapObjPC_features);
+  // fest.setSearchSurface(obsObjPC);
+  // fest.setInputCloud(obsObjPC_keypoints);
+  // fest.setInputNormals(obsObjPC);
+  // fest.compute (*obsObjPC_features);
   cout << "Features have been computed" << endl;
   
 
@@ -408,24 +415,28 @@ Eigen::Matrix4f NurbSLAM::alignScanKeypointsWithMapObjectDense(int objID, pcl::P
   cout << "computed keypoints for observation. have " << obsObjPC_keypoints->size() << endl;
     
   // Estimate normals
-  pcl::NormalEstimation<pcl::PointNormal, pcl::PointNormal> nest;
-  nest.setRadiusSearch(pclNormalRadiusSetting);
-  // nest.setKSearch(7);
-  nest.setSearchMethod(search_method_);
-  nest.setInputCloud(obsObjPC);
-  nest.compute(*obsObjPC);
+  computeNormals(obsObjPC);
+  // pcl::NormalEstimation<pcl::PointNormal, pcl::PointNormal> nest;
+  // nest.setRadiusSearch(pclNormalRadiusSetting);
+  // // nest.setKSearch(7);
+  // nest.setSearchMethod(search_method_);
+  // nest.setViewPoint(state.matrix()(0,3),state.matrix()(1,3),state.matrix()(2,3)); // Set the viewpoint to the current pose
+  // nest.setInputCloud(obsObjPC);
+  // nest.compute(*obsObjPC);
   cout << "computed normals for cloud observation" << endl;
+  bObjectNormalsComputed = true;
   
   // Estimate features
-  pcl::FPFHEstimationOMP<pcl::PointNormal,pcl::PointNormal,pcl::FPFHSignature33> fest;
-  fest.setRadiusSearch(pclFeatureRadiusSetting);
-  // fest.setKSearch(7);
-  fest.setSearchMethod(search_method_);
-  fest.setSearchSurface(obsObjPC);
-  fest.setInputCloud(obsObjPC_keypoints);
-  fest.setInputNormals(obsObjPC);
-  fest.compute (*obsObjPC_features);
-  cout << "Features have been computed" << endl;
+  computeFeatures(obsObjPC_keypoints, obsObjPC, obsObjPC_features);
+  // pcl::FPFHEstimationOMP<pcl::PointNormal,pcl::PointNormal,pcl::FPFHSignature33> fest;
+  // fest.setRadiusSearch(pclFeatureRadiusSetting);
+  // // fest.setKSearch(7);
+  // fest.setSearchMethod(search_method_);
+  // fest.setSearchSurface(obsObjPC);
+  // fest.setInputCloud(obsObjPC_keypoints);
+  // fest.setInputNormals(obsObjPC);
+  // fest.compute (*obsObjPC_features);
+  cout << "Features have been computed for observation keypoints" << endl;
   
 
   //Perform alignment
@@ -495,7 +506,7 @@ Eigen::Matrix4f NurbSLAM::alignScanWithMapObject(int objID, pcl::PointCloud<pcl:
 
   Eigen::Matrix4f transformOut;
 
-  pcl::search::KdTree<pcl::PointNormal>::Ptr search_method_(new pcl::search::KdTree<pcl::PointNormal>);
+  // pcl::search::KdTree<pcl::PointNormal>::Ptr search_method_(new pcl::search::KdTree<pcl::PointNormal>);
   
   if (localisationOption == 0){
     // ICP
@@ -521,16 +532,16 @@ Eigen::Matrix4f NurbSLAM::alignScanWithMapObject(int objID, pcl::PointCloud<pcl:
   }else{
     
     // Estimate normals
-    pcl::NormalEstimation<pcl::PointNormal, pcl::PointNormal> nest;
-    nest.setRadiusSearch(pclNormalRadiusSetting);
-    // nest.setKSearch(7);
-    nest.setSearchMethod(search_method_);
-    nest.setInputCloud(obsObjPC);
-    nest.compute(*obsObjPC);
+    // pcl::NormalEstimation<pcl::PointNormal, pcl::PointNormal> nest;
+    // nest.setRadiusSearch(pclNormalRadiusSetting);
+    // // nest.setKSearch(7);
+    // nest.setSearchMethod(search_method_);
+    // nest.setViewPoint(state.matrix()(0,3),state.matrix()(1,3),state.matrix()(2,3)); // Set the viewpoint to the current pose
+    // nest.setInputCloud(obsObjPC);
+    // nest.compute(*obsObjPC);
+    computeNormals(obsObjPC);
     cout << "computed normals for observation" << endl;
-
-    cout << "Normals have been estimated" << endl;
-
+    bObjectNormalsComputed = true;
 
     if (bRejectNonOverlappingInAlign){
       rejectNonOverlappingPoints( mapMeshList[objID], obsObjPC, obsObjPC_filtered);
@@ -540,14 +551,15 @@ Eigen::Matrix4f NurbSLAM::alignScanWithMapObject(int objID, pcl::PointCloud<pcl:
 
 
     // Estimate features
-    pcl::FPFHEstimationOMP<pcl::PointNormal,pcl::PointNormal,pcl::FPFHSignature33> fest;
-    fest.setRadiusSearch(pclFeatureRadiusSetting);
-    // fest.setKSearch(7);
-    fest.setSearchMethod(search_method_);
-    fest.setInputCloud(obsObjPC_filtered);
-    fest.setSearchSurface(obsObjPC);
-    fest.setInputNormals(obsObjPC);
-    fest.compute (*obsObjPC_features);
+    computeFeatures(obsObjPC_filtered, obsObjPC, obsObjPC_features);
+    // pcl::FPFHEstimationOMP<pcl::PointNormal,pcl::PointNormal,pcl::FPFHSignature33> fest;
+    // fest.setRadiusSearch(pclFeatureRadiusSetting);
+    // // fest.setKSearch(7);
+    // fest.setSearchMethod(search_method_);
+    // fest.setInputCloud(obsObjPC_filtered);
+    // fest.setSearchSurface(obsObjPC);
+    // fest.setInputNormals(obsObjPC);
+    // fest.compute (*obsObjPC_features);
     cout << "Features have been computed for observation" << endl;
   
 
@@ -624,11 +636,11 @@ Eigen::Matrix4f NurbSLAM::alignScanWithMapObject(int objID, pcl::PointCloud<pcl:
     visu.spin ();
   }
 
-  bool bSaveAlignmentData = false;
+  // bool bSaveAlignmentData = false;
 
-  if (bSaveAlignmentData){
+  // if (bSaveAlignmentData){
 
-  }
+  // }
 
   return transformOut;
 }
@@ -693,6 +705,61 @@ void NurbSLAM::computeKeypoints(pcl::PointCloud<pcl::PointNormal>::Ptr cloud, pc
 
   // Others - harris6D...
   
+  
+}
+
+/*! 
+  \brief  Compute the normals for a given scan
+
+  \param cloud            input cloud, and the cloud where the normals are stored 
+
+  \author Benjamin Morrell
+  \date 08 May 2018
+*/
+void NurbSLAM::computeNormals(pcl::PointCloud<pcl::PointNormal>::Ptr cloud){
+  
+  // Init search tree
+  pcl::search::KdTree<pcl::PointNormal>::Ptr search_method_(new pcl::search::KdTree<pcl::PointNormal>);
+  
+  // Estimate normals
+  pcl::NormalEstimationOMP<pcl::PointNormal, pcl::PointNormal> nest;
+  nest.setRadiusSearch(pclNormalRadiusSetting);
+  // nest.setKSearch(7);
+  nest.setSearchMethod(search_method_);
+  nest.setViewPoint(state.matrix()(0,3),state.matrix()(1,3),state.matrix()(2,3)); // Set the viewpoint to the current pose
+  nest.setInputCloud(cloud);
+  nest.compute(*cloud);
+  cout << "computed normals for cloud" << endl;
+  
+}
+
+/*! 
+  \brief  Compute the features for a given scan
+
+  \param cloud            downsampled cloud
+  \param searchSurface    original cloud for searching neighbours
+  \param[out] features    the output features
+
+  \warning It is expected that the normals are already computed
+
+  \author Benjamin Morrell
+  \date 08 May 2018
+*/
+void NurbSLAM::computeFeatures(pcl::PointCloud<pcl::PointNormal>::Ptr cloud, pcl::PointCloud<pcl::PointNormal>::Ptr searchSurface, pcl::PointCloud<pcl::FPFHSignature33>::Ptr features){
+  
+  // Init search tree
+  pcl::search::KdTree<pcl::PointNormal>::Ptr search_method_(new pcl::search::KdTree<pcl::PointNormal>);
+  
+  // Estimate features
+  pcl::FPFHEstimationOMP<pcl::PointNormal,pcl::PointNormal,pcl::FPFHSignature33> fest;
+  fest.setRadiusSearch(pclFeatureRadiusSetting);
+  // fest.setKSearch(7);
+  fest.setSearchMethod(search_method_);
+  fest.setInputCloud(cloud);
+  fest.setSearchSurface(searchSurface);
+  fest.setInputNormals(searchSurface);
+  fest.compute (*features);
+  cout << "Features have been computed for cloud" << endl;
   
 }
 
@@ -829,6 +896,13 @@ void NurbSLAM::alignAndUpdateMeshes(){
     // Align scans with new transformation delta (delat from existing transform)
     pcl::transformPointCloud(*objectMeshList[i], *cloudTransformed, transformDelta);
 
+    // Compute normals if not already computed
+    if (!bObjectNormalsComputed){
+      computeNormals(cloudTransformed);
+      bObjectNormalsComputed = true;
+    }
+
+
     if (objIDList[i] == -1){
       // New object
       cout << "\n\t\t ADDING NEW OBJECT \n\n";
@@ -908,25 +982,32 @@ void NurbSLAM::updatePointCloudAndFeaturesInMap(int objID){
   mp.pointCloudFromObject3D(objID, msSurf, mtSurf, mapMeshList[objID]);
 
   // Search tree
-  pcl::search::KdTree<pcl::PointNormal>::Ptr search_method_(new pcl::search::KdTree<pcl::PointNormal>);
+  // pcl::search::KdTree<pcl::PointNormal>::Ptr search_method_(new pcl::search::KdTree<pcl::PointNormal>);
 
-  // Estimate normals
-  pcl::NormalEstimation<pcl::PointNormal, pcl::PointNormal> nest;
-  nest.setRadiusSearch(pclNormalRadiusSetting);
-  // nest.setKSearch(7);
-  nest.setSearchMethod(search_method_);
-  nest.setInputCloud(mapMeshList[objID]);
-  nest.compute(*mapMeshList[objID]);
+  cout << "Normal before at (0,0) from NURBS is: " << mapMeshList[objID]->at(0,0).normal_x << " , " << mapMeshList[objID]->at(0,0).normal_y << " , " << mapMeshList[objID]->at(0,0).normal_z << endl;
+
+  // // Estimate normals
+  computeNormals(mapMeshList[objID]);
+  // // pcl::NormalEstimation<pcl::PointNormal, pcl::PointNormal> nest;
+  // // nest.setRadiusSearch(pclNormalRadiusSetting);
+  // // // nest.setKSearch(7);
+  // // nest.setSearchMethod(search_method_);
+  // // nest.setViewPoint(state.matrix()(0,3),state.matrix()(1,3),state.matrix()(2,3)); // Set the viewpoint to the current pose
+  // // nest.setInputCloud(mapMeshList[objID]);
+  // // nest.compute(*mapMeshList[objID]);
   cout << "computed normals for map cloud" << endl;
 
+  cout << "Normal after at (0,0) from pcl is: " << mapMeshList[objID]->at(0,0).normal_x << " , " << mapMeshList[objID]->at(0,0).normal_y << " , " << mapMeshList[objID]->at(0,0).normal_z << endl;
+
   // Estimate features
-  pcl::FPFHEstimationOMP<pcl::PointNormal,pcl::PointNormal,pcl::FPFHSignature33> fest;
-  fest.setRadiusSearch(pclFeatureRadiusSetting);
-  // fest.setKSearch(7);
-  fest.setInputCloud(mapMeshList[objID]);
-  fest.setSearchMethod(search_method_);
-  fest.setInputNormals(mapMeshList[objID]);
-  fest.compute (*mapFeatureList[objID]);
+  computeFeatures(mapMeshList[objID], mapMeshList[objID], mapFeatureList[objID]);
+  // pcl::FPFHEstimationOMP<pcl::PointNormal,pcl::PointNormal,pcl::FPFHSignature33> fest;
+  // fest.setRadiusSearch(pclFeatureRadiusSetting);
+  // // fest.setKSearch(7);
+  // fest.setInputCloud(mapMeshList[objID]);
+  // fest.setSearchMethod(search_method_);
+  // fest.setInputNormals(mapMeshList[objID]);
+  // fest.compute (*mapFeatureList[objID]);
   cout << "Features have been computed for map cloud" << endl;
 
   // Set flag that there have been updates

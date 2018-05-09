@@ -6,7 +6,7 @@ using namespace PLib ;
 
 
 SplitSurface::SplitSurface(): correspondences_(new pcl::Correspondences), nExtraNew(0), maxDistThreshMultiplier(0.6),
-  newRowColBuffer(0)
+  newRowColBuffer(0), bEstimateNormals(false)
 {//corr_filtPtr(new pcl::Correspondences),
   // TDBM May have to set size of dynamic arrays
 
@@ -20,7 +20,7 @@ SplitSurface::SplitSurface(): correspondences_(new pcl::Correspondences), nExtra
 
 void SplitSurface::setInputMap(pcl::PointCloud<pcl::PointNormal>::Ptr mapCloud){
   this->mapCloud = mapCloud;
-  // TDBM - This may cause issues!
+  
 }
 
 void SplitSurface::setInputObservation(pcl::PointCloud<pcl::PointNormal>::Ptr obsCloud){
@@ -33,8 +33,7 @@ int SplitSurface::getCloudWidth(){
 }
 
 SplitSurface::~SplitSurface(){
-  // Do I need to something here to no leak memory?
-  // TDBM
+  ;
 }
 
 
@@ -78,13 +77,30 @@ void SplitSurface::splitNewSurfaceObservation(pcl::PointCloud<pcl::PointNormal>:
 */
 // void SplitSurface::findNonOverlappingData(pcl::PointCloud<pcl::PointXYZ>::Ptr mapCloud, pcl::PointCloud<pcl::PointXYZ>::Ptr obsCloud){
 void SplitSurface::findNonOverlappingData(){  
-  // Estimate normals
-  pcl::NormalEstimationOMP<pcl::PointNormal, pcl::PointNormal> nest;
-  nest.setRadiusSearch(0.025);
-  nest.setInputCloud(obsCloud);
-  nest.compute(*obsCloud);
-  nest.setInputCloud(mapCloud);
-  nest.compute(*mapCloud);
+
+  bool bNormalsPresentObs = !(obsCloud->at(0,0).normal_x == 0.0 && obsCloud->at(0,0).normal_y == 0.0 && obsCloud->at(0,0).normal_z == 0.0);
+  if (!bNormalsPresentObs){
+    cout << "No normals in observation cloud in SplitSurface" << endl;
+  }
+  bool bNormalsPresentMap = !(mapCloud->at(0,0).normal_x == 0.0 && mapCloud->at(0,0).normal_y == 0.0 && mapCloud->at(0,0).normal_z == 0.0);
+  if (!bNormalsPresentMap){
+    cout << "No normals in map cloud in SplitSurface" << endl;
+  }
+
+  if (bEstimateNormals || !bNormalsPresentObs || !bNormalsPresentMap){
+    cout << "\nEstimating normals in split surface. Note this may have errors as the viewpoint may be wrong\n" << endl;
+    // Estimate normals
+    pcl::NormalEstimationOMP<pcl::PointNormal, pcl::PointNormal> nest;
+    nest.setRadiusSearch(0.025);
+    if (bEstimateNormals || !bNormalsPresentObs){
+      nest.setInputCloud(obsCloud);
+      nest.compute(*obsCloud);
+    }
+    if (bEstimateNormals || !bNormalsPresentMap){
+      nest.setInputCloud(mapCloud);
+      nest.compute(*mapCloud);
+    }
+  }
 
   // Estimate correspondences
   bool doNormalShooting = true;

@@ -57,6 +57,7 @@ class NurbSLAM {
 
     float inlierFraction;
     
+    bool bObjectNormalsComputed;
 
     // Options
     bool bMappingModeOn;
@@ -77,6 +78,8 @@ class NurbSLAM {
     Eigen::Matrix4f alignScanKeypointsWithMapObjectDense(int objID, pcl::PointCloud<pcl::PointNormal>::Ptr obsObjPC);
     Eigen::Matrix4f alignScanWithMapObject(int objID, pcl::PointCloud<pcl::PointNormal>::Ptr obsObjPC);
     void computeKeypoints(pcl::PointCloud<pcl::PointNormal>::Ptr cloud, pcl::search::KdTree<pcl::PointNormal>::Ptr search_method_, pcl::PointCloud<pcl::PointNormal>::Ptr keypoints);
+    void computeNormals(pcl::PointCloud<pcl::PointNormal>::Ptr cloud);
+    void computeFeatures(pcl::PointCloud<pcl::PointNormal>::Ptr cloud, pcl::PointCloud<pcl::PointNormal>::Ptr searchSurface, pcl::PointCloud<pcl::FPFHSignature33>::Ptr features);
     void rejectNonOverlappingPoints(pcl::PointCloud<pcl::PointNormal>::Ptr mapObjPC, pcl::PointCloud<pcl::PointNormal>::Ptr obsObjPC, pcl::PointCloud<pcl::PointNormal>::Ptr obsPCFilt);
 
     void updateSLAMFilter();

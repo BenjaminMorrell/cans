@@ -75,6 +75,8 @@ class SplitSurface {
     pcl::PointCloud<pcl::PointNormal>::Ptr mapCloud;
     pcl::PointCloud<pcl::PointNormal>::Ptr obsCloud;
 
+    bool bEstimateNormals; // Whether or not to estimate the normals for overlap checking. Ideally not
+
 };
 
 

@@ -2338,7 +2338,7 @@ void Mapping3D::pointCloudFromNurbsData(Matrix_Point3Df& data, pcl::PointCloud<p
 void Mapping3D::pointCloudFromObject3D(int objID, int ms, int mt, pcl::PointCloud<pcl::PointNormal>::Ptr cloud){
 
   // Get the data points
-  objectMap[objID].getSurfacePointCloud(cloud, ms,  mt)
+  objectMap[objID].getSurfacePointCloud(cloud, ms,  mt);
 
   // Matrix_Point3Df data = objectMap[objID].getSurfacePoints(ms, mt); 
 
