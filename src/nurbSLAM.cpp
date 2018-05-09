@@ -872,7 +872,7 @@ void NurbSLAM::updateSLAMFilter(){
 void NurbSLAM::alignAndUpdateMeshes(){
   
   pcl::PointCloud<pcl::PointNormal>::Ptr cloudTransformed (new pcl::PointCloud<pcl::PointNormal>(mp.numRowsDesired, mp.numColsDesired));
-
+  
   std::vector<float> searchMetrics;
 
   int updateID = -1;
@@ -920,6 +920,7 @@ void NurbSLAM::alignAndUpdateMeshes(){
       // Get size before update
       int nRows = mp.objectMap[objIDList[i]].ctrlPnts().rows();
       int nCols = mp.objectMap[objIDList[i]].ctrlPnts().cols();
+      oldObj = mp.objectMap[objIDList[i]];
 
       mp.updateObject(objIDList[i], cloudTransformed); 
 
@@ -928,6 +929,12 @@ void NurbSLAM::alignAndUpdateMeshes(){
       nCols != mp.objectMap[objIDList[i]].ctrlPnts().cols()){
         cout << "Surface was updated" << endl;
         updateID = objIDList[i];
+
+        if (mp.objectMap[objIDList[i]].nansInObject()){
+          cout << "Nans in combined object. Reverting" << endl;
+          mp.updateObjectInMap(objIDList[i],oldObj);
+        }
+
       }else{
         // Flag for no update
         updateID = -1;
@@ -983,6 +990,12 @@ void NurbSLAM::updatePointCloudAndFeaturesInMap(int objID){
   
   // Generate point cloud for NURBS
   mp.pointCloudFromObject3D(objID, msSurf, mtSurf, mapMeshList[objID]);
+
+  if (doesPointCloudHaveNans(mapMeshList[objID])){
+    cout << "Nans in point cloud, revert to old" << endl;
+    mp.updateObjectInMap(objID,oldObj);
+    mp.pointCloudFromObject3D(objID, msSurf, mtSurf, mapMeshList[objID]);
+  }
 
   // Search tree
   // pcl::search::KdTree<pcl::PointNormal>::Ptr search_method_(new pcl::search::KdTree<pcl::PointNormal>);
@@ -1088,3 +1101,16 @@ void NurbSLAM::loadObjectIntoMap(std::string filename){
 
 }
 
+bool NurbSLAM::doesPointCloudHaveNans(pcl::PointCloud<pcl::PointNormal>::Ptr cloud){
+
+  for (int i = 0; i < cloud->height; i++){
+    for (int j = 0; j < cloud->width; j++){
+      if (!pcl::isFinite(cloud->at(j,i))){
+        cout << "Nans in point cloud. First at (" << i << ", " << j << ")\n";
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
