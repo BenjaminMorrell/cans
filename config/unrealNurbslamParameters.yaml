@@ -1,10 +1,10 @@
 # -----------------------------
 # Options (maybe put as args)
 # -----------------------------
-alignmentOption: 0 # 0 - dense to dense, 1 - keypoints to dense, 2 - keypoints to keypoints
-bShowAlignment: false
+alignmentOption: 1 # 0 - dense to dense, 1 - keypoints to dense, 2 - keypoints to keypoints
+bShowAlignment: true
 localisationOption: 2 # Option for localisation method (0 - PCL, 1 - RANSAC IA, 2 - Prerejective RANSAC)
-keypointOption: 0
+keypointOption: 0 # 0 - ISS detector, 1: Smoothed surface (not good)
 
 bRejectNonOverlappingInAlign: true # whether or not to reject non-overlapping points before alignment
 
@@ -63,6 +63,8 @@ nSurfPointsFactor: 5.0 # multiplier by the number of control points to get the n
 /mapping/nCtrlDefaultT: 25
 /mapping/degree: 2
 
+# Data association
+/mapping/searchThresh: 50.0 # capture everything for 67p
 
 # # Mesh processing
 # /meshing/numRowsDesired: 125
