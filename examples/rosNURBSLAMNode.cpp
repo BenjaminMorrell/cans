@@ -342,7 +342,9 @@ class nurbSLAMNode {
       // Mapping
       nh.param("/meshing/numRowsDesired", slam.mp.numRowsDesired, slam.mp.numRowsDesired);
       nh.param("/meshing/numColsDesired", slam.mp.numColsDesired, slam.mp.numColsDesired);
+      nh.param("/meshing/minRowsColsAllowed", slam.mp.minRowsColsAllowed, slam.mp.minRowsColsAllowed);
       nh.param("/meshing/maxNanAllowed", slam.mp.maxNanAllowed, slam.mp.maxNanAllowed);
+      nh.param("/meshing/maxNanPercentage", slam.mp.maxNanPercentage, slam.mp.maxNanPercentage);
       nh.param("/meshing/removeNanBuffer", slam.mp.removeNanBuffer, slam.mp.removeNanBuffer);
       nh.param("/meshing/newRowColBuffer", slam.mp.newRowColBuffer, slam.mp.newRowColBuffer);
       nh.param("/meshing/bFilterZ", slam.mp.bFilterZ, slam.mp.bFilterZ);

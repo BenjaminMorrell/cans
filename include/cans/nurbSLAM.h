@@ -63,6 +63,8 @@ class NurbSLAM {
     bool bMappingModeOn;
     bool bLocalisationModeOn;
 
+    Object3D oldObj;
+
   public:
 
     NurbSLAM();
@@ -89,6 +91,8 @@ class NurbSLAM {
 
     void setState(Eigen::Affine3f startingState);
     Eigen::Affine3f getState();
+
+    bool doesPointCloudHaveNans(pcl::PointCloud<pcl::PointNormal>::Ptr cloud);
 
     // Changing modes
     void activateMappingMode();
