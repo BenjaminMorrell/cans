@@ -26,7 +26,7 @@ private:
     
     
 
-    std::vector<float> searchThresh;
+    
 
     bool knotInsertionFlag;
     int numInsert;
@@ -103,6 +103,8 @@ public:
     int removeNanBuffer;
     int nCtrlDefault[2];
     int order[2]; 
+
+    std::vector<float> searchThresh;
 
     bool useNonRectData;
 

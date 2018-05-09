@@ -355,16 +355,12 @@ class nurbSLAMNode {
       nh.param("/mapping/degree", slam.mp.order[0], slam.mp.order[0]);
       nh.param("/mapping/degree", slam.mp.order[1], slam.mp.order[1]);
 
-      mh.param("/mapping/searchThresh", slam.mp.searchThresh[0], slam.mp.searchThresh[0]);
-      mh.param("/mapping/searchThresh", slam.mp.searchThresh[1], slam.mp.searchThresh[1]);
-      mh.param("/mapping/searchThresh", slam.mp.searchThresh[2], slam.mp.searchThresh[2]);
+      nh.param("/mapping/searchThresh", slam.mp.searchThresh[0], slam.mp.searchThresh[0]);
+      nh.param("/mapping/searchThresh", slam.mp.searchThresh[1], slam.mp.searchThresh[1]);
+      nh.param("/mapping/searchThresh", slam.mp.searchThresh[2], slam.mp.searchThresh[2]);
 
       cout << "nCtrlDefaultS is " << slam.mp.nCtrlDefault[0] << endl;
       cout << "nCtrlDefaultT is " << slam.mp.nCtrlDefault[1] << endl;
-
-      
-
-      slam.mp.searchThresh[0]
 
       cout << "Finished setting SLAM parameters" << endl;
 
