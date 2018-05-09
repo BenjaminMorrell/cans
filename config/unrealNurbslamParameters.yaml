@@ -25,7 +25,7 @@ pclNormalRadiusSetting: 0.6
 pclFeatureRadiusSetting: 1.2
 # RANSAC
 /ransac/inlierMultiplier: 0.05
-/ransac/maximumIterations: 500
+/ransac/maximumIterations: 5000
 
 # POSSIBLY USE
 /ransac/numberOfSamples: 3
@@ -58,7 +58,7 @@ nSurfPointsFactor: 5.0 # multiplier by the number of control points to get the n
 /meshing/zThreshMultiplier: 0.005
 
 # NURBS generation
-/mapping/useNonRectData: true # To use the new extension method
+/mapping/useNonRectData: false # To use the new extension method
 /mapping/nCtrlDefaultS: 25
 /mapping/nCtrlDefaultT: 25
 /mapping/degree: 2

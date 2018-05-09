@@ -1001,8 +1001,8 @@ void Mapping3D::meshFromScan(pcl::PointCloud<pcl::PointNormal>::Ptr cloudOut, pc
 
   cout << "Finished copying data across" << endl;
 
-  pcl::PCDWriter writer;
-  writer.write<pcl::PointNormal> ("cloud_pre_nan_average.pcd", *cloudOut, false);
+  // pcl::PCDWriter writer;
+  // writer.write<pcl::PointNormal> ("cloud_pre_nan_average.pcd", *cloudOut, false);
 
   // cout << "NanIndices are: " << nanIndices << endl;
 
@@ -1013,7 +1013,7 @@ void Mapping3D::meshFromScan(pcl::PointCloud<pcl::PointNormal>::Ptr cloudOut, pc
     cout << "Iteration for averaging Nans" << endl;
   }
 
-  writer.write<pcl::PointNormal> ("cloud_post_nan_average.pcd", *cloudOut, false);
+  // writer.write<pcl::PointNormal> ("cloud_post_nan_average.pcd", *cloudOut, false);
 
 }
 
@@ -1713,8 +1713,8 @@ void Mapping3D::updateObject(int objID, pcl::PointCloud<pcl::PointNormal>::Ptr o
   }
   
   // Get point cloud from NURBS object
-  obj.getSurfacePointCloud(objPC, 10, 10);
-  writer.write<pcl::PointNormal> ("newSurf_knot_insert.pcd", *objPC, false);
+  // obj.getSurfacePointCloud(objPC, 10, 10);
+  // writer.write<pcl::PointNormal> ("newSurf_knot_insert.pcd", *objPC, false);
 
 
   // Join Surfaces

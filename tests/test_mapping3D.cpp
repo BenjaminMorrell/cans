@@ -3327,6 +3327,8 @@ TEST_F (nurbsDataFromPCNonRect, testRightSurfUpdate){
     mp.writeObjectPCDFile(filename.c_str(), 1, 10, 10);
 
     pcl::PCDWriter writer;
+    filename = "/home/bjm/SpaceCRAFT/Results/nurbs_overlap_original_data.pcd";
+    writer.write<pcl::PointNormal> (filename, *dataC, false);
     filename = "/home/bjm/SpaceCRAFT/Results/nurbs_overlap_new_data.pcd";
     writer.write<pcl::PointNormal> (filename, *data_r[0], false);
 
@@ -3378,7 +3380,7 @@ TEST_F (nurbsDataFromPCNonRect, testRightSurfUpdate){
         if (j == 0){
             mp.objectMap[1].writeVRML("UpdatedSurf0.wrl",Color(255,100,255),50,80);
             filename = "/home/bjm/SpaceCRAFT/Results/nurbs_overlap_final.pcd";
-            mp.writeObjectPCDFile(filename.c_str(), 1, 125, 155);
+            mp.writeObjectPCDFile(filename.c_str(), 1, 10, 15);
         }else if (j == 1){
             mp.objectMap[1].writeVRML("UpdatedSurf1.wrl",Color(255,100,255),50,80);
         }else if (j == 2){
