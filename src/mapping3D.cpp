@@ -16,7 +16,8 @@ Mapping3D::Mapping3D():
     searchThresh(7), numRowsDesired(45), numColsDesired(45),
     maxNanAllowed(10), removeNanBuffer(0), numberOfMetrics(7), msSurf(125), mtSurf(125),
     knotInsertionFlag(true), numInsert(3), deltaKnotInsert(1e-2), newRowColBuffer(0), useNonRectData(false),
-    bFilterZ(false), nPointsZLim(400), zThreshMultiplier(0.03), bRejectScan(false)
+    bFilterZ(false), nPointsZLim(400), zThreshMultiplier(0.03), bRejectScan(false),
+    minRowsColsAllowed(15), maxNanPercentage(0.1)
 {
   searchThresh[0] = 7.75;
   searchThresh[1] = 7.75;
@@ -935,14 +936,16 @@ void Mapping3D::meshFromScan(pcl::PointCloud<pcl::PointNormal>::Ptr cloudOut, pc
 
   // Rest cloud size given number of output rows and cols
   if (rowFlags.count() < numRowsDesired){
-    pcl::common::deleteRows(*cloudOut, *cloudOut, numRowsDesired - rowFlags.count());
+    pcl::common::deleteRows(*cloudOut, *cloudOut, (int)std::ceil((float)(numRowsDesired - rowFlags.count())/2.0));
+    // pcl::common::deleteRows(*cloudOut, *cloudOut, numRowsDesired - rowFlags.count());
     cout << "Remove rows from output. Size is now: Rows: " << cloudOut->height << ", Cols: " << cloudOut->width << endl;
     // Note that delete Rows removes twice the input amount -= so take the new values from the output cloud
     numRows = cloudOut->height;
   }
 
   if (colFlags.count() < numColsDesired){
-    pcl::common::deleteCols(*cloudOut, *cloudOut, numColsDesired - colFlags.count());
+    pcl::common::deleteCols(*cloudOut, *cloudOut, (int)std::ceil((float)(numColsDesired - colFlags.count())/2.0));
+    // pcl::common::deleteCols(*cloudOut, *cloudOut, numColsDesired - colFlags.count());
     cout << "Remove cols from output. Size is now: Rows: " << cloudOut->height << ", Cols: " << cloudOut->width << endl;
     // Note that delete Cols removes twice the input amount -= so take the new values from the output cloud
     numCols = cloudOut->width;
@@ -1007,6 +1010,8 @@ void Mapping3D::meshFromScan(pcl::PointCloud<pcl::PointNormal>::Ptr cloudOut, pc
   }
 
   cout << "Finished copying data across" << endl;
+
+  cout << "Number of nans left: " << nanArray.count() << endl;
 
   // pcl::PCDWriter writer;
   // writer.write<pcl::PointNormal> ("cloud_pre_nan_average.pcd", *cloudOut, false);

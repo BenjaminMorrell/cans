@@ -939,3 +939,27 @@ Eigen::Array<float,4,Eigen::Dynamic> Object3D::getBatchDistanceFromPointsToSurfa
 
   return distAndGrad;
 }
+
+
+//-------------------------------------------------------------------
+/*! 
+  \brief  Check if any of the contorl points are nan
+
+  \author Benjamin Morrell
+  \date 09 May 2018
+*/
+bool Object3D::nansInObject(){
+
+  Matrix_HPoint3Df controlPoints = this->ctrlPnts();
+
+  for (int i = 0; i < controlPoints.rows(); i++){
+    for (int j = 0; j < controlPoints.cols(); j++){
+      if (!std::isfinite(controlPoints(i,j).x()) || !std::isfinite(controlPoints(i,j).y()) || !std::isfinite(controlPoints(i,j).z())){
+        cout << "Nan in control points" << endl;
+        return true;
+      }
+    }
+  }
+
+  return false;
+}

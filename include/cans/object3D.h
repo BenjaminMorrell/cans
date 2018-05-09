@@ -69,6 +69,7 @@ class Object3D : public NurbsSurfacef {
     float getDistanceFromPointToSurface(Eigen::Vector3f& query, int ms = 20, int mt = 20);
     Eigen::Array<float,4,Eigen::Dynamic> getBatchDistanceFromPointsToSurface(Eigen::Array<float,3,Eigen::Dynamic>& query, int ms = 20, int mt = 20);
 
+    bool nansInObject();
 
 
     Point3Df& getCentre();

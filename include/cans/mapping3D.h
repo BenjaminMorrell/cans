@@ -99,7 +99,9 @@ public:
 
     int numRowsDesired;
     int numColsDesired;
+    int minRowsColsAllowed;
     int maxNanAllowed;
+    float maxNanPercentage;
     int removeNanBuffer;
     int nCtrlDefault[2];
     int order[2]; 

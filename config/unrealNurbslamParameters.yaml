@@ -49,7 +49,10 @@ nSurfPointsFactor: 6.0 # multiplier by the number of control points to get the n
 # Mesh processing
 /meshing/numRowsDesired: 115
 /meshing/numColsDesired: 115
+/meshing/minRowsColsAllowed: 15
 /meshing/maxNanAllowed: 5
+/meshing/maxNanPercentage: 0.25
+
 /meshing/removeNanBuffer: 4
 /meshing/newRowColBuffer: 10
 
