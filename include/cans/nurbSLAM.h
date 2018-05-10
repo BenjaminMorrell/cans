@@ -46,7 +46,14 @@ class NurbSLAM {
     Eigen::Affine3f transformDelta;
 
   
-    // Other SLAM filter stuff maybe...
+    // SLAM components
+    Eigen::Matrix<float,12,1> ekfState;
+    Eigen::Matrix<float,12,12> P;
+    Eigen::Matrix<float,12,12> J;
+    Eigen::Matrix<float,12,12> Q;
+    Eigen::Matrix<float,6,6> R;
+    Eigen::Matrix<float,6,12> Jh;
+    Eigen::Matrix<float,12,6> K;
 
     // Lists to store sets of scans
     std::vector<pcl::PointCloud<pcl::PointNormal>::Ptr> objectMeshList; 
@@ -54,6 +61,7 @@ class NurbSLAM {
     std::vector<pcl::PointCloud<pcl::FPFHSignature33>::Ptr> mapFeatureList; 
     std::vector<int> objIDList;
     std::vector<Eigen::Matrix4f> transformationList;
+    std::vector<float> inlierFractionList;
 
     float inlierFraction;
     
@@ -72,7 +80,7 @@ class NurbSLAM {
     ~NurbSLAM();
 
     // Higher level function
-    void processScans(std::vector<pcl::PointCloud<pcl::PointNormal>::Ptr> clouds);
+    void processScans(std::vector<pcl::PointCloud<pcl::PointNormal>::Ptr> clouds, float timestep = 0.0);
 
     int processSingleScan(pcl::PointCloud<pcl::PointNormal>::Ptr cloud, pcl::PointCloud<pcl::PointNormal>::Ptr cloudTransformed);
 
@@ -84,7 +92,8 @@ class NurbSLAM {
     void computeFeatures(pcl::PointCloud<pcl::PointNormal>::Ptr cloud, pcl::PointCloud<pcl::PointNormal>::Ptr searchSurface, pcl::PointCloud<pcl::FPFHSignature33>::Ptr features);
     void rejectNonOverlappingPoints(pcl::PointCloud<pcl::PointNormal>::Ptr mapObjPC, pcl::PointCloud<pcl::PointNormal>::Ptr obsObjPC, pcl::PointCloud<pcl::PointNormal>::Ptr obsPCFilt);
 
-    void updateSLAMFilter();
+    void processStepEKF(float timestep);
+    void updateSLAMFilter(float timestep);
 
     void alignAndUpdateMeshes();
     void updatePointCloudAndFeaturesInMap(int objID);
