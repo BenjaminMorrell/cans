@@ -18,6 +18,8 @@
 // #include <pcl/features/normal_3d_omp.h>
 // #include <pcl/features/fpfh_omp.h>
 #include <pcl/features/normal_3d.h>
+#include <pcl/features/3dsc.h>
+#include <pcl/features/shot_omp.h>
 
 // Already in splitSurface.h
 // #include <pcl/registration/icp.h>
@@ -37,9 +39,10 @@
 #include <pcl/visualization/pcl_visualizer.h>
 typedef pcl::visualization::PointCloudColorHandlerCustom<pcl::PointNormal> ColorHandlerT; // Visualisation?
 
-
+template<typename featureType = pcl::FPFHSignature33>
 class NurbSLAM {
-
+  public:
+    typedef boost::shared_ptr<pcl::PointCloud<featureType> > Ptr;
   private:
     
     Eigen::Affine3f state;
@@ -51,7 +54,7 @@ class NurbSLAM {
     // Lists to store sets of scans
     std::vector<pcl::PointCloud<pcl::PointNormal>::Ptr> objectMeshList; 
     std::vector<pcl::PointCloud<pcl::PointNormal>::Ptr> mapMeshList; 
-    std::vector<pcl::PointCloud<pcl::FPFHSignature33>::Ptr> mapFeatureList; 
+    std::vector<pcl::PointCloud<featureType>::Ptr> mapFeatureList; 
     std::vector<int> objIDList;
     std::vector<Eigen::Matrix4f> transformationList;
 
@@ -79,14 +82,18 @@ class NurbSLAM {
     Eigen::Matrix4f alignScanKeypointsWithMapObjectKeypoints(int objID, pcl::PointCloud<pcl::PointNormal>::Ptr obsObjPC);
     Eigen::Matrix4f alignScanKeypointsWithMapObjectDense(int objID, pcl::PointCloud<pcl::PointNormal>::Ptr obsObjPC);
     Eigen::Matrix4f alignScanWithMapObject(int objID, pcl::PointCloud<pcl::PointNormal>::Ptr obsObjPC);
+
     void computeKeypoints(pcl::PointCloud<pcl::PointNormal>::Ptr cloud, pcl::search::KdTree<pcl::PointNormal>::Ptr search_method_, pcl::PointCloud<pcl::PointNormal>::Ptr keypoints);
     void computeNormals(pcl::PointCloud<pcl::PointNormal>::Ptr cloud);
-    void computeFeatures(pcl::PointCloud<pcl::PointNormal>::Ptr cloud, pcl::PointCloud<pcl::PointNormal>::Ptr searchSurface, pcl::PointCloud<pcl::FPFHSignature33>::Ptr features);
+
+    void computeFeatures(pcl::PointCloud<pcl::PointNormal>::Ptr cloud, pcl::PointCloud<pcl::PointNormal>::Ptr searchSurface, pcl::PointCloud<featureType>::Ptr features);
+    
     void rejectNonOverlappingPoints(pcl::PointCloud<pcl::PointNormal>::Ptr mapObjPC, pcl::PointCloud<pcl::PointNormal>::Ptr obsObjPC, pcl::PointCloud<pcl::PointNormal>::Ptr obsPCFilt);
 
     void updateSLAMFilter();
 
     void alignAndUpdateMeshes();
+
     void updatePointCloudAndFeaturesInMap(int objID);
 
     void setState(Eigen::Affine3f startingState);
@@ -138,6 +145,7 @@ class NurbSLAM {
     std::vector<double> processTimes; // Vector that is 5 values long. 1) Mesh processing, 2) Data association, 3) Alignment, 4) pose update, 5) Update map
     // For a given process Scan call, this is cumulative for the number of scans
 
+    int featureSelection;
 
     int keypointOption;
 };

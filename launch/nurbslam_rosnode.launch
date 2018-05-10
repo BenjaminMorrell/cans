@@ -5,7 +5,8 @@
   <arg name="slamMode" default="0"/> 
 
   <!-- Load parameters -->
-  <rosparam command="load" file="$(find cans)/config/unrealNurbslamParameters.yaml" />
+  <!-- <rosparam command="load" file="$(find cans)/config/unrealNurbslamParameters.yaml" /> -->
+  <rosparam command="load" file="$(find cans)/config/unrealNurbslamParametersLowRes.yaml" />
   <!-- <rosparam command="load" file="$(find cans)/config/nurbslamParameters.yaml" /> -->
 
   <!-- Run node -->

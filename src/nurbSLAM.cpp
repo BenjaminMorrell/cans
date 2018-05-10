@@ -25,7 +25,8 @@ NurbSLAM::NurbSLAM():
     modelResolutionKeypoints(0.005), minNeighboursKeypoints(5),
     ransac_maximumIterations(5000), ransac_numberOfSamples(3),
     ransac_correspondenceRandomness(3), ransac_similarityThreshold(0.9), ransac_inlierFraction(0.25),
-    processTimes(5), bObjectNormalsComputed(false)
+    processTimes(5), bObjectNormalsComputed(false),
+    featureSelection(0)
 {
   state = Eigen::Affine3f::Identity();
   transformDelta = Eigen::Affine3f::Identity();
@@ -491,9 +492,10 @@ Eigen::Matrix4f NurbSLAM::alignScanKeypointsWithMapObjectDense(int objID, pcl::P
   \author Benjamin Morrell
   \date 30 April 2018
 */
+template<typename featureType = pcl::FPFHSignature33>
 Eigen::Matrix4f NurbSLAM::alignScanWithMapObject(int objID, pcl::PointCloud<pcl::PointNormal>::Ptr obsObjPC){
   
-  pcl::PointCloud<pcl::FPFHSignature33>::Ptr obsObjPC_features (new pcl::PointCloud<pcl::FPFHSignature33>);
+  pcl::PointCloud<featureType>::Ptr obsObjPC_features (new pcl::PointCloud<featureType>);
   pcl::PointCloud<pcl::PointNormal>::Ptr obsObjPC_aligned (new pcl::PointCloud<pcl::PointNormal>);
   pcl::PointCloud<pcl::PointNormal>::Ptr obsObjPC_filtered (new pcl::PointCloud<pcl::PointNormal>);
 
@@ -575,7 +577,7 @@ Eigen::Matrix4f NurbSLAM::alignScanWithMapObject(int objID, pcl::PointCloud<pcl:
     //Perform alignment 
     if (localisationOption == 1){
       // RANSAC Initial Alignment
-      pcl::SampleConsensusInitialAlignment<pcl::PointNormal,pcl::PointNormal,pcl::FPFHSignature33> align;
+      pcl::SampleConsensusInitialAlignment<pcl::PointNormal,pcl::PointNormal,featureType> align;
       align.setInputSource(obsObjPC_filtered);
       align.setSourceFeatures(obsObjPC_features);
       align.setInputTarget(mapMeshList[objID]);
@@ -601,7 +603,7 @@ Eigen::Matrix4f NurbSLAM::alignScanWithMapObject(int objID, pcl::PointCloud<pcl:
     }else if (localisationOption == 2){
       // Prerejective RANSAC
       // SampleConsensusPrerejective_Exposed<pcl::PointNormal,pcl::PointNormal,pcl::FPFHSignature33> align;
-      pcl::SampleConsensusPrerejective<pcl::PointNormal,pcl::PointNormal,pcl::FPFHSignature33> align;
+      pcl::SampleConsensusPrerejective<pcl::PointNormal,pcl::PointNormal,featureType> align;
       align.setInputSource(obsObjPC_filtered);
       align.setSourceFeatures(obsObjPC_features);
       align.setInputTarget(mapMeshList[objID]);
@@ -754,20 +756,54 @@ void NurbSLAM::computeNormals(pcl::PointCloud<pcl::PointNormal>::Ptr cloud){
   \author Benjamin Morrell
   \date 08 May 2018
 */
-void NurbSLAM::computeFeatures(pcl::PointCloud<pcl::PointNormal>::Ptr cloud, pcl::PointCloud<pcl::PointNormal>::Ptr searchSurface, pcl::PointCloud<pcl::FPFHSignature33>::Ptr features){
+void NurbSLAM::computeFeatures(pcl::PointCloud<pcl::PointNormal>::Ptr cloud, pcl::PointCloud<pcl::PointNormal>::Ptr searchSurface, pcl::PointCloud<featureType>::Ptr features){
   
   // Init search tree
   pcl::search::KdTree<pcl::PointNormal>::Ptr search_method_(new pcl::search::KdTree<pcl::PointNormal>);
   
   // Estimate features
-  pcl::FPFHEstimationOMP<pcl::PointNormal,pcl::PointNormal,pcl::FPFHSignature33> fest;
-  fest.setRadiusSearch(pclFeatureRadiusSetting);
-  // fest.setKSearch(7);
-  fest.setSearchMethod(search_method_);
-  fest.setInputCloud(cloud);
-  fest.setSearchSurface(searchSurface);
-  fest.setInputNormals(searchSurface);
-  fest.compute (*features);
+  switch (featureSelection){
+    case 0:
+      cout << "Computing FPFH" << endl;
+      pcl::FPFHEstimationOMP<pcl::PointNormal,pcl::PointNormal,featureType> fest;
+      fest.setRadiusSearch(pclFeatureRadiusSetting);
+      // fest.setKSearch(7);
+      fest.setSearchMethod(search_method_);
+      fest.setInputCloud(cloud);
+      fest.setSearchSurface(searchSurface);
+      fest.setInputNormals(searchSurface);
+      // Other options here...
+      // Depending on the feature
+
+      fest.compute (*features);
+    case 1:
+      cout << "Computing SHOT" << endl;
+      pcl::SHOTEstimationOMP<pcl::PointNormal,pcl::PointNormal,featureType> fest;
+      fest.setRadiusSearch(pclFeatureRadiusSetting);
+      // fest.setKSearch(7);
+      fest.setSearchMethod(search_method_);
+      fest.setInputCloud(cloud);
+      fest.setSearchSurface(searchSurface);
+      fest.setInputNormals(searchSurface);
+      // Other options here...
+      // Depending on the feature
+
+      fest.compute (*features);
+    case 2:
+      cout << "Computing 3DSC" << endl;
+      pcl::ShapeContext3DEstimation<pcl::PointNormal,pcl::PointNormal,featureType> fest;
+      fest.setRadiusSearch(pclFeatureRadiusSetting);
+      // fest.setKSearch(7);
+      fest.setSearchMethod(search_method_);
+      fest.setInputCloud(cloud);
+      fest.setSearchSurface(searchSurface);
+      fest.setInputNormals(searchSurface);
+      // Other options here...
+      // Depending on the feature
+
+      fest.compute (*features);
+  }
+  
   cout << "Features have been computed for cloud" << endl;
   
 }
@@ -986,12 +1022,12 @@ void NurbSLAM::updatePointCloudAndFeaturesInMap(int objID){
     // New object
     cout << "new object - first mesh to generate" << endl;
     mapMeshList.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr (new pcl::PointCloud<pcl::PointNormal>(mtSurf, msSurf, pcl::PointNormal())));
-    mapFeatureList.push_back(pcl::PointCloud<pcl::FPFHSignature33>::Ptr (new pcl::PointCloud<pcl::FPFHSignature33>));
+    mapFeatureList.push_back(pcl::PointCloud<featureType>::Ptr (new pcl::PointCloud<featureType>));
   }else{
     // write a new object over the old
     cout << "update object - replace the mesh and features" << endl;
     mapMeshList[objID] = pcl::PointCloud<pcl::PointNormal>::Ptr (new pcl::PointCloud<pcl::PointNormal>(mtSurf, msSurf, pcl::PointNormal()));
-    mapFeatureList[objID] = pcl::PointCloud<pcl::FPFHSignature33>::Ptr (new pcl::PointCloud<pcl::FPFHSignature33>);
+    mapFeatureList[objID] = pcl::PointCloud<featureType>::Ptr (new pcl::PointCloud<featureType>);
   }
   
   // Generate point cloud for NURBS

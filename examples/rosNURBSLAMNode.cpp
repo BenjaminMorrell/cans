@@ -74,6 +74,8 @@ class nurbSLAMNode {
       transformTF.child_frame_id_ = "cam_optical";
       transformTF.frame_id_ = "world";
 
+      stateFilename = "/home/bjm/SpaceCRAFT/unrealDataTrackN.txt";
+
       // Clear file
       ofstream myfile;
       myfile.open (stateFilename, std::ofstream::out | std::ofstream::trunc); // open and close to clear.
@@ -215,11 +217,11 @@ class nurbSLAMNode {
       // /home/amme2/Development/voxblox_ws/testNURBS_Unreal_6.wrl
       // TODO - wrap this in an if statement
       for (int i=0; i < slam.mp.objectMap.size(); i++){
-        std::string filename = "/home/amme2/Development/Results/testNURBS_Unreal_" + static_cast<ostringstream*>( &(ostringstream() << (i)) )->str() + ".wrl";
-        // std::string filename = "/home/bjm/SpaceCRAFT/Results/testNURBS_Unreal_" + static_cast<ostringstream*>( &(ostringstream() << (i)) )->str() + ".wrl";
+        // std::string filename = "/home/amme2/Development/Results/testNURBS_Unreal_" + static_cast<ostringstream*>( &(ostringstream() << (i)) )->str() + ".wrl";
+        std::string filename = "/home/bjm/SpaceCRAFT/Results/testNURBS_Unreal_" + static_cast<ostringstream*>( &(ostringstream() << (i)) )->str() + ".wrl";
         slam.mp.objectMap[i].writeVRML(filename.c_str(),Color(255,100,255),50,80); 
-        filename = "/home/amme2/Development/Results/testNURBS_Unreal_" + static_cast<ostringstream*>( &(ostringstream() << (i)) )->str() + ".pcd";
-        // filename = "/home/bjm/SpaceCRAFT/Results/testNURBS_Unreal_" + static_cast<ostringstream*>( &(ostringstream() << (i)) )->str() + ".pcd";
+        // filename = "/home/amme2/Development/Results/testNURBS_Unreal_" + static_cast<ostringstream*>( &(ostringstream() << (i)) )->str() + ".pcd";
+        filename = "/home/bjm/SpaceCRAFT/Results/testNURBS_Unreal_" + static_cast<ostringstream*>( &(ostringstream() << (i)) )->str() + ".pcd";
         slam.mp.writeObjectPCDFile(filename.c_str(), i, 125, 125);
       }
       
@@ -422,7 +424,7 @@ main (int argc, char** argv)
   ros::Subscriber sub = nh.subscribe ("/camera/points2", 1, &nurbSLAMNode::cloud_cb, &nurbnode);
 
   // Timer to process the cloud
-  ros::Timer timer = nh.createTimer(ros::Duration(30.0), &nurbSLAMNode::processPointCloud, &nurbnode);
+  ros::Timer timer = nh.createTimer(ros::Duration(10.0), &nurbSLAMNode::processPointCloud, &nurbnode);
   
   // Publisher for the NURBS objects
   ros::Publisher mapPub = nh.advertise<cans_msgs::Object3D>("object",1,false);
