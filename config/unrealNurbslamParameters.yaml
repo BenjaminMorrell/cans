@@ -6,9 +6,9 @@ bShowAlignment: false
 localisationOption: 2 # Option for localisation method (0 - PCL, 1 - RANSAC IA, 2 - Prerejective RANSAC)
 keypointOption: 0 # 0 - ISS detector, 1: Smoothed surface (not good)
 
-bRejectNonOverlappingInAlign: true # whether or not to reject non-overlapping points before alignment
+bRejectNonOverlappingInAlign: false # whether or not to reject non-overlapping points before alignment
 
-bPublishNurbsPointCloud: false # whether or not to publish the point cloud for visualuisation in Rviz
+bPublishNurbsPointCloud: true # whether or not to publish the point cloud for visualuisation in Rviz
 
 bTestMapGeneration: false
 
@@ -25,7 +25,7 @@ pclNormalRadiusSetting: 0.6
 pclFeatureRadiusSetting: 1.2
 # RANSAC
 /ransac/inlierMultiplier: 0.05
-/ransac/maximumIterations: 5000
+/ransac/maximumIterations: 500
 
 # POSSIBLY USE
 /ransac/numberOfSamples: 3
@@ -39,7 +39,7 @@ maxDistanceOverlap: 0.35 # maximum allowed distance away from existing surface t
 
 
 # Number of data points
-nSurfPointsFactor: 6.0 # multiplier by the number of control points to get the number of surface points to sample
+nSurfPointsFactor: 5.0 # multiplier by the number of control points to get the number of surface points to sample
 # Was 7.0
 
 

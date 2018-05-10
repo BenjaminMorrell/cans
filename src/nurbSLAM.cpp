@@ -548,6 +548,12 @@ Eigen::Matrix4f NurbSLAM::alignScanWithMapObject(int objID, pcl::PointCloud<pcl:
 
     if (bRejectNonOverlappingInAlign){
       rejectNonOverlappingPoints( mapMeshList[objID], obsObjPC, obsObjPC_filtered);
+
+      if (obsObjPC_filtered->width*obsObjPC_filtered->height < 10){
+        cout << "Not enough overlap points" << endl;
+        inlierFraction = 0.0;
+        return;
+      }
     }else{
       obsObjPC_filtered = obsObjPC;
     }

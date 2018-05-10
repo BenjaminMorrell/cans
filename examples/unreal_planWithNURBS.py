@@ -39,7 +39,7 @@ class Planner:
     self.time = 0.0
     self.elapsedTime = 0.0
     self.tmax = 100.0
-    self.averageVel = 0.07 # m/s
+    self.averageVel = 0.01 # m/s
 
     # Times for replanning
     self.replanHz = 0.1
@@ -59,7 +59,7 @@ class Planner:
 
     self.planner.inflate_buffer = 0.0
     self.planner.quad_buffer = 0.3
-    self.planner.nurbs_weight = 1e-10
+    self.planner.nurbs_weight = 1e-27
 
   def initialisePlanner(self):
     # Waypoints
@@ -79,7 +79,7 @@ class Planner:
     self.planner.on_disc_updated_signal()
 
     # Set mutation strength
-    self.planner.qr_polytraj.mutation_strength = 1e-15
+    self.planner.qr_polytraj.mutation_strength = 1e-26
 
   def computeTrajTime(self):
     if not'x' in self.start.keys():
@@ -122,7 +122,7 @@ class Planner:
     
     # Fixed weight
     for i in range(0,len(self.nurbs)):
-      self.planner.load_nurbs_obstacle(self.nurbs[i],sum_func=True,custom_weighting=False)
+      self.planner.load_nurbs_obstacle(self.nurbs[i],sum_func=True,custom_weighting=True)
       # self.planner.nurbs_weight = 1e-5#12
       # self.planner.on_nurbs_weight_update_button_clicked()
       # TODO(BM) find a more efficient way to update the NURBS for planning 
@@ -155,7 +155,7 @@ class Planner:
 
   def readNURBSMessage(self,msg):
     
-    if not plan.firstPlan or self.blockUpdate:
+    if self.blockUpdate:
       return
     # Print parameters
     print("ID: {}\nDegU: {}, DegV: {}\nnCtrl: ({}, {})".format(msg.ID,msg.degU,msg.degV,msg.nCtrlS,msg.nCtrlT))
@@ -245,7 +245,7 @@ class Planner:
 
     # Time to start replan
     # startTime = self.time + self.startDeltaT
-    startTime = self.elapsedTime #+ self.startDeltaT
+    startTime = self.elapsedTime + self.startDeltaT
     
     print("Getting start at time: {}".format(startTime))
     # State for the start
@@ -351,24 +351,24 @@ if __name__ == '__main__':
 
   # Set up start and goal 
   # For simple test case
-  plan.start['x'] = [0.8]
-  plan.start['y'] = [-2.0]
-  plan.start['z'] = [0.6]
-  plan.start['yaw'] = [0.0]
-  plan.goal['x'] = [0.8]
-  plan.goal['y'] = [1.0]
-  plan.goal['z'] = [0.6]
-  plan.goal['yaw'] = [0.0]
+  # plan.start['x'] = [0.8]
+  # plan.start['y'] = [-2.0]
+  # plan.start['z'] = [0.6]
+  # plan.start['yaw'] = [0.0]
+  # plan.goal['x'] = [0.8]
+  # plan.goal['y'] = [1.0]
+  # plan.goal['z'] = [0.6]
+  # plan.goal['yaw'] = [0.0]
 
   # For 67P test case
-  # plan.start['x'] = [-11.5]
-  # plan.start['y'] = [1.0]
-  # plan.start['z'] = [2.0]
-  # plan.start['yaw'] = [0.0]
-  # plan.goal['x'] = [11.5]
-  # plan.goal['y'] = [1.0]
-  # plan.goal['z'] = [2.0]
-  # plan.goal['yaw'] = [0.0]
+  plan.start['x'] = [-12.0]
+  plan.start['y'] = [0.0]
+  plan.start['z'] = [0.0]
+  plan.start['yaw'] = [0.0]
+  plan.goal['x'] = [11.5]
+  plan.goal['y'] = [-2.0]
+  plan.goal['z'] = [0.0]
+  plan.goal['yaw'] = [0.0]
 
   plan.initialisePlanner()
 
@@ -390,7 +390,7 @@ if __name__ == '__main__':
   # setpoint_pub = rospy.Publisher("setpoint",PoseStamped,queue_size=1)
 
   # Flag to subscribe to the tf from unreal to update the start position for planning
-  bUseTFToUpdateStart = True
+  bUseTFToUpdateStart = False
 
   if bUseTFToUpdateStart:
     # TF listener
@@ -406,21 +406,26 @@ if __name__ == '__main__':
       # setpoint_pub.publish(msg)
       # increment time
       # plan.time += 1.0/rateHz # TODO WARNING - this is not going to accurately track time
-      timer += 1.0/rateHz 
+      
       if timer > 1.0/ plan.replanHz:
         # plan.firstPlan = False
-        plan.setupAndRunTrajectory()
         timer = 0.0
+        plan.setupAndRunTrajectory()
+        
+
+      plan.time += 1.0/rateHz
+      timer += 1.0/rateHz 
+
 
       if bUseTFToUpdateStart:
         try:
-          (trans, rot) = tf_listener.lookupTransform('/world', '/nurb_cam', rospy.Time(0)) # time argument just gets the latest
+          (trans, rot) = tf_listener.lookupTransform('/world', '/cam_optical', rospy.Time(0)) # time argument just gets the latest
         except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
-          continue
+          pass
     
       #   plan.updateStartFromTF(trans,rot)
 
-      plan.time += 1.0/rateHz
+      
         
       r.sleep()
       

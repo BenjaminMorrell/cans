@@ -71,8 +71,8 @@ class nurbSLAMNode {
       slam.ransac_inlierMultiplier = 0.1; // for the RANSAC inlier threshold
       slam.modelResolutionKeypoints = 0.005; // For localisation
 
-      transformTF.child_frame_id_ = "nurb_cam";
-      transformTF.frame_id_ = "starting_cam";
+      transformTF.child_frame_id_ = "cam_optical";
+      transformTF.frame_id_ = "world";
 
       // Clear file
       ofstream myfile;
@@ -285,7 +285,7 @@ class nurbSLAMNode {
       pcl::toROSMsg(*cloud, msg);
 
       // Set frame ID
-      msg.header.frame_id = "local_origin";
+      msg.header.frame_id = "world";
       msg.header.seq = objID;
       msg.header.stamp = ros::Time::now();
 
@@ -422,21 +422,45 @@ main (int argc, char** argv)
   ros::Subscriber sub = nh.subscribe ("/camera/points2", 1, &nurbSLAMNode::cloud_cb, &nurbnode);
 
   // Timer to process the cloud
-  ros::Timer timer = nh.createTimer(ros::Duration(10.0), &nurbSLAMNode::processPointCloud, &nurbnode);
+  ros::Timer timer = nh.createTimer(ros::Duration(30.0), &nurbSLAMNode::processPointCloud, &nurbnode);
   
   // Publisher for the NURBS objects
   ros::Publisher mapPub = nh.advertise<cans_msgs::Object3D>("object",1,false);
   ros::Publisher mapPCPub = nh.advertise<sensor_msgs::PointCloud2>("object_point_cloud",1,false);
 
   tf::TransformBroadcaster tf_br;
+  tf::TransformListener tf_listener;
+
+
+  // Set initial state from TF listener
+  tf::StampedTransform transform;
+  Eigen::Affine3d transformEigen;
+
+  try{
+    tf_listener.waitForTransform("/world", "/starting_cam",
+                            ros::Time(0), ros::Duration(3.0));
+    tf_listener.lookupTransform("/world", "/starting_cam",  
+                              ros::Time(0), transform);
+    tf::transformTFToEigen(transform,transformEigen);
+  }
+  catch (tf::TransformException ex){
+    ROS_ERROR("%s",ex.what());
+    cout << "Using unit state" << endl;
+    transformEigen = Eigen::Affine3d::Identity();
+  }
+
+  
+
+  nurbnode.slam.setState(transformEigen.cast<float>());
+
 
   // Spin
   // ros::spin ();
   
-  ros::Rate r(1);// Adjust this 
+  ros::Rate r(10);// Adjust this 
   int counter = 0;
   while (nh.ok()){
-    if (counter%5 == 0){//nurbnode.bNewObjects){
+    if (counter%10 == 0){//nurbnode.bNewObjects){
       // If the objects have been updated
       for (int i = 0; i < nurbnode.slam.mp.objectMap.size(); i++){
         // for each object - fill a message and publish it
