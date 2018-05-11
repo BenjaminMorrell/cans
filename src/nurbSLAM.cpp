@@ -882,6 +882,8 @@ void NurbSLAM::rejectNonOverlappingPoints(pcl::PointCloud<pcl::PointNormal>::Ptr
 */
 void NurbSLAM::processStepEKF(float timestep){
 
+  cout << "\nState before process step is:\n" << ekfState << endl;
+
   for (int i=0; i < 3; i++){
     // Update positon with constant acceleration model
     ekfState(i) += ekfState(i+3)*timestep + ekfState(i+6)*std::pow(timestep,2.0)*0.5;
@@ -906,7 +908,8 @@ void NurbSLAM::processStepEKF(float timestep){
   // Update P
   P = J*P*J.transpose() + Q;
   
-  cout << "Completed EKF process step" << endl;
+  cout << "State after process step with timestep " << timestep << "s is:\n" << ekfState << endl;
+  cout << "Covariance, P is:\n" << P << endl;
 }
 
 /*! 

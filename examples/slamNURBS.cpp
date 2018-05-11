@@ -336,6 +336,9 @@ void runSLAM(int argc,char ** argv, ros::NodeHandle nh){
   // INITIALISE STATE
   slam.setState(transform);
 
+  // TIMESTEP
+  float timestep = 20.0; // 20.0 one scan every 20 seconds
+
   Eigen::Vector3f rpy; // init vector to store output state
 
   // Init pcl reader
@@ -397,7 +400,7 @@ void runSLAM(int argc,char ** argv, ros::NodeHandle nh){
     startTime = std::chrono::high_resolution_clock::now(); 
 
     // Process scans
-    slam.processScans(clouds);
+    slam.processScans(clouds, timestep);
 
     // End time and duraction
     endTime = std::chrono::high_resolution_clock::now();
