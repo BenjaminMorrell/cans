@@ -31,9 +31,9 @@ pclFeatureRadiusSetting: 0.1
 /ransac/numberOfSamples: 3
 /ransac/correspondenceRandomness: 3
 /ransac/similarityThreshold: 0.9
-/ransac/inlierFraction: 0.25 # this should maybe be more strict for the blender data
+/ransac/inlierFraction: 0.6 # this should maybe be more strict for the blender data
 
-validInlierThreshold: 0.5
+validInlierThreshold: 0.6
 
 maxDistanceOverlap: 0.05 # maximum allowed distance away from existing surface to not be classes as new data
 
@@ -47,7 +47,7 @@ nSurfPointsFactor: 5.0 # multiplier by the number of control points to get the n
 # Mesh processing
 /meshing/numRowsDesired: 95
 /meshing/numColsDesired: 95
-/meshing/maxNanAllowed: 10
+/meshing/maxNanAllowed: 5
 /meshing/removeNanBuffer: 2
 /meshing/newRowColBuffer: 10
 
@@ -72,10 +72,10 @@ nSurfPointsFactor: 5.0 # multiplier by the number of control points to get the n
 /ekf/pNoiseAccel: 0.3
 /ekf/pNoiseAng: 0.1
 /ekf/qNoiseMultiplier: 1.5
-/ekf/noiseObsBasePos: 0.05
-/ekf/noiseObsMultPos: 2.5
-/ekf/noiseObsBaseAng: 0.025
-/ekf/noiseObsMultAng: 1.25
+/ekf/noiseObsBasePos: 0.1
+/ekf/noiseObsMultPos: 5.0
+/ekf/noiseObsBaseAng: 0.05
+/ekf/noiseObsMultAng: 2.5
 
 
 # No filter settings
