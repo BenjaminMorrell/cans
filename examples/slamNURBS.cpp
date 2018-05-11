@@ -337,7 +337,8 @@ void runSLAM(int argc,char ** argv, ros::NodeHandle nh){
   slam.setState(transform);
 
   // TIMESTEP
-  float timestep = 20.0; // 20.0 one scan every 20 seconds
+  float timestep = 0.1; 
+  nh.param("/ekf/timestep", timestep, timestep);
 
   Eigen::Vector3f rpy; // init vector to store output state
 

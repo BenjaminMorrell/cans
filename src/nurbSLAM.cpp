@@ -910,6 +910,9 @@ void NurbSLAM::processStepEKF(float timestep){
   
   cout << "State after process step with timestep " << timestep << "s is:\n" << ekfState << endl;
   cout << "Covariance, P is:\n" << P << endl;
+
+  // Update state - pose
+  state.matrix().block(0,3,3,1) = ekfState.block(0,0,3,1);
 }
 
 /*! 

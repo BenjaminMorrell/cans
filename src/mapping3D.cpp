@@ -1275,7 +1275,6 @@ bool Mapping3D::averageOutNans(pcl::PointCloud<pcl::PointNormal>::Ptr cloud, Eig
   // cout << "Number of cols: " << nanIndices.cols() << endl;
 
   bool noNans = true;
-  cout << "number of nans: " << nanIndices.cols() << endl;
 
   for (int i = 0; i < nanIndices.cols(); i++){
     if (nanIndices(0,i) == -1){
