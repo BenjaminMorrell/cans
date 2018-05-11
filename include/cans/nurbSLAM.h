@@ -163,6 +163,8 @@ class NurbSLAM {
     float noiseObsMultPos;
     float noiseObsBaseAng;
     float noiseObsMultAng;
+
+    int processModel; // 0 - const accel, 1 - const vel, 2 - const pos
 };
 
 

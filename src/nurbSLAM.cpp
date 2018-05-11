@@ -25,7 +25,7 @@ NurbSLAM::NurbSLAM():
     modelResolutionKeypoints(0.005), minNeighboursKeypoints(5),
     ransac_maximumIterations(5000), ransac_numberOfSamples(3),
     ransac_correspondenceRandomness(3), ransac_similarityThreshold(0.9), ransac_inlierFraction(0.25),
-    processTimes(5), bObjectNormalsComputed(false)
+    processTimes(5), bObjectNormalsComputed(false), processModel(0)
 {
   state = Eigen::Affine3f::Identity();
   oldState = Eigen::Affine3f::Identity();
@@ -884,26 +884,51 @@ void NurbSLAM::processStepEKF(float timestep){
 
   cout << "\nState before process step is:\n" << ekfState << endl;
 
-  for (int i=0; i < 3; i++){
-    // Update positon with constant acceleration model
-    ekfState(i) += ekfState(i+3)*timestep + ekfState(i+6)*std::pow(timestep,2.0)*0.5;
-    // Update velocity with constant acceleration model
-    ekfState(i+3) += ekfState(i+6)*timestep;
+  switch (processModel){
+    case 0: // constant acceleration
+      for (int i=0; i < 3; i++){
+        // Update positon with constant acceleration model
+        ekfState(i) += ekfState(i+3)*timestep + ekfState(i+6)*std::pow(timestep,2.0)*0.5;
+        // Update velocity with constant acceleration model
+        ekfState(i+3) += ekfState(i+6)*timestep;
+      }
+
+      // Currently assume constant angles
+
+      // Update Jacobian with the timestep
+      J.setIdentity();
+      J(0,3) = timestep;
+      J(1,4) = timestep;
+      J(2,5) = timestep;
+      J(3,6) = timestep;
+      J(4,7) = timestep;
+      J(5,8) = timestep;
+      J(0,6) = 0.5*std::pow(timestep,2.0);
+      J(1,7) = 0.5*std::pow(timestep,2.0);
+      J(2,8) = 0.5*std::pow(timestep,2.0);
+      break;
+    case 1: // Constant velocity model
+      for (int i=0; i < 3; i++){
+        // Update positon with constant velocity model
+        ekfState(i) += ekfState(i+3)*timestep;
+      }
+
+      // Currently assume constant angles
+
+      // Update Jacobian with the timestep
+      J.setIdentity();
+      J(0,3) = timestep;
+      J(1,4) = timestep;
+      J(2,5) = timestep;
+      break;
+    case 2: // Zero velocity model
+
+      J.setIdentity();
+
+      break;
   }
 
-  // Currently assumet constante angles
-
-  // Update Jacobian with the timestep
-  J.setIdentity();
-  J(0,3) = timestep;
-  J(1,4) = timestep;
-  J(2,5) = timestep;
-  J(3,6) = timestep;
-  J(4,7) = timestep;
-  J(5,8) = timestep;
-  J(0,6) = 0.5*std::pow(timestep,2.0);
-  J(1,7) = 0.5*std::pow(timestep,2.0);
-  J(2,8) = 0.5*std::pow(timestep,2.0);
+  
 
   // Update P
   P = J*P*J.transpose() + Q;
