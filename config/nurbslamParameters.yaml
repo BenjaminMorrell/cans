@@ -2,11 +2,11 @@
 # Options (maybe put as args)
 # -----------------------------
 alignmentOption: 0 # 0 - dense to dense, 1 - keypoints to dense, 2 - keypoints to keypoints
-bShowAlignment: true
+bShowAlignment: false
 localisationOption: 2 # Option for localisation method (0 - PCL, 1 - RANSAC IA, 2 - Prerejective RANSAC)
 keypointOption: 0
 
-bRejectNonOverlappingInAlign: false # whether or not to reject non-overlapping points before alignment
+bRejectNonOverlappingInAlign: true # whether or not to reject non-overlapping points before alignment
 
 bPublishNurbsPointCloud: false # whether or not to publish the point cloud for visualuisation in Rviz
 
@@ -35,7 +35,7 @@ pclFeatureRadiusSetting: 0.1
 
 validInlierThreshold: 0.6
 
-maxDistanceOverlap: 0.05 # maximum allowed distance away from existing surface to not be classes as new data
+maxDistanceOverlap: 0.05 # maximum allowed distance away from existing surface to not be classed as new data
 
 # Number of data points
 nSurfPointsFactor: 5.0 # multiplier by the number of control points to get the number of surface points to sample
@@ -70,16 +70,17 @@ nSurfPointsFactor: 5.0 # multiplier by the number of control points to get the n
 /ekf/pNoisePos: 1.0
 /ekf/pNoiseVel: 3.0
 /ekf/pNoiseAccel: 3.0
-/ekf/pNoiseAng: 1.0
+/ekf/pNoiseAng: 0.1
 /ekf/qNoiseMultiplier: 3.0
-/ekf/noiseObsBasePos: 0.01
+/ekf/noiseObsBasePos: 0.05 # 0.01
 /ekf/noiseObsMultPos: 5.0
-/ekf/noiseObsBaseAng: 0.005
+/ekf/noiseObsBaseAng: 0.025 # 0.05
 /ekf/noiseObsMultAng: 2.5
+/ekf/rMatMultiplier: 1.0
 
 /ekf/timestep: 20.0 # For data-based cases
 
-/ekf/processModel: 0 # 0 - const accel, 1 - const vel, 2 - const pos
+/ekf/processModel: 2 # 0 - const accel, 1 - const vel, 2 - const pos
 
 # No filter settings
 # /ekf/pNoisePos: 3.0

@@ -57,6 +57,8 @@ NurbSLAM::NurbSLAM():
   noiseObsBaseAng = 0.5;
   noiseObsMultAng = 0.5;
 
+  rMatMultiplier = 1.0;
+
   // Set up matrices
   setInitEKFStates();
 
@@ -137,6 +139,7 @@ void NurbSLAM::processScans(std::vector<pcl::PointCloud<pcl::PointNormal>::Ptr> 
           // Remove transformation
           transformationList.pop_back();
           inlierFractionList.pop_back();
+
         }
       }
 
@@ -893,7 +896,7 @@ void NurbSLAM::processStepEKF(float timestep){
         ekfState(i+3) += ekfState(i+6)*timestep;
       }
 
-      // Currently assume constant angles
+      // Angular error in state - constant
 
       // Update Jacobian with the timestep
       J.setIdentity();
@@ -913,7 +916,7 @@ void NurbSLAM::processStepEKF(float timestep){
         ekfState(i) += ekfState(i+3)*timestep;
       }
 
-      // Currently assume constant angles
+      // Angular error in state - constant
 
       // Update Jacobian with the timestep
       J.setIdentity();
@@ -922,6 +925,8 @@ void NurbSLAM::processStepEKF(float timestep){
       J(2,5) = timestep;
       break;
     case 2: // Zero velocity model
+
+      // Angular error in state - constant
 
       J.setIdentity();
 
@@ -963,6 +968,8 @@ void NurbSLAM::updateSLAMFilter(float timestep){
   R(3,3) = std::sqrt(threeSig/3.0);
   R(4,4) = std::sqrt(threeSig/3.0);
   R(5,5) = std::sqrt(threeSig/3.0);
+
+  R = R*rMatMultiplier;
 
   cout << "R is: \n" << R << endl;
   // TODO - Revise and tune these settings 

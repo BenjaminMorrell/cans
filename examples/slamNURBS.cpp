@@ -123,6 +123,7 @@ void setSLAMParameters(NurbSLAM& slam, ros::NodeHandle nh){
   nh.param("/ekf/noiseObsBaseAng", slam.noiseObsBaseAng, slam.noiseObsBaseAng);
   nh.param("/ekf/noiseObsMultAng", slam.noiseObsMultAng, slam.noiseObsMultAng);
   nh.param("/ekf/processModel", slam.processModel, slam.processModel);
+  nh.param("/ekf/rMatMultiplier", slam.rMatMultiplier, slam.rMatMultiplier);
   
 
 
