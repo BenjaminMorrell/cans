@@ -1654,16 +1654,19 @@ void Mapping3D::updateObject(int objID, pcl::PointCloud<pcl::PointNormal>::Ptr o
 
   ss.splitNewSurfaceObservation(mapObjPC, obsObjPC);
   cout << "Extend Direction is: " << ss.extendDirection << endl;
+  
+
+  if (ss.extendDirection[0] == 'N' || ss.extendDirection[1] == 'N'){
+    cout << "\nNo extension of surface needed (not enough new data)\n" << endl;
+    return;
+  }
+  
+
   if (useNonRectData){
     // Get new data indices 
     ss.getNewDataIndices();
     cout << "New Row indices are:\n" << ss.newRowIndices << endl;
     cout << "New Col indices are:\n" << ss.newColIndices << endl;
-  }
-
-  if (ss.extendDirection[0] == 'N' || ss.extendDirection[1] == 'N'){
-    cout << "\nNo extension of surface needed (not enough new data)\n" << endl;
-    return;
   }
 
   // Get matrix from new data

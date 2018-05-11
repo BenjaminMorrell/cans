@@ -2,7 +2,7 @@
 # Options (maybe put as args)
 # -----------------------------
 alignmentOption: 0 # 0 - dense to dense, 1 - keypoints to dense, 2 - keypoints to keypoints
-bShowAlignment: true
+bShowAlignment: false
 localisationOption: 2 # Option for localisation method (0 - PCL, 1 - RANSAC IA, 2 - Prerejective RANSAC)
 keypointOption: 0
 
@@ -24,7 +24,7 @@ pclNormalRadiusSetting: 0.05
 # Features
 pclFeatureRadiusSetting: 0.1
 # RANSAC
-/ransac/inlierMultiplier: 0.1
+/ransac/inlierMultiplier: 0.01
 /ransac/maximumIterations: 5000
 
 # POSSIBLY USE
@@ -71,10 +71,21 @@ nSurfPointsFactor: 5.0 # multiplier by the number of control points to get the n
 /ekf/pNoiseVel: 0.5
 /ekf/pNoiseAccel: 0.3
 /ekf/pNoiseAng: 0.1
-/ekf/qNoiseMultiplier: 3.0
-/ekf/noiseObsBasePos: 0.1
-/ekf/noiseObsMultPos: 5.0
-/ekf/noiseObsBaseAng: 0.05
-/ekf/noiseObsMultAng: 2.5
+/ekf/qNoiseMultiplier: 1.5
+/ekf/noiseObsBasePos: 0.05
+/ekf/noiseObsMultPos: 2.5
+/ekf/noiseObsBaseAng: 0.025
+/ekf/noiseObsMultAng: 1.25
 
+
+# No filter settings
+# /ekf/pNoisePos: 3.0
+# /ekf/pNoiseVel: 3.0
+# /ekf/pNoiseAccel: 3.0
+# /ekf/pNoiseAng: 3.0
+# /ekf/qNoiseMultiplier: 3.0
+# /ekf/noiseObsBasePos: 0.000000001
+# /ekf/noiseObsMultPos: 0.0
+# /ekf/noiseObsBaseAng: 0.000000001
+# /ekf/noiseObsMultAng: 0.0
 

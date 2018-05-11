@@ -872,6 +872,11 @@ void NurbSLAM::rejectNonOverlappingPoints(pcl::PointCloud<pcl::PointNormal>::Ptr
 /*! 
   \brief  Perform the EKF state update
 
+  Uses a Multiplicative EKF for the attitude - from 	
+  Fundamentals of Spacecraft Attitude Determination and Control
+  by Markley, F. Landis; Crassidis, John L
+  Chapter 6
+
   \author Benjamin Morrell
   \date 10 May 2018
 */
@@ -936,6 +941,9 @@ void NurbSLAM::updateSLAMFilter(float timestep){
   // Get the observation(s)
   //--------------------------------------------------
   //--------------------------------------------------
+  // Observation
+  transformDelta.matrix() = transformationList[0];// list is of 4x4 matrices
+  // Eigen::Affine3f deltaRotOnly(Eigen::AngleAxisf(transformDelta.linear()));
   Eigen::Matrix<float,6,1> observation, predicted;
   predicted.setZero();
   Eigen::Vector3f stateTrans;
@@ -943,34 +951,32 @@ void NurbSLAM::updateSLAMFilter(float timestep){
   stateTrans(1) = state(1,3);
   stateTrans(2) = state(2,3);
 
-  // Rotation
-  Eigen::Vector3f rpy; // init vector to store output state  
-  transformDelta.matrix() = transformationList[0];// list is of 4x4 matrices
-  cout << "TransformDelta from alignment is:\n" << transformDelta.matrix() << endl;
- 
-  rpy = transformDelta.rotation().eulerAngles(2, 1, 0); // Check ordering
+  // cout << "Transformation linear is:\n" << transformDelta.linear() << endl;
 
-  observation(3) = rpy(2);
-  observation(4) = rpy(1);
-  observation(5) = rpy(0);
+  // Rotation - get rodrigeuz parameters
+  Eigen::Vector3f attitudeErrorRodrigeuz;
+  // Axis angle
+  Eigen::AngleAxisf attitudeErrorAA(transformDelta.linear());
+  // Compute Rodrigeuz parameter
+  attitudeErrorRodrigeuz = attitudeErrorAA.axis()*std::tan(attitudeErrorAA.angle()/2.0);
 
-  // Translation 
-  Eigen::Affine3f deltaRot;deltaRot.setIdentity();
-  Eigen::Vector3f deltaTrans; deltaTrans.setZero();
-  // Get pure rotation 3, 2, 1 Euler transformation
-  deltaRot.rotate (Eigen::AngleAxisf(observation(5),Eigen::Vector3f::UnitZ()));
-  deltaRot.rotate (Eigen::AngleAxisf(observation(4),Eigen::Vector3f::UnitY()));
-  deltaRot.rotate (Eigen::AngleAxisf(observation(3),Eigen::Vector3f::UnitX()));
+  observation(3) = attitudeErrorRodrigeuz(0);
+  observation(4) = attitudeErrorRodrigeuz(1);
+  observation(5) = attitudeErrorRodrigeuz(2);
   
-  // Init delta Trans
+  // Translation 
+  Eigen::Vector3f deltaTrans; deltaTrans.setZero();
   deltaTrans(0) = transformDelta(0,3);
   deltaTrans(1) = transformDelta(1,3);
   deltaTrans(2) = transformDelta(2,3);
 
   // Get t_delt = R_delt t_1 + t_delt - t_1
-  deltaTrans = deltaTrans + deltaRot*stateTrans - stateTrans;
+  deltaTrans = deltaTrans + transformDelta.linear()*stateTrans - stateTrans;
+  // deltaTrans = deltaTrans + deltaRotOnly*stateTrans - stateTrans;
+  
   
   // Put in the observation
+  // observation.block(0,0,3,2) = deltaTrans;
   observation(0) = deltaTrans(0);
   observation(1) = deltaTrans(1);
   observation(2) = deltaTrans(2);
@@ -984,28 +990,40 @@ void NurbSLAM::updateSLAMFilter(float timestep){
 
   cout << "Kalman Gain is:\n" << K << endl;
 
-  // Update the state
-  ekfState += K*(observation - predicted);
+  // KF Update 
+  Eigen::Matrix<float,12,1> ekfUpdate;
 
-  cout << "EKF State is:\n" << ekfState << endl;
+  ekfUpdate = K*(observation - predicted);
 
-  cout << "State, pre transformation is:\n" << state.matrix() << endl;
+  cout << "EKF Update is:\n" << ekfUpdate << endl;
 
-  // Update the state 
+  // Update linear
+  ekfState.block(0,0,9,1) += ekfUpdate.block(0,0,9,1);
+  // cout << "EKF State is:\n" << ekfState << endl;
+
+  // Output angular
+  attitudeErrorRodrigeuz = ekfUpdate.block(9,0,3,1);
+
+  cout << "Rodrigeuz state is:\n" << attitudeErrorRodrigeuz << endl;
+  cout << "Norm is: " << 2.0*std::atan(attitudeErrorRodrigeuz.norm()) << "\nVector is: \n" << attitudeErrorRodrigeuz.normalized() << endl;
+
+  cout << "TransformDelta from alignment is:\n" << transformDelta.matrix() << endl;
+
+  // Update state estimate
   oldState = state;
-  state.setIdentity();
+  cout << "State, pre transformation is:\n" << state.matrix() << endl;  
   
-  // Translation
+  // Apply rotation 
+  Eigen::Affine3f deltaRotTransform(Eigen::AngleAxisf(2.0*std::atan(attitudeErrorRodrigeuz.norm()), attitudeErrorRodrigeuz.normalized()));
+  // state.rotate(Eigen::AngleAxisf(2*std:atanf(attitudeErrorRodrigeuz.norm()), attitudeErrorRodrigeuz.normalized()));
+
+  state = deltaRotTransform*state;
+
+  // Apply Translation
   state(0,3) = ekfState(0);
   state(1,3) = ekfState(1);
   state(2,3) = ekfState(2);
-    
-  // 3, 2, 1 Euler transformation
-  state.rotate (Eigen::AngleAxisf(ekfState(11),Eigen::Vector3f::UnitZ()));
-  state.rotate (Eigen::AngleAxisf(ekfState(10),Eigen::Vector3f::UnitY()));
-  state.rotate (Eigen::AngleAxisf(ekfState(9),Eigen::Vector3f::UnitX()));
-  // TODO check order of the angles!!!
-
+  
   cout << "State after transform is:\n" << state.matrix() << endl;
 
   // Get updated transform delta
@@ -1261,13 +1279,6 @@ void NurbSLAM::setInitEKFStates(){
   ekfState(1) = state.matrix()(1,3);
   ekfState(2) = state.matrix()(2,3);
 
-  // Rotation
-  Eigen::Vector3f rpy; // init vector to store output state
-  rpy = state.rotation().eulerAngles(2, 1, 0); // Check ordering
-
-  ekfState(9) = rpy(2);
-  ekfState(10) = rpy(1);
-  ekfState(11) = rpy(0);
 }
 
 /*! 

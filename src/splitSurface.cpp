@@ -676,7 +676,7 @@ void SplitSurface::getNewDataIndices(){
     s_ind = corr_filt[i].index_match/mt_obs;// Floor or how may times mt goes into index
     t_ind = corr_filt[i].index_match%mt_obs;// Remainder after dividing by mt
 
-    cout << "Point " << i << " as indices s, t, indices: (" << s_ind << ", " << t_ind << ")." << endl;
+    // cout << "Point " << i << " as indices s, t, indices: (" << s_ind << ", " << t_ind << ")." << endl;
 
     switch (extendDirection[1]){
       case 'L' : // Data to the Left edge of the new data
