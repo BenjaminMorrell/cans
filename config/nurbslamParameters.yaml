@@ -2,13 +2,15 @@
 # Options (maybe put as args)
 # -----------------------------
 alignmentOption: 0 # 0 - dense to dense, 1 - keypoints to dense, 2 - keypoints to keypoints
-bShowAlignment: false
+bShowAlignment: true
 localisationOption: 2 # Option for localisation method (0 - PCL, 1 - RANSAC IA, 2 - Prerejective RANSAC)
 keypointOption: 0
 
 bRejectNonOverlappingInAlign: false # whether or not to reject non-overlapping points before alignment
 
 bPublishNurbsPointCloud: false # whether or not to publish the point cloud for visualuisation in Rviz
+
+bTestMapGeneration: false
 
 # -----------------------------
 # Localisation
@@ -29,10 +31,11 @@ pclFeatureRadiusSetting: 0.1
 /ransac/numberOfSamples: 3
 /ransac/correspondenceRandomness: 3
 /ransac/similarityThreshold: 0.9
-/ransac/inlierFraction: 0.25
+/ransac/inlierFraction: 0.25 # this should maybe be more strict for the blender data
 
 validInlierThreshold: 0.5
 
+maxDistanceOverlap: 0.05 # maximum allowed distance away from existing surface to not be classes as new data
 
 # Number of data points
 nSurfPointsFactor: 5.0 # multiplier by the number of control points to get the number of surface points to sample
@@ -49,10 +52,29 @@ nSurfPointsFactor: 5.0 # multiplier by the number of control points to get the n
 /meshing/newRowColBuffer: 10
 
 /meshing/bFilterZ: false
-/meshing/nPointsZLim: 400
+/meshing/nPointsZLim: 1000
+/meshing/zThreshMultiplier: 0.005
 
 # NURBS generation
 /mapping/useNonRectData: true # To use the new extension method
 /mapping/nCtrlDefaultS: 17
 /mapping/nCtrlDefaultR: 17
+/mapping/degree: 3
+
+# Data association
+# /mapping/searchThresh: 50.0 # capture everything for 67p
+
+# -----------------------------
+# EKF
+# -----------------------------
+/ekf/pNoisePos: 0.5
+/ekf/pNoiseVel: 0.5
+/ekf/pNoiseAccel: 0.3
+/ekf/pNoiseAng: 0.1
+/ekf/qNoiseMultiplier: 3.0
+/ekf/noiseObsBasePos: 0.1
+/ekf/noiseObsMultPos: 5.0
+/ekf/noiseObsBaseAng: 0.05
+/ekf/noiseObsMultAng: 2.5
+
 

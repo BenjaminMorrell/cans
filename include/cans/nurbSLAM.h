@@ -43,6 +43,7 @@ class NurbSLAM {
   private:
     
     Eigen::Affine3f state;
+    Eigen::Affine3f oldState;
     Eigen::Affine3f transformDelta;
 
   
@@ -98,6 +99,8 @@ class NurbSLAM {
     void alignAndUpdateMeshes();
     void updatePointCloudAndFeaturesInMap(int objID);
 
+    void setInitEKFStates();
+
     void setState(Eigen::Affine3f startingState);
     Eigen::Affine3f getState();
 
@@ -147,8 +150,19 @@ class NurbSLAM {
     std::vector<double> processTimes; // Vector that is 5 values long. 1) Mesh processing, 2) Data association, 3) Alignment, 4) pose update, 5) Update map
     // For a given process Scan call, this is cumulative for the number of scans
 
-
     int keypointOption;
+
+    // SLAM options
+
+    float pNoisePos;
+    float pNoiseVel;
+    float pNoiseAccel;
+    float pNoiseAng;
+    float qNoiseMultiplier;
+    float noiseObsBasePos;
+    float noiseObsMultPos;
+    float noiseObsBaseAng;
+    float noiseObsMultAng;
 };
 
 

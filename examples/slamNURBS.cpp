@@ -111,6 +111,19 @@ void setSLAMParameters(NurbSLAM& slam, ros::NodeHandle nh){
   cout << "nCtrlDefaultS is " << slam.mp.nCtrlDefault[0] << endl;
   cout << "nCtrlDefaultT is " << slam.mp.nCtrlDefault[1] << endl;
 
+  // SLAM EKF
+  nh.param("/ekf/pNoisePos", slam.pNoisePos, slam.pNoisePos);
+  nh.param("/ekf/pNoiseVel", slam.pNoiseVel, slam.pNoiseVel);
+  nh.param("/ekf/pNoiseAccel", slam.pNoiseAccel, slam.pNoiseAccel);
+  nh.param("/ekf/pNoiseAng", slam.pNoiseAng, slam.pNoiseAng);
+  nh.param("/ekf/qNoiseMultiplier", slam.qNoiseMultiplier, slam.qNoiseMultiplier);
+  
+  nh.param("/ekf/noiseObsBasePos", slam.noiseObsBasePos, slam.noiseObsBasePos);
+  nh.param("/ekf/noiseObsMultPos", slam.noiseObsMultPos, slam.noiseObsMultPos);
+  nh.param("/ekf/noiseObsBaseAng", slam.noiseObsBaseAng, slam.noiseObsBaseAng);
+  nh.param("/ekf/noiseObsMultAng", slam.noiseObsMultAng, slam.noiseObsMultAng);
+
+
   cout << "Finished setting SLAM parameters" << endl;
 
 }
@@ -272,6 +285,7 @@ void runSLAM(int argc,char ** argv, ros::NodeHandle nh){
   // slam.modelResolutionKeypoints = 0.005; // For localisation
 
   setSLAMParameters(slam, nh);
+  slam.setInitEKFStates();
 
   // Mapping settings
   // slam.mp.numRowsDesired = 95;

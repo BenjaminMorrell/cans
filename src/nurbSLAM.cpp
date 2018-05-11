@@ -28,6 +28,7 @@ NurbSLAM::NurbSLAM():
     processTimes(5), bObjectNormalsComputed(false)
 {
   state = Eigen::Affine3f::Identity();
+  oldState = Eigen::Affine3f::Identity();
   transformDelta = Eigen::Affine3f::Identity();
 
   // Mapping settings
@@ -42,59 +43,22 @@ NurbSLAM::NurbSLAM():
   mp.useNonRectData = true;
 
   // nSurfPointsFactor = (float)mp.numRowsDesired/(float)mp.nCtrlDefault;
-
+  cout << "Setting up EKF matrices" << endl;
   // EKF init
-  P.setIdentity();
-  float pInitPos = 0.05;
-  float pInitVel = 0.05;
-  float pInitAccel = 0.03;
-  float pInitAng = 0.01;
-  P(0,0) = pInitPos;
-  P(1,1) = pInitPos;
-  P(2,2) = pInitPos;
-  P(3,3) = pInitVel;
-  P(4,4) = pInitVel;
-  P(5,5) = pInitVel;
-  P(6,6) = pInitAccel;
-  P(7,7) = pInitAccel;
-  P(8,8) = pInitAccel;
-  P(9,9) = pInitAng;
-  P(10,10) = pInitAng;
-  P(12,12) = pInitAng;
+  pNoisePos = 0.05;
+  pNoiseVel = 0.05;
+  pNoiseAccel = 0.03;
+  pNoiseAng = 0.01;
+  qNoiseMultiplier = 3.0;
 
-  // Q = P;
-  Q.setIdentity();
-  Q(0,0) = pInitPos;
-  Q(1,1) = pInitPos;
-  Q(2,2) = pInitPos;
-  Q(3,3) = pInitVel;
-  Q(4,4) = pInitVel;
-  Q(5,5) = pInitVel;
-  Q(6,6) = pInitAccel;
-  Q(7,7) = pInitAccel;
-  Q(8,8) = pInitAccel;
-  Q(9,9) = pInitAng;
-  Q(10,10) = pInitAng;
-  Q(12,12) = pInitAng;
+  // Observation noise
+  noiseObsBasePos = 1.0;
+  noiseObsMultPos = 2.0;
+  noiseObsBaseAng = 0.5;
+  noiseObsMultAng = 0.5;
 
-  J.setIdentity();
-  J(0,3) = 1.0;J(1,4) = 1.0;J(2,5) = 1.0;
-  J(0,6) = 1.0;J(1,7) = 1.0;J(2,8) = 1.0;
-  J(4,6) = 1.0;J(5,7) = 1.0;J(6,8) = 1.0;
-  // These will be multiplies by time parameters DeltaT once we have it
-
-  R.setIdentity(); // This will be adjusted once observations are made
-
-  Jh.setZero();
-  Jh(0,0) = 1.0;
-  Jh(1,1) = 1.0;
-  Jh(2,2) = 1.0;
-  Jh(3,9) = 1.0;
-  Jh(4,10) = 1.0;
-  Jh(5,11) = 1.0;
-
-  // init EKF state
-  ekfState.setZero();
+  // Set up matrices
+  setInitEKFStates();
 
 }
 
@@ -106,7 +70,6 @@ NurbSLAM::NurbSLAM():
   \date 30 April 2018
 */
 NurbSLAM::~NurbSLAM(){;}
-
 
 //-------------------------------------------------------------------
 // ------------- HGHER LEVEL FUNCTIONALITY  -----------------------------
@@ -906,7 +869,6 @@ void NurbSLAM::rejectNonOverlappingPoints(pcl::PointCloud<pcl::PointNormal>::Ptr
 // ------------- SLAM FUNCTIONS  -----------------------------
 //-------------------------------------------------------------------
 
-
 /*! 
   \brief  Perform the EKF state update
 
@@ -955,31 +917,36 @@ void NurbSLAM::updateSLAMFilter(float timestep){
 
   // Set R from inlier fraction
   float metric = inlierFractionList[0];
-  float threeSig = 1.0 + 2.0*(1.0-metric);
+  float threeSig = noiseObsBasePos + noiseObsMultPos*(1.0-metric);
   R.setIdentity();
   R(0,0) = std::sqrt(threeSig/3.0);
   R(1,1) = std::sqrt(threeSig/3.0);
   R(2,2) = std::sqrt(threeSig/3.0);
   // Angles
-  threeSig = 0.5 + 0.5*(1.0-metric);
+  threeSig = noiseObsBaseAng + noiseObsMultAng*(1.0-metric);
   R(3,3) = std::sqrt(threeSig/3.0);
   R(4,4) = std::sqrt(threeSig/3.0);
   R(5,5) = std::sqrt(threeSig/3.0);
 
+  cout << "R is: \n" << R << endl;
   // TODO - Revise and tune these settings 
 
-  // Get the observation
+  //--------------------------------------------------
+  //--------------------------------------------------
+  // Get the observation(s)
+  //--------------------------------------------------
+  //--------------------------------------------------
   Eigen::Matrix<float,6,1> observation, predicted;
-  observation(0) = transformationList[0](0);
-  observation(1) = transformationList[0](1);
-  observation(2) = transformationList[0](2);
-  predicted(0) = ekfState(0);
-  predicted(1) = ekfState(1);
-  predicted(2) = ekfState(2);
+  predicted.setZero();
+  Eigen::Vector3f stateTrans;
+  stateTrans(0) = state(0,3);
+  stateTrans(1) = state(1,3);
+  stateTrans(2) = state(2,3);
 
   // Rotation
-  Eigen::Vector3f rpy; // init vector to store output state
+  Eigen::Vector3f rpy; // init vector to store output state  
   transformDelta.matrix() = transformationList[0];// list is of 4x4 matrices
+  cout << "TransformDelta from alignment is:\n" << transformDelta.matrix() << endl;
  
   rpy = transformDelta.rotation().eulerAngles(2, 1, 0); // Check ordering
 
@@ -987,19 +954,45 @@ void NurbSLAM::updateSLAMFilter(float timestep){
   observation(4) = rpy(1);
   observation(5) = rpy(0);
 
-  predicted(3) = ekfState(9);
-  predicted(4) = ekfState(10);
-  predicted(5) = ekfState(11);
+  // Translation 
+  Eigen::Affine3f deltaRot;deltaRot.setIdentity();
+  Eigen::Vector3f deltaTrans; deltaTrans.setZero();
+  // Get pure rotation 3, 2, 1 Euler transformation
+  deltaRot.rotate (Eigen::AngleAxisf(observation(5),Eigen::Vector3f::UnitZ()));
+  deltaRot.rotate (Eigen::AngleAxisf(observation(4),Eigen::Vector3f::UnitY()));
+  deltaRot.rotate (Eigen::AngleAxisf(observation(3),Eigen::Vector3f::UnitX()));
+  
+  // Init delta Trans
+  deltaTrans(0) = transformDelta(0,3);
+  deltaTrans(1) = transformDelta(1,3);
+  deltaTrans(2) = transformDelta(2,3);
 
-  cout << "Innovation is: " << observation - predicted << endl;
+  // Get t_delt = R_delt t_1 + t_delt - t_1
+  deltaTrans = deltaTrans + deltaRot*stateTrans - stateTrans;
+  
+  // Put in the observation
+  observation(0) = deltaTrans(0);
+  observation(1) = deltaTrans(1);
+  observation(2) = deltaTrans(2);
+
+  cout << "Observation is:\n" << observation << endl;
+  // cout << "Predicted is:\n" << predicted << endl;
+  // cout << "Innovation is: \n" << (observation - predicted) << endl;
 
   // Compute the Kalman gain
   K = P*Jh.transpose()*(Jh*P*Jh.transpose() + R).inverse();
 
+  cout << "Kalman Gain is:\n" << K << endl;
+
   // Update the state
   ekfState += K*(observation - predicted);
 
+  cout << "EKF State is:\n" << ekfState << endl;
+
+  cout << "State, pre transformation is:\n" << state.matrix() << endl;
+
   // Update the state 
+  oldState = state;
   state.setIdentity();
   
   // Translation
@@ -1008,15 +1001,19 @@ void NurbSLAM::updateSLAMFilter(float timestep){
   state(2,3) = ekfState(2);
     
   // 3, 2, 1 Euler transformation
-  state.rotate (Eigen::AngleAxisf(ekfState(3),Eigen::Vector3f::UnitZ()));
-  state.rotate (Eigen::AngleAxisf(ekfState(4),Eigen::Vector3f::UnitY()));
-  state.rotate (Eigen::AngleAxisf(ekfState(5),Eigen::Vector3f::UnitX()));
+  state.rotate (Eigen::AngleAxisf(ekfState(11),Eigen::Vector3f::UnitZ()));
+  state.rotate (Eigen::AngleAxisf(ekfState(10),Eigen::Vector3f::UnitY()));
+  state.rotate (Eigen::AngleAxisf(ekfState(9),Eigen::Vector3f::UnitX()));
   // TODO check order of the angles!!!
 
-  cout << "State transform is " << state.matrix() << endl;
+  cout << "State after transform is:\n" << state.matrix() << endl;
+
+  // Get updated transform delta
+  transformDelta = state*oldState.inverse();
+
+  cout << "TransformDelta is:\n" << transformDelta.matrix() << endl;
 
 }
-
 
 /*! 
   \brief  Update the alignment of meshes and update the map
@@ -1188,6 +1185,65 @@ void NurbSLAM::updatePointCloudAndFeaturesInMap(int objID){
 
 }
 
+void NurbSLAM::setInitEKFStates(){
+  cout << "Setting up EKF matrices" << endl;
+  // EKF init
+  P.setIdentity();
+  P(0,0) = pNoisePos;
+  P(1,1) = pNoisePos;
+  P(2,2) = pNoisePos;
+  P(3,3) = pNoiseVel;
+  P(4,4) = pNoiseVel;
+  P(5,5) = pNoiseVel;
+  P(6,6) = pNoiseAccel;
+  P(7,7) = pNoiseAccel;
+  P(8,8) = pNoiseAccel;
+  P(9,9) = pNoiseAng;
+  P(10,10) = pNoiseAng;
+  P(11,11) = pNoiseAng;
+
+  Q = P*qNoiseMultiplier;
+  // Q.setIdentity();
+  // Q(0,0) = pNoisePos;
+  // Q(1,1) = pNoisePos;
+  // Q(2,2) = pNoisePos;
+  // Q(3,3) = pNoiseVel;
+  // Q(4,4) = pNoiseVel;
+  // Q(5,5) = pNoiseVel;
+  // Q(6,6) = pNoiseAccel;
+  // Q(7,7) = pNoiseAccel;
+  // Q(8,8) = pNoiseAccel;
+  // Q(9,9) = pNoiseAng;
+  // Q(10,10) = pNoiseAng;
+  // Q(11,11) = pNoiseAng;
+
+  J.setIdentity();
+  J(0,3) = 1.0;J(1,4) = 1.0;J(2,5) = 1.0;
+  J(0,6) = 1.0;J(1,7) = 1.0;J(2,8) = 1.0;
+  J(4,6) = 1.0;J(5,7) = 1.0;J(6,8) = 1.0;
+  // These will be multiplies by time parameters DeltaT once we have it
+
+  R.setIdentity(); // This will be adjusted once observations are made
+
+  Jh.setZero();
+  Jh(0,0) = 1.0;
+  Jh(1,1) = 1.0;
+  Jh(2,2) = 1.0;
+  Jh(3,9) = 1.0;
+  Jh(4,10) = 1.0;
+  Jh(5,11) = 1.0;
+
+  // init EKF state
+  ekfState.setZero();
+
+  cout << "P init is:\n" << P << endl;
+}
+
+//-------------------------------------------------------------------
+// ------------- Get and set  -----------------------------
+//-------------------------------------------------------------------
+
+
 /*! 
   \brief  Sets the state
   
@@ -1197,10 +1253,22 @@ void NurbSLAM::updatePointCloudAndFeaturesInMap(int objID){
   \author Benjamin Morrell
   \date 30 April 2018
 */
-void NurbSLAM::setState(Eigen::Affine3f inputState){
+  void NurbSLAM::setState(Eigen::Affine3f inputState){
   this->state = inputState;
-}
+  oldState = state;
+  // Update EKF state
+  ekfState(0) = state.matrix()(0,3);
+  ekfState(1) = state.matrix()(1,3);
+  ekfState(2) = state.matrix()(2,3);
 
+  // Rotation
+  Eigen::Vector3f rpy; // init vector to store output state
+  rpy = state.rotation().eulerAngles(2, 1, 0); // Check ordering
+
+  ekfState(9) = rpy(2);
+  ekfState(10) = rpy(1);
+  ekfState(11) = rpy(0);
+}
 
 /*! 
   \brief  Get the current state
@@ -1211,6 +1279,7 @@ void NurbSLAM::setState(Eigen::Affine3f inputState){
 Eigen::Affine3f NurbSLAM::getState(){
   return state;
 }
+
 
 /*! 
   \brief Turns on mapping mode
