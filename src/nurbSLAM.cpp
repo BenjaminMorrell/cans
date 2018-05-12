@@ -1022,7 +1022,7 @@ void NurbSLAM::updateSLAMFilter(float timestep){
   //--------------------------------------------------
   //--------------------------------------------------
   
-  float angularError = std::tan(attitudeErrorAA.angle()/2.0);
+  float angularError = std::abs(std::tan(attitudeErrorAA.angle()/2.0));
   float linearError = 0.0;
   for (int k = 0; k < 3; k++){linearError += std::pow(observation(k),2.0);}
   linearError = std::sqrt(linearError);
@@ -1034,36 +1034,36 @@ void NurbSLAM::updateSLAMFilter(float timestep){
 
   if (angularError > 0.78){
     // High uncertainty if more than 45 degrees
-    angularErrorMult = 10000.0;
+    angularErrorMult = 100000000.0;
     cout << "Angular error > 45 deg, placing large uncertainty" << endl;
     bRejectAlignment = true;
   }
   if (angularError > 1.57){
     // High uncertainty if more than 90 degrees
     cout << "Angular error > 90 deg, placing very large uncertainty" << endl;
-    angularErrorMult = 10000000.0;
+    angularErrorMult = 100000000000.0;
     bRejectAlignment = true;
   }
 
   if (linearError > 1.0){
     // High uncertainty if more than 5 m NEED TO ADJUST THIS FOR DIFFERENT SCALES
     cout << "Linear error > 1 m, placing large uncertainty" << endl;
-    linearErrorMult = 10000.0;
+    linearErrorMult = 100000000.0;
     bRejectAlignment = true;
   }
 
   if (linearError > 3.0){
     // High uncertainty if more than 5 m NEED TO ADJUST THIS FOR DIFFERENT SCALES
     cout << "Linear error > 3 m, placing very large uncertainty" << endl;
-    linearErrorMult = 1000000.0;
+    linearErrorMult = 10000000000.0;
     bRejectAlignment = true;
   }
 
   if (inlierFractionList[0] < 0.6){
     // Increase uncertainty if fraction is low
     cout << "Very low inlier fraction. Placing large uncertainty" << endl;
-    linearErrorMult *= 100;
-    angularErrorMult *= 100;
+    linearErrorMult *= 10000;
+    angularErrorMult *= 10000;
     bRejectAlignment = true;
   }
 
