@@ -1076,6 +1076,13 @@ void NurbSLAM::updateSLAMFilter(float timestep){
     bRejectAlignment = true;
   }
 
+  if (bRejectAlignment){
+    cout << "No update to state, alignment rejected" << endl;
+    transformDelta = Eigen::Affine3f::Identity();
+    // State not updated
+    return;
+  }
+
   linearErrorMult = std::min((float)1e25,linearErrorMult);
   angularErrorMult = std::min((float)1e25,angularErrorMult);
 

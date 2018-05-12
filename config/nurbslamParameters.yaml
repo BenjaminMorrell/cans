@@ -6,7 +6,7 @@ bShowAlignment: false
 localisationOption: 2 # Option for localisation method (0 - PCL, 1 - RANSAC IA, 2 - Prerejective RANSAC)
 keypointOption: 0
 
-machine: 1
+machine: 0
 
 bRejectNonOverlappingInAlign: false # whether or not to reject non-overlapping points before alignment
 
@@ -77,7 +77,7 @@ nSurfPointsFactor: 5.0 # multiplier by the number of control points to get the n
 /ekf/pNoiseVel: 0.1
 /ekf/pNoiseAccel: 0.01
 /ekf/pNoiseAng: 5.0
-/ekf/qNoiseMultiplier: 0.001
+/ekf/qNoiseMultiplier: 0.01
 /ekf/noiseObsBasePos: 0.01 # 0.01
 /ekf/noiseObsMultPos: 1.0
 /ekf/noiseObsBaseAng: 0.005 # 0.05
