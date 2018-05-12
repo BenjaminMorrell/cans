@@ -115,6 +115,7 @@ public:
     float zThreshMultiplier;
     bool bRejectScan;
     
+    bool bNegateZ;
 
     int msSurf;
     int mtSurf;

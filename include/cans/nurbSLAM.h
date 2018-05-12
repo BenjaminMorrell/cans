@@ -43,7 +43,8 @@ class NurbSLAM {
   private:
     
     Eigen::Affine3f state;
-    Eigen::Affine3f oldState;
+    Eigen::Affine3f oldState; // after the process step
+    Eigen::Affine3f previousState; // Before most recent process step
     Eigen::Affine3f transformDelta;
 
   
@@ -66,6 +67,7 @@ class NurbSLAM {
 
     float inlierFraction;
     int numberOfPointsInAlignment;
+    bool bRejectAlignment;
     
     bool bObjectNormalsComputed;
 
@@ -139,6 +141,7 @@ class NurbSLAM {
     int localisationOption;
 
     bool bUseFullAlignmentTransformInUpdate;
+    bool bUseOldStateForNewObjects; 
 
     float modelResolutionKeypoints; // Setting for keypoint extraction
     int minNeighboursKeypoints;

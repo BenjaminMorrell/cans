@@ -103,12 +103,14 @@ void setSLAMParameters(NurbSLAM& slam, ros::NodeHandle nh){
   nh.param("/meshing/newRowColBuffer", slam.mp.newRowColBuffer, slam.mp.newRowColBuffer);
   nh.param("/meshing/bFilterZ", slam.mp.bFilterZ, slam.mp.bFilterZ);
   nh.param("/meshing/nPointsZLim", slam.mp.nPointsZLim, slam.mp.nPointsZLim);
+  nh.param("/meshing/bNegateZ", slam.mp.bNegateZ, slam.mp.bNegateZ);
 
   nh.param("/mapping/useNonRectData", slam.mp.useNonRectData, slam.mp.useNonRectData);
   nh.param("/mapping/nCtrlDefaultS", slam.mp.nCtrlDefault[0], slam.mp.nCtrlDefault[0]); 
   nh.param("/mapping/nCtrlDefaultT", slam.mp.nCtrlDefault[1], slam.mp.nCtrlDefault[1]);
 
   nh.param("/mapping/bUseFullAlignmentTransformInUpdate", slam.bUseFullAlignmentTransformInUpdate, slam.bUseFullAlignmentTransformInUpdate);
+  nh.param("/mapping/bUseOldStateForNewObjects", slam.bUseOldStateForNewObjects, slam.bUseOldStateForNewObjects);
   
 
   cout << "nCtrlDefaultS is " << slam.mp.nCtrlDefault[0] << endl;
@@ -168,6 +170,9 @@ void runSLAM(int argc,char ** argv, ros::NodeHandle nh){
 
   // Load data for given test case:
   cout << "In blender sequence test " << endl;
+
+  int machine = 0;
+  nh.param("machine", machine, machine);
 
   switch (dataSet){
     case 0: 
@@ -239,10 +244,17 @@ void runSLAM(int argc,char ** argv, ros::NodeHandle nh){
       break;
     case 6:
       // Longer Blob 2 - no problematic square parts
+      if (machine == 0){
+        filestem = "/home/bjm/Dropbox/PhD_Code/Data/3D_Scans/Blensor/Blob2/BlobScan_data00";
+        outFilestem = "/home/bjm/Dropbox/PhD_Code/Results/Blob2/blob_";
+        pathFilename = "/home/bjm/Dropbox/PhD_Code/Data/3D_Scans/Blensor/Blob2/BlobScan_path.txt";
+      }else if (machine == 1){
+        filestem = "/home/amme2/Development/Data/Blob2/BlobScan_data00";
+        outFilestem = "/home/amme2/Development/Results/Blensor/Blob2/blob_";
+        pathFilename = "/home/amme2/Development/Data/Blob2/BlobScan_path.txt";
+      }
       cout << "Running Long Blob2 Dataset\n";
-      filestem = "/home/bjm/Dropbox/PhD_Code/Data/3D_Scans/Blensor/Blob2/BlobScan_data00";
-      outFilestem = "/home/bjm/Dropbox/PhD_Code/Results/Blob2/blob_";
-      pathFilename = "/home/bjm/Dropbox/PhD_Code/Data/3D_Scans/Blensor/Blob2/BlobScan_path.txt";
+      
       scanSteps = 1;
       numberOfScans = numberOfScans*scanSteps;
       nData = 100;

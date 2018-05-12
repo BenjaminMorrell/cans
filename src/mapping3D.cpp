@@ -17,7 +17,7 @@ Mapping3D::Mapping3D():
     maxNanAllowed(10), removeNanBuffer(0), numberOfMetrics(7), msSurf(125), mtSurf(125),
     knotInsertionFlag(true), numInsert(3), deltaKnotInsert(1e-2), newRowColBuffer(0), useNonRectData(false),
     bFilterZ(false), nPointsZLim(400), zThreshMultiplier(0.03), bRejectScan(false),
-    minRowsColsAllowed(15), maxNanPercentage(0.1)
+    minRowsColsAllowed(15), maxNanPercentage(0.1), bNegateZ(false)
 {
   searchThresh[0] = 7.75;
   searchThresh[1] = 7.75;
@@ -1063,8 +1063,15 @@ void Mapping3D::getNanMatrixFromPointCloud(Eigen::Array<bool, Eigen::Dynamic, Ei
 
     float threeSigZ = std::sqrt(covarianceMatrix(2,2))*3.0;
 
-    zLimLow = centroid(2) - threeSigZ;
-    zLimHigh = centroid(2) + threeSigZ*zThreshMultiplier;
+    if (bNegateZ){
+      zLimHigh = centroid(2) + threeSigZ;
+      zLimLow = centroid(2) - threeSigZ*zThreshMultiplier;
+    }else{
+      zLimLow = centroid(2) - threeSigZ;
+      zLimHigh = centroid(2) + threeSigZ*zThreshMultiplier;
+    }
+    
+    
   }
 
   cout << "Zlow is: " << zLimLow << ", Zhigh is: " << zLimHigh << endl;

@@ -2,9 +2,11 @@
 # Options (maybe put as args)
 # -----------------------------
 alignmentOption: 0 # 0 - dense to dense, 1 - keypoints to dense, 2 - keypoints to keypoints
-bShowAlignment: true
+bShowAlignment: false
 localisationOption: 2 # Option for localisation method (0 - PCL, 1 - RANSAC IA, 2 - Prerejective RANSAC)
 keypointOption: 0
+
+machine: 1
 
 bRejectNonOverlappingInAlign: false # whether or not to reject non-overlapping points before alignment
 
@@ -52,8 +54,9 @@ nSurfPointsFactor: 5.0 # multiplier by the number of control points to get the n
 /meshing/newRowColBuffer: 10
 
 /meshing/bFilterZ: false
-/meshing/nPointsZLim: 1000
-/meshing/zThreshMultiplier: 0.005
+/meshing/nPointsZLim: 10000
+/meshing/zThreshMultiplier: -1.0
+/meshing/bNegateZ: true
 
 # NURBS generation
 /mapping/useNonRectData: true # To use the new extension method
@@ -65,6 +68,7 @@ nSurfPointsFactor: 5.0 # multiplier by the number of control points to get the n
 # /mapping/searchThresh: 50.0 # capture everything for 67p
 
 /mapping/bUseFullAlignmentTransformInUpdate: true
+/mapping/bUseOldStateForNewObjects: true
 
 # -----------------------------
 # EKF
@@ -72,12 +76,12 @@ nSurfPointsFactor: 5.0 # multiplier by the number of control points to get the n
 /ekf/pNoisePos: 1.0
 /ekf/pNoiseVel: 3.0
 /ekf/pNoiseAccel: 3.0
-/ekf/pNoiseAng: 0.1 #(0.5)
+/ekf/pNoiseAng: 0.5 
 /ekf/qNoiseMultiplier: 3.0
 /ekf/noiseObsBasePos: 0.01 # 0.01
-/ekf/noiseObsMultPos: 0.0
+/ekf/noiseObsMultPos: 1.0
 /ekf/noiseObsBaseAng: 0.005 # 0.05
-/ekf/noiseObsMultAng: 0.0
+/ekf/noiseObsMultAng: 1.0
 /ekf/rMatMultiplier: 1.0
 
 /ekf/timestep: 20.0 # For data-based cases

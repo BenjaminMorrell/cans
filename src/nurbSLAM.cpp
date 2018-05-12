@@ -26,10 +26,11 @@ NurbSLAM::NurbSLAM():
     ransac_maximumIterations(5000), ransac_numberOfSamples(3),
     ransac_correspondenceRandomness(3), ransac_similarityThreshold(0.9), ransac_inlierFraction(0.25),
     processTimes(5), bObjectNormalsComputed(false), processModel(0),numberOfPointsInAlignment(0),
-    bUseFullAlignmentTransformInUpdate(false)
+    bUseFullAlignmentTransformInUpdate(false), bRejectAlignment(false), bUseOldStateForNewObjects(false)
 {
   state = Eigen::Affine3f::Identity();
   oldState = Eigen::Affine3f::Identity();
+  previousState = Eigen::Affine3f::Identity();
   transformDelta = Eigen::Affine3f::Identity();
 
   // Mapping settings
@@ -84,6 +85,11 @@ void NurbSLAM::processScans(std::vector<pcl::PointCloud<pcl::PointNormal>::Ptr> 
   transformationList.clear();
   inlierFractionList.clear();
   processTimes.clear();
+  transformDelta = Eigen::Affine3f::Identity();
+
+  // Store the previous state
+  previousState = state;
+
   for (int i = 0; i < 5; i++){processTimes.push_back(0.0);}// reset to zero
   bMapUpdatedFromScan = false; // reset to false
 
@@ -96,6 +102,8 @@ void NurbSLAM::processScans(std::vector<pcl::PointCloud<pcl::PointNormal>::Ptr> 
 
   // Process step of EKF
   processStepEKF(timestep);
+
+  oldState = state;
   
   // Initial Scan processing
   for (int i = 0; i < clouds.size(); i++){
@@ -1028,17 +1036,27 @@ void NurbSLAM::updateSLAMFilter(float timestep){
     // High uncertainty if more than 45 degrees
     angularErrorMult = 10000.0;
     cout << "Angular error > 45 deg, placing large uncertainty" << endl;
+    bRejectAlignment = true;
   }
   if (angularError > 1.57){
     // High uncertainty if more than 90 degrees
     cout << "Angular error > 90 deg, placing very large uncertainty" << endl;
     angularErrorMult = 10000000.0;
+    bRejectAlignment = true;
   }
 
-  if (linearError > 5.0){
+  if (linearError > 1.0){
     // High uncertainty if more than 5 m NEED TO ADJUST THIS FOR DIFFERENT SCALES
-    cout << "Linear error > 5 m, placing large uncertainty" << endl;
-    linearErrorMult = 100000.0;
+    cout << "Linear error > 1 m, placing large uncertainty" << endl;
+    linearErrorMult = 10000.0;
+    bRejectAlignment = true;
+  }
+
+  if (linearError > 3.0){
+    // High uncertainty if more than 5 m NEED TO ADJUST THIS FOR DIFFERENT SCALES
+    cout << "Linear error > 3 m, placing very large uncertainty" << endl;
+    linearErrorMult = 1000000.0;
+    bRejectAlignment = true;
   }
 
   if (inlierFractionList[0] < 0.6){
@@ -1046,6 +1064,7 @@ void NurbSLAM::updateSLAMFilter(float timestep){
     cout << "Very low inlier fraction. Placing large uncertainty" << endl;
     linearErrorMult *= 100;
     angularErrorMult *= 100;
+    bRejectAlignment = true;
   }
 
   int desiredSize = mp.numRowsDesired*mp.numColsDesired;
@@ -1054,6 +1073,7 @@ void NurbSLAM::updateSLAMFilter(float timestep){
     cout << "Very low number of points. Placing large uncertainty" << endl;
     linearErrorMult *= 1000;
     angularErrorMult *= 1000;
+    bRejectAlignment = true;
   }
   
   float noiseObsMultPosSize = noiseObsMultPos;
@@ -1065,16 +1085,16 @@ void NurbSLAM::updateSLAMFilter(float timestep){
   float metric = inlierFractionList[0];
   float threeSig = noiseObsBasePos + noiseObsMultPos*(1.0-metric) + noiseObsMultPosSize*(1 - numberOfPointsInAlignment/desiredSize) + noiseObsMultPosErr*(linearError);
   R.setIdentity();
-  R(0,0) = std::sqrt(threeSig/3.0)*linearErrorMult;
-  R(1,1) = std::sqrt(threeSig/3.0)*linearErrorMult;
-  R(2,2) = std::sqrt(threeSig/3.0)*linearErrorMult;
+  R(0,0) = std::sqrt(threeSig/3.0);
+  R(1,1) = std::sqrt(threeSig/3.0);
+  R(2,2) = std::sqrt(threeSig/3.0);
   // Angles
   threeSig = noiseObsBaseAng + noiseObsMultAng*(1.0-metric) + noiseObsMultAngSize*(1 - numberOfPointsInAlignment/desiredSize) + noiseObsMultAngErr*(angularError);
-  R(3,3) = std::sqrt(threeSig/3.0)*angularErrorMult;
-  R(4,4) = std::sqrt(threeSig/3.0)*angularErrorMult;
-  R(5,5) = std::sqrt(threeSig/3.0)*angularErrorMult;
+  R(3,3) = std::sqrt(threeSig/3.0);
+  R(4,4) = std::sqrt(threeSig/3.0);
+  R(5,5) = std::sqrt(threeSig/3.0);
 
-  R = R*rMatMultiplier;
+  R = R*rMatMultiplier*linearErrorMult*angularErrorMult;
 
   cout << "R is: \n" << R << endl;
   // TODO - Revise and tune these settings 
@@ -1105,7 +1125,6 @@ void NurbSLAM::updateSLAMFilter(float timestep){
   cout << "TransformDelta from alignment is:\n" << transformDelta.matrix() << endl;
 
   // Update state estimate
-  oldState = state;
   cout << "State, pre transformation is:\n" << state.matrix() << endl;  
   
   // Apply rotation 
@@ -1138,19 +1157,22 @@ void NurbSLAM::updateSLAMFilter(float timestep){
 */
 void NurbSLAM::alignAndUpdateMeshes(){
   
+  if (bRejectAlignment){
+    cout << "Rejected alignment. Not updating the mesh" << endl;
+    bRejectAlignment = false;
+    return;
+  }
   pcl::PointCloud<pcl::PointNormal>::Ptr cloudTransformed (new pcl::PointCloud<pcl::PointNormal>(mp.numRowsDesired, mp.numColsDesired));
   
   std::vector<float> searchMetrics;
+
+  Eigen::Affine3f localTransformDelta;
+  localTransformDelta = transformDelta;
 
   int updateID = -1;
 
   cout << "In Align and update Meshes. TransformDelta EKF is:\n" << transformDelta.matrix() << endl;
   
-  if (transformationList.size() > 0 && bUseFullAlignmentTransformInUpdate){
-    transformDelta.matrix() = transformationList[0];
-    cout << "In Align and update Meshes. TransformDelta full is:\n" << transformationList[0] << endl;
-  }
-
   if (objectMeshList.size() > 0){
     cout << "Object mesh list has values cloud at [0] of size: " << objectMeshList[0]->size() << endl;
     cout << "and at (0,0) = " << objectMeshList[0]->at(0,0) << endl;
@@ -1168,8 +1190,22 @@ void NurbSLAM::alignAndUpdateMeshes(){
       cout << "ignoring scan due to too many Nans" << endl;
       continue;
     }
+    if (bUseFullAlignmentTransformInUpdate && transformationList.size() > 0){
+      cout << "Resetting transform delta for aligning meshes to full alignment" << endl;
+      localTransformDelta.matrix() = transformationList[i];
+      cout << "In Align and update Meshes. TransformDelta full is:\n" << transformationList[i] << endl;
+    }else{
+      localTransformDelta = transformDelta;
+    }
+    
+    if (objIDList[i] == -1 && bUseOldStateForNewObjects){
+      // New object - use transform before ekf process step
+      localTransformDelta = previousState*oldState.inverse(); // Will need to check this...
+      cout << "Using old state for add new object. Transform is:\n" << localTransformDelta.matrix() << endl;
+    }
+
     // Align scans with new transformation delta (delat from existing transform)
-    pcl::transformPointCloud(*objectMeshList[i], *cloudTransformed, transformDelta);
+    pcl::transformPointCloud(*objectMeshList[i], *cloudTransformed, localTransformDelta);
 
     // Compute normals if not already computed
     if (!bObjectNormalsComputed){
