@@ -1100,7 +1100,12 @@ void NurbSLAM::updateSLAMFilter(float timestep){
   R(4,4) = std::sqrt(threeSig/3.0);
   R(5,5) = std::sqrt(threeSig/3.0);
 
-  R = R*rMatMultiplier*linearErrorMult*angularErrorMult;
+  if (bRejectAlignment){
+    R = R*(float)1e25;
+  }else{
+    R = R*rMatMultiplier*linearErrorMult*angularErrorMult;
+  }
+  
 
   cout << "R is: \n" << R << endl;
   // TODO - Revise and tune these settings 
