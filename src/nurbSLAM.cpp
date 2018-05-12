@@ -26,7 +26,8 @@ NurbSLAM::NurbSLAM():
     ransac_maximumIterations(5000), ransac_numberOfSamples(3),
     ransac_correspondenceRandomness(3), ransac_similarityThreshold(0.9), ransac_inlierFraction(0.25),
     processTimes(5), bObjectNormalsComputed(false), processModel(0),numberOfPointsInAlignment(0),
-    bUseFullAlignmentTransformInUpdate(false), bRejectAlignment(false), bUseOldStateForNewObjects(false)
+    bUseFullAlignmentTransformInUpdate(false), bRejectAlignment(false), bUseOldStateForNewObjects(false),
+    rejectCriteria(6)
 {
   state = Eigen::Affine3f::Identity();
   oldState = Eigen::Affine3f::Identity();
@@ -63,6 +64,13 @@ NurbSLAM::NurbSLAM():
 
   // Set up matrices
   setInitEKFStates();
+
+  rejectCriteria[0] = 0.78; // 45 degrees
+  rejectCriteria[1] = 1.57;
+  rejectCriteria[2] = 1.5; // Linear error
+  rejectCriteria[3] = 3.0;
+  rejectCriteria[4] = 0.6; // inlier criteria
+  rejectCriteria[5] = 0.25; // fraction of points compared to desired. 
 
 }
 
@@ -1032,34 +1040,34 @@ void NurbSLAM::updateSLAMFilter(float timestep){
   float angularErrorMult = 1.0;
   float linearErrorMult = 1.0;
 
-  if (angularError > 0.78){
+  if (angularError > rejectCriteria[0]){
     // High uncertainty if more than 45 degrees
     angularErrorMult = 1e10;
     cout << "Angular error > 45 deg, placing large uncertainty" << endl;
     bRejectAlignment = true;
   }
-  if (angularError > 1.57){
+  if (angularError > rejectCriteria[1]){
     // High uncertainty if more than 90 degrees
     cout << "Angular error > 90 deg, placing very large uncertainty" << endl;
     angularErrorMult = 1e15;
     bRejectAlignment = true;
   }
 
-  if (linearError > 1.0){
+  if (linearError > rejectCriteria[2]){
     // High uncertainty if more than 5 m NEED TO ADJUST THIS FOR DIFFERENT SCALES
-    cout << "Linear error > 1 m, placing large uncertainty" << endl;
+    cout << "Linear error > 1.5 m, placing large uncertainty" << endl;
     linearErrorMult = 1e10;
     bRejectAlignment = true;
   }
 
-  if (linearError > 3.0){
+  if (linearError > rejectCriteria[3]){
     // High uncertainty if more than 5 m NEED TO ADJUST THIS FOR DIFFERENT SCALES
     cout << "Linear error > 3 m, placing very large uncertainty" << endl;
     linearErrorMult = 1e15;
     bRejectAlignment = true;
   }
 
-  if (inlierFractionList[0] < 0.6){
+  if (inlierFractionList[0] < rejectCriteria[4]){
     // Increase uncertainty if fraction is low
     cout << "Very low inlier fraction. Placing large uncertainty" << endl;
     linearErrorMult *= 1e5;
@@ -1068,7 +1076,7 @@ void NurbSLAM::updateSLAMFilter(float timestep){
   }
 
   int desiredSize = mp.numRowsDesired*mp.numColsDesired;
-  if ((float)numberOfPointsInAlignment/(float)desiredSize < 0.25){
+  if ((float)numberOfPointsInAlignment/(float)desiredSize < rejectCriteria[5]){
     // High penaty if there are not many points
     cout << "Very low number of points. Placing large uncertainty" << endl;
     linearErrorMult *= 1e5;

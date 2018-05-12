@@ -142,6 +142,7 @@ class NurbSLAM {
 
     bool bUseFullAlignmentTransformInUpdate;
     bool bUseOldStateForNewObjects; 
+    std::vector<float> rejectCriteria;
 
     float modelResolutionKeypoints; // Setting for keypoint extraction
     int minNeighboursKeypoints;

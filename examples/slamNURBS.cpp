@@ -129,6 +129,11 @@ void setSLAMParameters(NurbSLAM& slam, ros::NodeHandle nh){
   nh.param("/ekf/noiseObsMultAng", slam.noiseObsMultAng, slam.noiseObsMultAng);
   nh.param("/ekf/processModel", slam.processModel, slam.processModel);
   nh.param("/ekf/rMatMultiplier", slam.rMatMultiplier, slam.rMatMultiplier);
+
+  nh.param("/ekf/rejectCriteriaAng", slam.rejectCriteria[0], slam.rejectCriteria[0]);
+  nh.param("/ekf/rejectCriteriaLin", slam.rejectCriteria[2], slam.rejectCriteria[2]);
+  nh.param("/ekf/rejectCriteriaInlier", slam.rejectCriteria[4], slam.rejectCriteria[4]);
+  nh.param("/ekf/rejectCriteriaNumberP", slam.rejectCriteria[5], slam.rejectCriteria[5]);
   
 
 
