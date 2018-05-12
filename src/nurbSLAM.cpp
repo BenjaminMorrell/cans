@@ -1034,36 +1034,36 @@ void NurbSLAM::updateSLAMFilter(float timestep){
 
   if (angularError > 0.78){
     // High uncertainty if more than 45 degrees
-    angularErrorMult = 100000000.0;
+    angularErrorMult = 1e10;
     cout << "Angular error > 45 deg, placing large uncertainty" << endl;
     bRejectAlignment = true;
   }
   if (angularError > 1.57){
     // High uncertainty if more than 90 degrees
     cout << "Angular error > 90 deg, placing very large uncertainty" << endl;
-    angularErrorMult = 100000000000.0;
+    angularErrorMult = 1e15;
     bRejectAlignment = true;
   }
 
   if (linearError > 1.0){
     // High uncertainty if more than 5 m NEED TO ADJUST THIS FOR DIFFERENT SCALES
     cout << "Linear error > 1 m, placing large uncertainty" << endl;
-    linearErrorMult = 100000000.0;
+    linearErrorMult = 1e10;
     bRejectAlignment = true;
   }
 
   if (linearError > 3.0){
     // High uncertainty if more than 5 m NEED TO ADJUST THIS FOR DIFFERENT SCALES
     cout << "Linear error > 3 m, placing very large uncertainty" << endl;
-    linearErrorMult = 10000000000.0;
+    linearErrorMult = 1e15;
     bRejectAlignment = true;
   }
 
   if (inlierFractionList[0] < 0.6){
     // Increase uncertainty if fraction is low
     cout << "Very low inlier fraction. Placing large uncertainty" << endl;
-    linearErrorMult *= 10000;
-    angularErrorMult *= 10000;
+    linearErrorMult *= 1e5;
+    angularErrorMult *= 1e5;
     bRejectAlignment = true;
   }
 
@@ -1071,10 +1071,16 @@ void NurbSLAM::updateSLAMFilter(float timestep){
   if ((float)numberOfPointsInAlignment/(float)desiredSize < 0.25){
     // High penaty if there are not many points
     cout << "Very low number of points. Placing large uncertainty" << endl;
-    linearErrorMult *= 1000;
-    angularErrorMult *= 1000;
+    linearErrorMult *= 1e5;
+    angularErrorMult *= 1e5;
     bRejectAlignment = true;
   }
+
+  linearErrorMult = std::min((float)1e25,linearErrorMult);
+  angularErrorMult = std::min((float)1e25,angularErrorMult);
+
+  cout << "Linear Error Mult is: " << linearErrorMult << endl;
+  cout << "Angular Error Mult is: " << angularErrorMult << endl;
   
   float noiseObsMultPosSize = noiseObsMultPos;
   float noiseObsMultPosErr = noiseObsMultPos*0.5;
