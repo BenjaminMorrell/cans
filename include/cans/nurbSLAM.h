@@ -65,6 +65,7 @@ class NurbSLAM {
     std::vector<float> inlierFractionList;
 
     float inlierFraction;
+    int numberOfPointsInAlignment;
     
     bool bObjectNormalsComputed;
 

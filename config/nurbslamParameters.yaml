@@ -2,7 +2,7 @@
 # Options (maybe put as args)
 # -----------------------------
 alignmentOption: 0 # 0 - dense to dense, 1 - keypoints to dense, 2 - keypoints to keypoints
-bShowAlignment: false
+bShowAlignment: true
 localisationOption: 2 # Option for localisation method (0 - PCL, 1 - RANSAC IA, 2 - Prerejective RANSAC)
 keypointOption: 0
 
@@ -70,12 +70,12 @@ nSurfPointsFactor: 5.0 # multiplier by the number of control points to get the n
 /ekf/pNoisePos: 1.0
 /ekf/pNoiseVel: 3.0
 /ekf/pNoiseAccel: 3.0
-/ekf/pNoiseAng: 0.1
+/ekf/pNoiseAng: 0.1 #(0.5)
 /ekf/qNoiseMultiplier: 3.0
 /ekf/noiseObsBasePos: 0.01 # 0.01
-/ekf/noiseObsMultPos: 5.0
+/ekf/noiseObsMultPos: 0.0
 /ekf/noiseObsBaseAng: 0.005 # 0.05
-/ekf/noiseObsMultAng: 2.5
+/ekf/noiseObsMultAng: 0.0
 /ekf/rMatMultiplier: 1.0
 
 /ekf/timestep: 20.0 # For data-based cases

@@ -305,14 +305,7 @@ void runSLAM(int argc,char ** argv, ros::NodeHandle nh){
     case 2:
       slam.activateLocalisationMode();
       cout << "\n\n\t\tACTIVATING PURE LOCALISATION MODE\n\n" << endl;
-      // load object
-      try{
-        slam.loadObjectIntoMap((outFilestem + "_0_final_obj.obj").c_str());
-        // TODO may need to update this to load multiple objects
-      }catch(...){
-        cout << "\n\nNo object found to use for localisation. Exiting." << endl;
-        return;
-      }
+
       break;
   }
 
@@ -325,11 +318,24 @@ void runSLAM(int argc,char ** argv, ros::NodeHandle nh){
   transform(0,3) = state(0,0);
   transform(1,3) = state(1,0);
   transform(2,3) = state(2,0);
+  
     
   // 3, 2, 1 Euler transformation
   transform.rotate (Eigen::AngleAxisf(state(5,0),Eigen::Vector3f::UnitZ()));
   transform.rotate (Eigen::AngleAxisf(state(4,0),Eigen::Vector3f::UnitY()));
   transform.rotate (Eigen::AngleAxisf(state(3,0),Eigen::Vector3f::UnitX()));
+
+  if (nurbSLAMMode==2){
+    transform.setIdentity();
+    transform(0,3) = 1.03987;
+    transform(1,3) = 3.49792;
+    transform(2,3) = 0.178754;
+
+    transform.rotate (Eigen::AngleAxisf(3.0279,Eigen::Vector3f::UnitZ()));
+    transform.rotate (Eigen::AngleAxisf(0.0100855,Eigen::Vector3f::UnitY()));
+    transform.rotate (Eigen::AngleAxisf(1.67344,Eigen::Vector3f::UnitX()));
+  }
+  
 
   cout << "transform is " << transform.matrix() << endl;
 
@@ -338,6 +344,17 @@ void runSLAM(int argc,char ** argv, ros::NodeHandle nh){
 
   // INITIALISE STATE
   slam.setState(transform);
+
+  if (nurbSLAMMode==2){
+    // load object
+    try{
+      slam.loadObjectIntoMap((outFilestem + "1_final_obj_saved.obj").c_str());
+      // TODO may need to update this to load multiple objects
+    }catch(...){
+      cout << "\n\nNo object found to use for localisation. Exiting." << endl;
+      return;
+    }
+  }
 
   // TIMESTEP
   float timestep = 0.1; 
@@ -364,14 +381,23 @@ void runSLAM(int argc,char ** argv, ros::NodeHandle nh){
   ofstream myfile;
   myfile.open (timingFilename.c_str(), std::ofstream::out | std::ofstream::trunc); // open and close to clear.
   myfile.close();
+  ofstream myfile2;
+  myfile2.open ((outFilestem + "state_track_slam.txt").c_str(), std::ofstream::out | std::ofstream::trunc);
+  myfile.close();
+  
+  int start_i = 0;
+
+  if (nurbSLAMMode==2){
+    start_i = 50;
+  }
 
   // Run sequence of scans 
-  for (int i = 0; i < numberOfScans; i += scanSteps){
+  for (int i = start_i; i < numberOfScans; i += scanSteps){
     cout << "Processing Scan " << i << endl;
 
-    // if (i == 43 || i == 85){
-    //   slam.bShowAlignment = true;
-    // }
+    if (i == 49){
+      slam.bShowAlignment = true;
+    }
 
     // if (i == 60){
     //   slam.bShowAlignment = false;
@@ -431,7 +457,30 @@ void runSLAM(int argc,char ** argv, ros::NodeHandle nh){
 
     // Write timing information
     myfile.open (timingFilename.c_str(), std::ios_base::app); // Append
-    for (int i=0; i < 6; i++){myfile << processTimesVec[i] << ", ";}
+    for (int k=0; k < 6; k++){myfile << processTimesVec[k] << ", ";}
+    myfile << "\n";
+    myfile.close();
+
+    // Save final objects
+    for (int j = 0; j < slam.mp.objectMap.size(); j++){
+      
+      // Write result to pcd
+      filename = outFilestem + static_cast<ostringstream*>( &(ostringstream() << (j)) )->str() + "_end_result.pcd";
+      slam.mp.writeObjectPCDFile(filename.c_str(), j, 125, 125);
+
+
+      // Write final object to file
+      filename = outFilestem + static_cast<ostringstream*>( &(ostringstream() << (j)) )->str() + "_final_obj.obj";
+      slam.mp.objectMap[j].write(filename.c_str());
+
+      // Write VRML
+      filename = outFilestem + static_cast<ostringstream*>( &(ostringstream() << (j)) )->str() + "_savedObject.wrl";
+      slam.mp.objectMap[j].writeVRML(filename.c_str(),Color(255,100,255),50,80); 
+    }
+
+    // Open file
+    myfile.open ((outFilestem + "state_track_slam.txt").c_str(), std::ios_base::app); // Append
+    for (int k=0; k < 6; k++){myfile << state(k,i) << ", ";}
     myfile << "\n";
     myfile.close();
   }
@@ -440,26 +489,11 @@ void runSLAM(int argc,char ** argv, ros::NodeHandle nh){
   cout << "Final state set is: " << state << endl;
 
   // Write to file
-  myfile.open ((outFilestem + "state_track_slam.txt").c_str());
+  myfile.open ((outFilestem + "state_track_slam_final.txt").c_str());
   myfile << state;
   myfile.close();
 
-  // Save final objects
-  for (int i = 0; i < slam.mp.objectMap.size(); i++){
-    
-    // Write result to pcd
-    filename = outFilestem + static_cast<ostringstream*>( &(ostringstream() << (i)) )->str() + "_end_result.pcd";
-    slam.mp.writeObjectPCDFile(filename.c_str(), i, 125, 125);
-
-
-    // Write final object to file
-    filename = outFilestem + static_cast<ostringstream*>( &(ostringstream() << (i)) )->str() + "_final_obj.obj";
-    slam.mp.objectMap[i].write(filename.c_str());
-
-    // Write VRML
-    filename = outFilestem + static_cast<ostringstream*>( &(ostringstream() << (i)) )->str() + "_savedObject.wrl";
-    slam.mp.objectMap[i].writeVRML(filename.c_str(),Color(255,100,255),50,80); 
-  }
+  
   
 }
 

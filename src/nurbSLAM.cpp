@@ -25,7 +25,7 @@ NurbSLAM::NurbSLAM():
     modelResolutionKeypoints(0.005), minNeighboursKeypoints(5),
     ransac_maximumIterations(5000), ransac_numberOfSamples(3),
     ransac_correspondenceRandomness(3), ransac_similarityThreshold(0.9), ransac_inlierFraction(0.25),
-    processTimes(5), bObjectNormalsComputed(false), processModel(0)
+    processTimes(5), bObjectNormalsComputed(false), processModel(0),numberOfPointsInAlignment(0)
 {
   state = Eigen::Affine3f::Identity();
   oldState = Eigen::Affine3f::Identity();
@@ -250,7 +250,7 @@ int NurbSLAM::processSingleScan(pcl::PointCloud<pcl::PointNormal>::Ptr cloud, pc
   processTimes[0] += dur.count();
   cout << "Duration for mesh processing is: " << dur.count() << "ms" << endl;
 
-  cout << "transform is: " << state.matrix() << endl;
+  cout << "transform is: \n" << state.matrix() << endl;
 
   // Compute Metrics
   searchMetrics = mp.computeSearchMetrics(cloudTransformed);
@@ -382,7 +382,7 @@ Eigen::Matrix4f NurbSLAM::alignScanKeypointsWithMapObjectKeypoints(int objID, pc
   
 
   cout << "Completed alignment" << endl;
-  cout << "Transform matrix out is: " << transformOut << endl;
+  cout << "Transform matrix out is: \n" << transformOut << endl;
   if (bShowAlignment){
     // Show alignment
     pcl::visualization::PCLVisualizer visu("Alignment");
@@ -493,7 +493,7 @@ Eigen::Matrix4f NurbSLAM::alignScanKeypointsWithMapObjectDense(int objID, pcl::P
   inlierFraction = (float)align.getInliers().size()/(float)(obsObjPC_keypoints->width*obsObjPC_keypoints->height);
 
   cout << "Completed alignment" << endl;
-  cout << "Transform matrix out is: " << transformOut << endl;
+  cout << "Transform matrix out is: \n" << transformOut << endl;
   if (bShowAlignment){
     // Show alignment
     pcl::visualization::PCLVisualizer visu("Alignment");
@@ -583,6 +583,7 @@ Eigen::Matrix4f NurbSLAM::alignScanWithMapObject(int objID, pcl::PointCloud<pcl:
       obsObjPC_filtered = obsObjPC;
     }
 
+    numberOfPointsInAlignment = obsObjPC_filtered->width*obsObjPC_filtered->height;
 
     // Estimate features
     computeFeatures(obsObjPC_filtered, obsObjPC, obsObjPC_features);
@@ -657,7 +658,7 @@ Eigen::Matrix4f NurbSLAM::alignScanWithMapObject(int objID, pcl::PointCloud<pcl:
     
   }
     cout << "Completed alignment" << endl;
-    cout << "Transform matrix out is: " << transformOut << endl;
+    cout << "Transform matrix out is: \n" << transformOut << endl;
   if (bShowAlignment){
     // Show alignment
     pcl::visualization::PCLVisualizer visu("Alignment");
@@ -955,24 +956,7 @@ void NurbSLAM::processStepEKF(float timestep){
 */
 void NurbSLAM::updateSLAMFilter(float timestep){
   // Maybe just loop for each observation
-
-  // Set R from inlier fraction
-  float metric = inlierFractionList[0];
-  float threeSig = noiseObsBasePos + noiseObsMultPos*(1.0-metric);
-  R.setIdentity();
-  R(0,0) = std::sqrt(threeSig/3.0);
-  R(1,1) = std::sqrt(threeSig/3.0);
-  R(2,2) = std::sqrt(threeSig/3.0);
-  // Angles
-  threeSig = noiseObsBaseAng + noiseObsMultAng*(1.0-metric);
-  R(3,3) = std::sqrt(threeSig/3.0);
-  R(4,4) = std::sqrt(threeSig/3.0);
-  R(5,5) = std::sqrt(threeSig/3.0);
-
-  R = R*rMatMultiplier;
-
-  cout << "R is: \n" << R << endl;
-  // TODO - Revise and tune these settings 
+  
 
   //--------------------------------------------------
   //--------------------------------------------------
@@ -1022,6 +1006,78 @@ void NurbSLAM::updateSLAMFilter(float timestep){
   cout << "Observation is:\n" << observation << endl;
   // cout << "Predicted is:\n" << predicted << endl;
   // cout << "Innovation is: \n" << (observation - predicted) << endl;
+
+  //--------------------------------------------------
+  //--------------------------------------------------
+  // Update R
+  //--------------------------------------------------
+  //--------------------------------------------------
+  
+  float angularError = std::tan(attitudeErrorAA.angle()/2.0);
+  float linearError = 0.0;
+  for (int k = 0; k < 3; k++){linearError += std::pow(observation(k),2.0);}
+  linearError = std::sqrt(linearError);
+  cout << "Transform size metrics are, linear: " << linearError << ", angular: " << angularError << endl;
+
+  // Thesholds
+  float angularErrorMult = 1.0;
+  float linearErrorMult = 1.0;
+
+  if (angularError > 0.78){
+    // High uncertainty if more than 45 degrees
+    angularErrorMult = 10000.0;
+    cout << "Angular error > 45 deg, placing large uncertainty" << endl;
+  }
+  if (angularError > 1.57){
+    // High uncertainty if more than 90 degrees
+    cout << "Angular error > 90 deg, placing very large uncertainty" << endl;
+    angularErrorMult = 10000000.0;
+  }
+
+  if (linearError > 5.0){
+    // High uncertainty if more than 5 m NEED TO ADJUST THIS FOR DIFFERENT SCALES
+    cout << "Linear error > 5 m, placing large uncertainty" << endl;
+    linearErrorMult = 100000.0;
+  }
+
+  if (inlierFractionList[0] < 0.6){
+    // Increase uncertainty if fraction is low
+    cout << "Very low inlier fraction. Placing large uncertainty" << endl;
+    linearErrorMult *= 100;
+    angularErrorMult *= 100;
+  }
+
+  int desiredSize = mp.numRowsDesired*mp.numColsDesired;
+  if ((float)numberOfPointsInAlignment/(float)desiredSize < 0.25){
+    // High penaty if there are not many points
+    cout << "Very low number of points. Placing large uncertainty" << endl;
+    linearErrorMult *= 1000;
+    angularErrorMult *= 1000;
+  }
+  
+  float noiseObsMultPosSize = noiseObsMultPos;
+  float noiseObsMultPosErr = noiseObsMultPos*0.5;
+  float noiseObsMultAngSize = noiseObsMultAng;
+  float noiseObsMultAngErr = noiseObsMultAng*0.5;
+
+  // Set R from inlier fraction
+  float metric = inlierFractionList[0];
+  float threeSig = noiseObsBasePos + noiseObsMultPos*(1.0-metric) + noiseObsMultPosSize*(1 - numberOfPointsInAlignment/desiredSize) + noiseObsMultPosErr*(linearError);
+  R.setIdentity();
+  R(0,0) = std::sqrt(threeSig/3.0)*linearErrorMult;
+  R(1,1) = std::sqrt(threeSig/3.0)*linearErrorMult;
+  R(2,2) = std::sqrt(threeSig/3.0)*linearErrorMult;
+  // Angles
+  threeSig = noiseObsBaseAng + noiseObsMultAng*(1.0-metric) + noiseObsMultAngSize*(1 - numberOfPointsInAlignment/desiredSize) + noiseObsMultAngErr*(angularError);
+  R(3,3) = std::sqrt(threeSig/3.0)*angularErrorMult;
+  R(4,4) = std::sqrt(threeSig/3.0)*angularErrorMult;
+  R(5,5) = std::sqrt(threeSig/3.0)*angularErrorMult;
+
+  R = R*rMatMultiplier;
+
+  cout << "R is: \n" << R << endl;
+  // TODO - Revise and tune these settings 
+
 
   // Compute the Kalman gain
   K = P*Jh.transpose()*(Jh*P*Jh.transpose() + R).inverse();
