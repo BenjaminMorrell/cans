@@ -25,7 +25,8 @@ NurbSLAM::NurbSLAM():
     modelResolutionKeypoints(0.005), minNeighboursKeypoints(5),
     ransac_maximumIterations(5000), ransac_numberOfSamples(3),
     ransac_correspondenceRandomness(3), ransac_similarityThreshold(0.9), ransac_inlierFraction(0.25),
-    processTimes(5), bObjectNormalsComputed(false), processModel(0),numberOfPointsInAlignment(0)
+    processTimes(5), bObjectNormalsComputed(false), processModel(0),numberOfPointsInAlignment(0),
+    bUseFullAlignmentTransformInUpdate(false)
 {
   state = Eigen::Affine3f::Identity();
   oldState = Eigen::Affine3f::Identity();
@@ -1143,7 +1144,12 @@ void NurbSLAM::alignAndUpdateMeshes(){
 
   int updateID = -1;
 
-  cout << "In Align and update Meshes. TransformDelta is:\n" << transformDelta.matrix() << endl;
+  cout << "In Align and update Meshes. TransformDelta EKF is:\n" << transformDelta.matrix() << endl;
+  
+  if (transformationList.size() > 0 && bUseFullAlignmentTransformInUpdate){
+    transformDelta.matrix() = transformationList[0];
+    cout << "In Align and update Meshes. TransformDelta full is:\n" << transformationList[0] << endl;
+  }
 
   if (objectMeshList.size() > 0){
     cout << "Object mesh list has values cloud at [0] of size: " << objectMeshList[0]->size() << endl;

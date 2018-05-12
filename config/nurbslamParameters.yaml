@@ -6,7 +6,7 @@ bShowAlignment: true
 localisationOption: 2 # Option for localisation method (0 - PCL, 1 - RANSAC IA, 2 - Prerejective RANSAC)
 keypointOption: 0
 
-bRejectNonOverlappingInAlign: true # whether or not to reject non-overlapping points before alignment
+bRejectNonOverlappingInAlign: false # whether or not to reject non-overlapping points before alignment
 
 bPublishNurbsPointCloud: false # whether or not to publish the point cloud for visualuisation in Rviz
 
@@ -64,6 +64,8 @@ nSurfPointsFactor: 5.0 # multiplier by the number of control points to get the n
 # Data association
 # /mapping/searchThresh: 50.0 # capture everything for 67p
 
+/mapping/bUseFullAlignmentTransformInUpdate: true
+
 # -----------------------------
 # EKF
 # -----------------------------
@@ -80,7 +82,7 @@ nSurfPointsFactor: 5.0 # multiplier by the number of control points to get the n
 
 /ekf/timestep: 20.0 # For data-based cases
 
-/ekf/processModel: 2 # 0 - const accel, 1 - const vel, 2 - const pos
+/ekf/processModel: 0 # 0 - const accel, 1 - const vel, 2 - const pos
 
 # No filter settings
 # /ekf/pNoisePos: 3.0

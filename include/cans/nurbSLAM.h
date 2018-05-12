@@ -138,6 +138,8 @@ class NurbSLAM {
     int alignmentOption;
     int localisationOption;
 
+    bool bUseFullAlignmentTransformInUpdate;
+
     float modelResolutionKeypoints; // Setting for keypoint extraction
     int minNeighboursKeypoints;
 

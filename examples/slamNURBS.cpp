@@ -108,6 +108,9 @@ void setSLAMParameters(NurbSLAM& slam, ros::NodeHandle nh){
   nh.param("/mapping/nCtrlDefaultS", slam.mp.nCtrlDefault[0], slam.mp.nCtrlDefault[0]); 
   nh.param("/mapping/nCtrlDefaultT", slam.mp.nCtrlDefault[1], slam.mp.nCtrlDefault[1]);
 
+  nh.param("/mapping/bUseFullAlignmentTransformInUpdate", slam.bUseFullAlignmentTransformInUpdate, slam.bUseFullAlignmentTransformInUpdate);
+  
+
   cout << "nCtrlDefaultS is " << slam.mp.nCtrlDefault[0] << endl;
   cout << "nCtrlDefaultT is " << slam.mp.nCtrlDefault[1] << endl;
 
@@ -395,9 +398,9 @@ void runSLAM(int argc,char ** argv, ros::NodeHandle nh){
   for (int i = start_i; i < numberOfScans; i += scanSteps){
     cout << "Processing Scan " << i << endl;
 
-    if (i == 49){
-      slam.bShowAlignment = true;
-    }
+    // if (i == 49){
+    //   slam.bShowAlignment = true;
+    // }
 
     // if (i == 60){
     //   slam.bShowAlignment = false;
