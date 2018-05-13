@@ -121,14 +121,19 @@ void setSLAMParameters(NurbSLAM& slam, ros::NodeHandle nh){
   nh.param("/ekf/pNoiseVel", slam.pNoiseVel, slam.pNoiseVel);
   nh.param("/ekf/pNoiseAccel", slam.pNoiseAccel, slam.pNoiseAccel);
   nh.param("/ekf/pNoiseAng", slam.pNoiseAng, slam.pNoiseAng);
+  nh.param("/ekf/pNoiseMultiplier", slam.pNoiseMultiplier, slam.pNoiseMultiplier);
   nh.param("/ekf/qNoiseMultiplier", slam.qNoiseMultiplier, slam.qNoiseMultiplier);
   
   nh.param("/ekf/noiseObsBasePos", slam.noiseObsBasePos, slam.noiseObsBasePos);
   nh.param("/ekf/noiseObsMultPos", slam.noiseObsMultPos, slam.noiseObsMultPos);
+  nh.param("/ekf/noiseObsMultPosErr", slam.noiseObsMultPosErr, slam.noiseObsMultPosErr);
   nh.param("/ekf/noiseObsBaseAng", slam.noiseObsBaseAng, slam.noiseObsBaseAng);
-  nh.param("/ekf/noiseObsMultAng", slam.noiseObsMultAng, slam.noiseObsMultAng);
+  nh.param("/ekf/noiseObsMultAngErr", slam.noiseObsMultAngErr, slam.noiseObsMultAngErr);
+  nh.param("/ekf/noiseObsMultPos", slam.noiseObsMultPos, slam.noiseObsMultPos);
   nh.param("/ekf/processModel", slam.processModel, slam.processModel);
   nh.param("/ekf/rMatMultiplier", slam.rMatMultiplier, slam.rMatMultiplier);
+
+  nh.param("/ekf/bKeepPConstant", slam.bKeepPConstant, slam.bKeepPConstant);
 
   nh.param("/ekf/rejectCriteriaAng", slam.rejectCriteria[0], slam.rejectCriteria[0]);
   nh.param("/ekf/rejectCriteriaLin", slam.rejectCriteria[2], slam.rejectCriteria[2]);

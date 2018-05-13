@@ -73,16 +73,21 @@ nSurfPointsFactor: 5.0 # multiplier by the number of control points to get the n
 # -----------------------------
 # EKF
 # -----------------------------
-/ekf/pNoisePos: 1.0
+/ekf/pNoisePos: 5.0
 /ekf/pNoiseVel: 0.1
 /ekf/pNoiseAccel: 0.01
-/ekf/pNoiseAng: 5.0
-/ekf/qNoiseMultiplier: 0.001
-/ekf/noiseObsBasePos: 0.01 # 0.01
-/ekf/noiseObsMultPos: 1.0
-/ekf/noiseObsBaseAng: 0.005 # 0.05
-/ekf/noiseObsMultAng: 1.0
-/ekf/rMatMultiplier: 1000.0
+/ekf/pNoiseAng: 40000.0
+/ekf/qNoiseMultiplier: 0.005
+/ekf/pNoiseMultiplier: 1.0
+/ekf/noiseObsBasePos: 0.001 # 0.01
+/ekf/noiseObsMultPos: 0 #0.1
+/ekf/noiseObsMultPosErr: 0 #100.0
+/ekf/noiseObsBaseAng: 0.00005 # 0.05
+/ekf/noiseObsMultAng: 0 #0.1
+/ekf/noiseObsMultAngErr: 0 #500.0
+/ekf/rMatMultiplier: 2500.0
+
+/ekf/bKeepPConstant: false
 
 /ekf/timestep: 20.0 # For data-based cases
 

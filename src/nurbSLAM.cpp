@@ -27,7 +27,7 @@ NurbSLAM::NurbSLAM():
     ransac_correspondenceRandomness(3), ransac_similarityThreshold(0.9), ransac_inlierFraction(0.25),
     processTimes(5), bObjectNormalsComputed(false), processModel(0),numberOfPointsInAlignment(0),
     bUseFullAlignmentTransformInUpdate(false), bRejectAlignment(false), bUseOldStateForNewObjects(false),
-    rejectCriteria(6)
+    rejectCriteria(6), bKeepPConstant(false)
 {
   state = Eigen::Affine3f::Identity();
   oldState = Eigen::Affine3f::Identity();
@@ -52,13 +52,16 @@ NurbSLAM::NurbSLAM():
   pNoiseVel = 0.05;
   pNoiseAccel = 0.03;
   pNoiseAng = 0.01;
+  pNoiseMultiplier = 1.0;
   qNoiseMultiplier = 3.0;
 
   // Observation noise
   noiseObsBasePos = 1.0;
   noiseObsMultPos = 2.0;
+  noiseObsMultPosErr = 1.0;
   noiseObsBaseAng = 0.5;
   noiseObsMultAng = 0.5;
+  noiseObsMultAngErr = 0.25;
 
   rMatMultiplier = 1.0;
 
@@ -954,7 +957,9 @@ void NurbSLAM::processStepEKF(float timestep){
   
 
   // Update P
-  P = J*P*J.transpose() + Q;
+  if (!bKeepPConstant){
+    P = J*P*J.transpose() + Q;
+  }
   
   cout << "State after process step with timestep " << timestep << "s is:\n" << ekfState << endl;
   cout << "Covariance, P is:\n" << P << endl;
@@ -1098,19 +1103,19 @@ void NurbSLAM::updateSLAMFilter(float timestep){
   cout << "Angular Error Mult is: " << angularErrorMult << endl;
   
   float noiseObsMultPosSize = noiseObsMultPos;
-  float noiseObsMultPosErr = noiseObsMultPos*0.5;
+  // float noiseObsMultPosErr = noiseObsMultPos*0.5;
   float noiseObsMultAngSize = noiseObsMultAng;
-  float noiseObsMultAngErr = noiseObsMultAng*0.5;
+  // float noiseObsMultAngErr = noiseObsMultAng*0.5;
 
   // Set R from inlier fraction
   float metric = inlierFractionList[0];
-  float threeSig = noiseObsBasePos + noiseObsMultPos*(1.0-metric) + noiseObsMultPosSize*(1 - numberOfPointsInAlignment/desiredSize) + noiseObsMultPosErr*(linearError);
+  float threeSig = noiseObsBasePos + noiseObsMultPos*(1.0-metric) + noiseObsMultPosSize*(1 - numberOfPointsInAlignment/desiredSize) + noiseObsMultPosErr*(std::pow(linearError,4.0));
   R.setIdentity();
   R(0,0) = std::sqrt(threeSig/3.0);
   R(1,1) = std::sqrt(threeSig/3.0);
   R(2,2) = std::sqrt(threeSig/3.0);
   // Angles
-  threeSig = noiseObsBaseAng + noiseObsMultAng*(1.0-metric) + noiseObsMultAngSize*(1 - numberOfPointsInAlignment/desiredSize) + noiseObsMultAngErr*(angularError);
+  threeSig = noiseObsBaseAng + noiseObsMultAng*(1.0-metric) + noiseObsMultAngSize*(1 - numberOfPointsInAlignment/desiredSize) + noiseObsMultAngErr*(std::pow(angularError,4.0));
   R(3,3) = std::sqrt(threeSig/3.0);
   R(4,4) = std::sqrt(threeSig/3.0);
   R(5,5) = std::sqrt(threeSig/3.0);
@@ -1170,6 +1175,13 @@ void NurbSLAM::updateSLAMFilter(float timestep){
   transformDelta = state*oldState.inverse();
 
   cout << "TransformDelta is:\n" << transformDelta.matrix() << endl;
+
+  // Update covariance
+  if (bKeepPConstant){
+    P = (Eigen::Matrix<float, 12,12>::Identity() - K*Jh)*P;
+  }
+  
+  cout << "Covariance P after update step is:\n" << P << endl;
 
 }
 
@@ -1381,6 +1393,8 @@ void NurbSLAM::setInitEKFStates(){
   P(9,9) = pNoiseAng;
   P(10,10) = pNoiseAng;
   P(11,11) = pNoiseAng;
+
+  P = P*pNoiseMultiplier;
 
   Q = P*qNoiseMultiplier;
   // Q.setIdentity();

@@ -143,6 +143,7 @@ class NurbSLAM {
     bool bUseFullAlignmentTransformInUpdate;
     bool bUseOldStateForNewObjects; 
     std::vector<float> rejectCriteria;
+    bool bKeepPConstant;
 
     float modelResolutionKeypoints; // Setting for keypoint extraction
     int minNeighboursKeypoints;
@@ -165,11 +166,14 @@ class NurbSLAM {
     float pNoiseVel;
     float pNoiseAccel;
     float pNoiseAng;
+    float pNoiseMultiplier;
     float qNoiseMultiplier;
     float noiseObsBasePos;
     float noiseObsMultPos;
+    float noiseObsMultPosErr;
     float noiseObsBaseAng;
     float noiseObsMultAng;
+    float noiseObsMultAngErr;
     float rMatMultiplier;
 
     int processModel; // 0 - const accel, 1 - const vel, 2 - const pos
