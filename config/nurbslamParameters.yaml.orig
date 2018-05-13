@@ -1,0 +1,115 @@
+# -----------------------------
+# Options (maybe put as args)
+# -----------------------------
+alignmentOption: 0 # 0 - dense to dense, 1 - keypoints to dense, 2 - keypoints to keypoints
+bShowAlignment: false
+localisationOption: 2 # Option for localisation method (0 - PCL, 1 - RANSAC IA, 2 - Prerejective RANSAC)
+keypointOption: 0
+
+machine: 1
+
+bRejectNonOverlappingInAlign: false # whether or not to reject non-overlapping points before alignment
+
+bPublishNurbsPointCloud: false # whether or not to publish the point cloud for visualuisation in Rviz
+
+bTestMapGeneration: false
+
+# -----------------------------
+# Localisation
+# -----------------------------
+# Keypoints
+/keypoints/modelResolution: 0.01
+/keypoints/minNeighbours: 5
+
+# Normals
+pclNormalRadiusSetting: 0.05
+# Features
+pclFeatureRadiusSetting: 0.1
+# RANSAC
+/ransac/inlierMultiplier: 0.01
+/ransac/maximumIterations: 5000
+
+# POSSIBLY USE
+/ransac/numberOfSamples: 3
+/ransac/correspondenceRandomness: 3
+/ransac/similarityThreshold: 0.9
+/ransac/inlierFraction: 0.6 # this should maybe be more strict for the blender data
+
+validInlierThreshold: 0.6
+
+maxDistanceOverlap: 0.05 # maximum allowed distance away from existing surface to not be classed as new data
+
+# Number of data points
+nSurfPointsFactor: 5.0 # multiplier by the number of control points to get the number of surface points to sample
+
+
+# -----------------------------
+# Mapping
+# -----------------------------
+# Mesh processing
+/meshing/numRowsDesired: 95
+/meshing/numColsDesired: 95
+/meshing/maxNanAllowed: 5
+/meshing/removeNanBuffer: 2
+/meshing/newRowColBuffer: 10
+
+/meshing/bFilterZ: false
+/meshing/nPointsZLim: 10000
+/meshing/zThreshMultiplier: -1.0
+/meshing/bNegateZ: true
+
+# NURBS generation
+/mapping/useNonRectData: true # To use the new extension method
+/mapping/nCtrlDefaultS: 17
+/mapping/nCtrlDefaultR: 17
+/mapping/degree: 3
+
+# Data association
+# /mapping/searchThresh: 50.0 # capture everything for 67p
+
+/mapping/bUseFullAlignmentTransformInUpdate: true
+/mapping/bUseOldStateForNewObjects: true
+
+# -----------------------------
+# EKF
+# -----------------------------
+/ekf/pNoisePos: 1.0
+/ekf/pNoiseVel: 0.1
+/ekf/pNoiseAccel: 0.01
+<<<<<<< Updated upstream
+/ekf/pNoiseAng: 5.0
+/ekf/qNoiseMultiplier: 0.001
+/ekf/noiseObsBasePos: 0.01 # 0.01
+/ekf/noiseObsMultPos: 1.0
+/ekf/noiseObsBaseAng: 0.005 # 0.05
+/ekf/noiseObsMultAng: 1.0
+=======
+/ekf/pNoiseAng: 10000.0
+/ekf/qNoiseMultiplier: 0.001
+/ekf/noiseObsBasePos: 0.01 # 0.01
+/ekf/noiseObsMultPos: 1.0
+/ekf/noiseObsBaseAng: 0.0005 # 0.05
+/ekf/noiseObsMultAng: 0.1
+>>>>>>> Stashed changes
+/ekf/rMatMultiplier: 1000.0
+
+/ekf/timestep: 20.0 # For data-based cases
+
+/ekf/processModel: 0 # 0 - const accel, 1 - const vel, 2 - const pos
+
+/ekf/rejectCriteriaAng: 0.78
+/ekf/rejectCriteriaLin: 1.5
+/ekf/rejectCriteriaInlier: 0.6
+/ekf/rejectCriteriaNumberP: 0.25
+
+# No filter settings
+# /ekf/pNoisePos: 3.0
+# /ekf/pNoiseVel: 3.0
+# /ekf/pNoiseAccel: 3.0
+# /ekf/pNoiseAng: 3.0
+# /ekf/qNoiseMultiplier: 3.0
+# /ekf/noiseObsBasePos: 0.000000001
+# /ekf/noiseObsMultPos: 0.0
+# /ekf/noiseObsBaseAng: 0.000000001
+# /ekf/noiseObsMultAng: 0.0
+
