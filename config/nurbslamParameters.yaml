@@ -6,7 +6,7 @@ bShowAlignment: false
 localisationOption: 2 # Option for localisation method (0 - PCL, 1 - RANSAC IA, 2 - Prerejective RANSAC)
 keypointOption: 0
 
-machine: 1
+machine: 0
 
 bRejectNonOverlappingInAlign: false # whether or not to reject non-overlapping points before alignment
 
@@ -74,17 +74,17 @@ nSurfPointsFactor: 5.0 # multiplier by the number of control points to get the n
 # EKF
 # -----------------------------
 /ekf/pNoisePos: 5.0
-/ekf/pNoiseVel: 0.1
-/ekf/pNoiseAccel: 0.01
+/ekf/pNoiseVel: 0.05
+/ekf/pNoiseAccel: 0.005
 /ekf/pNoiseAng: 40000.0
-/ekf/qNoiseMultiplier: 5.0
+/ekf/qNoiseMultiplier: 5.0 # may have been best at 1.0
 /ekf/pNoiseMultiplier: 1.0
 /ekf/noiseObsBasePos: 0.001 
 /ekf/noiseObsMultPos: 500.0
-/ekf/noiseObsMultPosErr: 500.0
+/ekf/noiseObsMultPosErr: 1000.0
 /ekf/noiseObsBaseAng: 0.00001
 /ekf/noiseObsMultAng: 2500.0
-/ekf/noiseObsMultAngErr: 2500.0 
+/ekf/noiseObsMultAngErr: 50000.0 
 /ekf/rMatMultiplier: 2500.0
 
 /ekf/bKeepPConstant: false
@@ -93,7 +93,7 @@ nSurfPointsFactor: 5.0 # multiplier by the number of control points to get the n
 
 /ekf/processModel: 0 # 0 - const accel, 1 - const vel, 2 - const pos
 
-/ekf/rejectCriteriaAng: 0.78
+/ekf/rejectCriteriaAng: 1.2
 /ekf/rejectCriteriaLin: 3.0
 /ekf/rejectCriteriaInlier: 0.6
 /ekf/rejectCriteriaNumberP: 0.25
