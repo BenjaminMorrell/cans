@@ -1177,7 +1177,7 @@ void NurbSLAM::updateSLAMFilter(float timestep){
   cout << "TransformDelta is:\n" << transformDelta.matrix() << endl;
 
   // Update covariance
-  if (bKeepPConstant){
+  if (!bKeepPConstant){
     P = (Eigen::Matrix<float, 12,12>::Identity() - K*Jh)*P;
   }
   
