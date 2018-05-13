@@ -1035,7 +1035,7 @@ void NurbSLAM::updateSLAMFilter(float timestep){
   //--------------------------------------------------
   //--------------------------------------------------
   
-  float angularError = std::abs(std::tan(attitudeErrorAA.angle()/2.0));
+  float angularError = std::abs(attitudeErrorAA.angle());
   float linearError = 0.0;
   for (int k = 0; k < 3; k++){linearError += std::pow(observation(k),2.0);}
   linearError = std::sqrt(linearError);
