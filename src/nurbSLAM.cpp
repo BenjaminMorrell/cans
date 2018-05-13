@@ -27,7 +27,7 @@ NurbSLAM::NurbSLAM():
     ransac_correspondenceRandomness(3), ransac_similarityThreshold(0.9), ransac_inlierFraction(0.25),
     processTimes(5), bObjectNormalsComputed(false), processModel(0),numberOfPointsInAlignment(0),
     bUseFullAlignmentTransformInUpdate(false), bRejectAlignment(false), bUseOldStateForNewObjects(false),
-    rejectCriteria(6), bKeepPConstant(false)
+    rejectCriteria(6), bKeepPConstant(false), bCombineErrors(false)
 {
   state = Eigen::Affine3f::Identity();
   oldState = Eigen::Affine3f::Identity();
@@ -1099,6 +1099,8 @@ void NurbSLAM::updateSLAMFilter(float timestep){
   linearErrorMult = std::min((float)1e25,linearErrorMult);
   angularErrorMult = std::min((float)1e25,angularErrorMult);
 
+  float combinedError = linearError/3.0 + angularError/0.7;
+
   cout << "Linear Error Mult is: " << linearErrorMult << endl;
   cout << "Angular Error Mult is: " << angularErrorMult << endl;
   
@@ -1109,13 +1111,22 @@ void NurbSLAM::updateSLAMFilter(float timestep){
 
   // Set R from inlier fraction
   float metric = inlierFractionList[0];
-  float threeSig = noiseObsBasePos + noiseObsMultPos*(std::pow(1.0-metric,2.0)) + noiseObsMultPosSize*(std::pow(1.0 - (float)numberOfPointsInAlignment/(float)desiredSize,2.0)) + noiseObsMultPosErr*(std::pow(linearError,4.0));
+  float threeSig;
+  if (bCombineErrors){
+    threeSig = noiseObsBasePos + noiseObsMultPos*(std::pow(1.0-metric,2.0)) + noiseObsMultPosSize*(std::pow(1.0 - (float)numberOfPointsInAlignment/(float)desiredSize,2.0)) + noiseObsMultPosErr*(std::pow(combinedError*3.0,2.0));
+  }else{
+    threeSig = noiseObsBasePos + noiseObsMultPos*(std::pow(1.0-metric,2.0)) + noiseObsMultPosSize*(std::pow(1.0 - (float)numberOfPointsInAlignment/(float)desiredSize,2.0)) + noiseObsMultPosErr*(std::pow(linearError,2.0));
+  } 
   R.setIdentity();
   R(0,0) = std::sqrt(threeSig/3.0);
   R(1,1) = std::sqrt(threeSig/3.0);
   R(2,2) = std::sqrt(threeSig/3.0);
   // Angles
-  threeSig = noiseObsBaseAng + noiseObsMultAng*(std::pow(1.0-metric,2.0)) + noiseObsMultAngSize*(std::pow(1.0 - (float)numberOfPointsInAlignment/(float)desiredSize,2.0)) + noiseObsMultAngErr*(std::pow(angularError,4.0));
+  if (bCombineErrors){
+    threeSig = noiseObsBaseAng + noiseObsMultAng*(std::pow(1.0-metric,2.0)) + noiseObsMultAngSize*(std::pow(1.0 - (float)numberOfPointsInAlignment/(float)desiredSize,2.0)) + noiseObsMultAngErr*(std::pow(combinedError*0.7,2.0));
+  }else{
+    threeSig = noiseObsBaseAng + noiseObsMultAng*(std::pow(1.0-metric,2.0)) + noiseObsMultAngSize*(std::pow(1.0 - (float)numberOfPointsInAlignment/(float)desiredSize,2.0)) + noiseObsMultAngErr*(std::pow(angularError,2.0));
+  }
   R(3,3) = std::sqrt(threeSig/3.0);
   R(4,4) = std::sqrt(threeSig/3.0);
   R(5,5) = std::sqrt(threeSig/3.0);
@@ -1394,8 +1405,6 @@ void NurbSLAM::setInitEKFStates(){
   P(10,10) = pNoiseAng;
   P(11,11) = pNoiseAng;
 
-  P = P*pNoiseMultiplier;
-
   Q = P*qNoiseMultiplier;
   // Q.setIdentity();
   // Q(0,0) = pNoisePos;
@@ -1410,6 +1419,8 @@ void NurbSLAM::setInitEKFStates(){
   // Q(9,9) = pNoiseAng;
   // Q(10,10) = pNoiseAng;
   // Q(11,11) = pNoiseAng;
+
+  P = P*pNoiseMultiplier;
 
   J.setIdentity();
   J(0,3) = 1.0;J(1,4) = 1.0;J(2,5) = 1.0;

@@ -144,6 +144,7 @@ class NurbSLAM {
     bool bUseOldStateForNewObjects; 
     std::vector<float> rejectCriteria;
     bool bKeepPConstant;
+    bool bCombineErrors;
 
     float modelResolutionKeypoints; // Setting for keypoint extraction
     int minNeighboursKeypoints;

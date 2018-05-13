@@ -132,6 +132,7 @@ void setSLAMParameters(NurbSLAM& slam, ros::NodeHandle nh){
   nh.param("/ekf/noiseObsMultAngErr", slam.noiseObsMultAngErr, slam.noiseObsMultAngErr);
   nh.param("/ekf/rMatMultiplier", slam.rMatMultiplier, slam.rMatMultiplier);
   nh.param("/ekf/bKeepPConstant", slam.bKeepPConstant, slam.bKeepPConstant);
+  nh.param("/ekf/bCombineErrors", slam.bCombineErrors, slam.bCombineErrors);
 
   nh.param("/ekf/processModel", slam.processModel, slam.processModel);
 
