@@ -1102,20 +1102,20 @@ void NurbSLAM::updateSLAMFilter(float timestep){
   cout << "Linear Error Mult is: " << linearErrorMult << endl;
   cout << "Angular Error Mult is: " << angularErrorMult << endl;
   
-  float noiseObsMultPosSize = noiseObsMultPos;
+  float noiseObsMultPosSize = noiseObsMultPos*0.1;
   // float noiseObsMultPosErr = noiseObsMultPos*0.5;
-  float noiseObsMultAngSize = noiseObsMultAng;
+  float noiseObsMultAngSize = noiseObsMultAng*0.1;
   // float noiseObsMultAngErr = noiseObsMultAng*0.5;
 
   // Set R from inlier fraction
   float metric = inlierFractionList[0];
-  float threeSig = noiseObsBasePos + noiseObsMultPos*(1.0-metric) + noiseObsMultPosSize*(1 - numberOfPointsInAlignment/desiredSize) + noiseObsMultPosErr*(std::pow(linearError,4.0));
+  float threeSig = noiseObsBasePos + noiseObsMultPos*(std::pow(1.0-metric,2.0)) + noiseObsMultPosSize*(std::pow(1.0 - (float)numberOfPointsInAlignment/(float)desiredSize,2.0)) + noiseObsMultPosErr*(std::pow(linearError,4.0));
   R.setIdentity();
   R(0,0) = std::sqrt(threeSig/3.0);
   R(1,1) = std::sqrt(threeSig/3.0);
   R(2,2) = std::sqrt(threeSig/3.0);
   // Angles
-  threeSig = noiseObsBaseAng + noiseObsMultAng*(1.0-metric) + noiseObsMultAngSize*(1 - numberOfPointsInAlignment/desiredSize) + noiseObsMultAngErr*(std::pow(angularError,4.0));
+  threeSig = noiseObsBaseAng + noiseObsMultAng*(std::pow(1.0-metric,2.0)) + noiseObsMultAngSize*(std::pow(1.0 - (float)numberOfPointsInAlignment/(float)desiredSize,2.0)) + noiseObsMultAngErr*(std::pow(angularError,4.0));
   R(3,3) = std::sqrt(threeSig/3.0);
   R(4,4) = std::sqrt(threeSig/3.0);
   R(5,5) = std::sqrt(threeSig/3.0);
