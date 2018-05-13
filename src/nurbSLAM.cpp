@@ -1060,14 +1060,14 @@ void NurbSLAM::updateSLAMFilter(float timestep){
 
   if (linearError > rejectCriteria[2]){
     // High uncertainty if more than 5 m NEED TO ADJUST THIS FOR DIFFERENT SCALES
-    cout << "Linear error > 1.5 m, placing large uncertainty" << endl;
+    cout << "Linear error > " << rejectCriteria[2] << " m, placing large uncertainty" << endl;
     linearErrorMult = 1e10;
     bRejectAlignment = true;
   }
 
   if (linearError > rejectCriteria[3]){
     // High uncertainty if more than 5 m NEED TO ADJUST THIS FOR DIFFERENT SCALES
-    cout << "Linear error > 3 m, placing very large uncertainty" << endl;
+    cout << "Linear error > " << rejectCriteria[3] << " m, placing very large uncertainty" << endl;
     linearErrorMult = 1e15;
     bRejectAlignment = true;
   }
