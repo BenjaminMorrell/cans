@@ -484,7 +484,8 @@ void runSLAM(int argc,char ** argv, ros::NodeHandle nh){
 
     // Write timing information
     myfile.open (timingFilename.c_str(), std::ios_base::app); // Append
-    for (int k=0; k < 6; k++){myfile << processTimesVec[k] << ", ";}
+    myfile << processTimesVec[0];
+    for (int k=1; k < 6; k++){myfile << ", " << processTimesVec[k];}
     myfile << "\n";
     myfile.close();
 
@@ -507,7 +508,8 @@ void runSLAM(int argc,char ** argv, ros::NodeHandle nh){
 
     // Open file
     myfile.open ((outFilestem + "state_track_slam.txt").c_str(), std::ios_base::app); // Append
-    for (int k=0; k < 6; k++){myfile << state(k,i) << ", ";}
+    myfile << state(0,i);
+    for (int k=1; k < 6; k++){myfile << ", " << state(k,i);}
     myfile << "\n";
     myfile.close();
   }
