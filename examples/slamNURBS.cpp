@@ -428,9 +428,9 @@ void runSLAM(int argc,char ** argv, ros::NodeHandle nh){
   for (int i = start_i; i < numberOfScans; i += scanSteps){
     cout << "Processing Scan " << i << endl;
 
-    if (i == 77){
-      slam.bShowAlignment = true;
-    }
+    // if (i == 77){
+    //   slam.bShowAlignment = true;
+    // }
 
     // if (i == 60){
     //   slam.bShowAlignment = false;
