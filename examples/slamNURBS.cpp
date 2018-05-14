@@ -180,6 +180,7 @@ void runSLAM(int argc,char ** argv, ros::NodeHandle nh){
   std::string outFilename;
   std::string filestem;
   std::string outFilestem;
+  std::string mapFilestem;
   std::string pathFilename;
 
   Eigen::Affine3f transform = Eigen::Affine3f::Identity();
@@ -266,6 +267,7 @@ void runSLAM(int argc,char ** argv, ros::NodeHandle nh){
       if (machine == 0){
         filestem = "/home/bjm/Dropbox/PhD_Code/Data/3D_Scans/Blensor/Blob2/BlobScan_data00";
         outFilestem = "/home/bjm/Dropbox/PhD_Code/Results/Blob2/blob_";
+        mapFilestem = "/home/bjm/Dropbox/PhD_Code/Results/Blob2/localisation_map/blob_";
         pathFilename = "/home/bjm/Dropbox/PhD_Code/Data/3D_Scans/Blensor/Blob2/BlobScan_path.txt";
       }else if (machine == 1){
         filestem = "/home/amme2/Development/Data/Blob2/BlobScan_data00";
@@ -277,7 +279,7 @@ void runSLAM(int argc,char ** argv, ros::NodeHandle nh){
       scanSteps = 1;
       numberOfScans = numberOfScans*scanSteps;
       nData = 100;
-      nObjLocalisation = 1;
+      nObjLocalisation = 2;
       break;
     case 7:
       // Blob Lateral - NOTE that the path may be wrong - so only use for SLAM...
@@ -294,6 +296,7 @@ void runSLAM(int argc,char ** argv, ros::NodeHandle nh){
       if (machine == 0){
         filestem = "/home/bjm/Dropbox/PhD_Code/Data/3D_Scans/Blensor/Blob3/BlobScan_data00";
         outFilestem = "/home/bjm/Dropbox/PhD_Code/Results/Blob3/blob_";
+        mapFilestem = "/home/bjm/Dropbox/PhD_Code/Results/Blob3/localisation_map/blob_";
         pathFilename = "/home/bjm/Dropbox/PhD_Code/Data/3D_Scans/Blensor/Blob3/BlobScan_path.txt";
       }else if (machine == 1){
         filestem = "/home/amme2/Development/Data/Blob3/BlobScan_data00";
@@ -354,11 +357,11 @@ void runSLAM(int argc,char ** argv, ros::NodeHandle nh){
     case 1:
       slam.activateMappingMode();
       cout << "\n\n\t\tACTIVATING PURE MAPPING MODE\n\n" << endl;
+      nh.param("mappingSteps",scanSteps,scanSteps); // MAYBE CHANGE
       break;
     case 2:
       slam.activateLocalisationMode();
       cout << "\n\n\t\tACTIVATING PURE LOCALISATION MODE\n\n" << endl;
-
       break;
   }
 
@@ -393,7 +396,9 @@ void runSLAM(int argc,char ** argv, ros::NodeHandle nh){
   cout << "transform is " << transform.matrix() << endl;
 
   // Reset state to zero
-  state.setZero(state.rows(),state.cols());
+  if (nurbSLAMMode != 1){
+    state.setZero(state.rows(),state.cols());
+  }
 
   // INITIALISE STATE
   slam.setState(transform);
@@ -404,7 +409,7 @@ void runSLAM(int argc,char ** argv, ros::NodeHandle nh){
       std::string filenameObj;
       cout << "Loading " << nObjLocalisation << " objects into map" << endl;
       for (int k = 0; k < nObjLocalisation; k++){
-        filenameObj = outFilestem + static_cast<ostringstream*>( &(ostringstream() << (k)) )->str() + "_final_obj_saved.obj";
+        filenameObj = mapFilestem + static_cast<ostringstream*>( &(ostringstream() << (k)) )->str() + "_final_obj.obj";
         slam.loadObjectIntoMap(filenameObj.c_str());
       }
       // TODO may need to update this to load multiple objects

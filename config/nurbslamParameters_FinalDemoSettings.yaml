@@ -45,7 +45,7 @@ maxDistanceOverlap: 0.05 # maximum allowed distance away from existing surface t
 nSurfPointsFactor: 5.0 # multiplier by the number of control points to get the number of surface points to sample
 
 mapCountThreshold: 3
-mapExtendThreshold: 6 # Make this very high to turn off the "new object when no extension for too long" feature
+mapExtendThreshold: 100
 
 # -----------------------------
 # Mapping
@@ -55,7 +55,7 @@ mapExtendThreshold: 6 # Make this very high to turn off the "new object when no 
 /meshing/numColsDesired: 95
 /meshing/maxNanAllowed: 5
 /meshing/removeNanBuffer: 2
-/meshing/newRowColBuffer: 10 # Good for mapping - 20
+/meshing/newRowColBuffer: 10
 
 /meshing/bFilterZ: false
 /meshing/nPointsZLim: 10000
@@ -83,7 +83,7 @@ mapExtendThreshold: 6 # Make this very high to turn off the "new object when no 
 /ekf/pNoiseAccel: 0.00025
 /ekf/pNoiseAng: 40000.0
 /ekf/qNoiseMultiplier: 5.0 # may have been best at 1.0
-/ekf/pNoiseMultiplier: 100.0
+/ekf/pNoiseMultiplier: 1.0
 /ekf/noiseObsBasePos: 0.001 
 /ekf/noiseObsMultPos: 500.0
 /ekf/noiseObsMultPosErr: 1000.0

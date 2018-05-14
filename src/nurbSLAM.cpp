@@ -232,7 +232,11 @@ void NurbSLAM::processScans(std::vector<pcl::PointCloud<pcl::PointNormal>::Ptr> 
     processTimes[4] += dur.count();
     cout << "Duration for Map update is: " << dur.count() << "ms" << endl;
   }else{
+    // Null reading for localisation
     processTimes[4] = -1.0;
+
+    // reset
+    bRejectAlignment = false;
   }
   
 }
@@ -303,6 +307,13 @@ int NurbSLAM::processSingleScan(pcl::PointCloud<pcl::PointNormal>::Ptr cloud, pc
   objID = mp.dataAssociation(searchMetrics);
 
   cout << "Completed data association" << endl;
+
+  if (objID >= 0){
+    if (mapExtendCount[objID] > mapExtendThreshold && bMappingModeOn){
+      cout << "No extension for too many observations. Creating new object" << endl;
+      objID = -1;
+    }
+  }
 
   t1 = std::chrono::high_resolution_clock::now();
   dur = t1-t2;
@@ -1076,7 +1087,7 @@ void NurbSLAM::updateSLAMFilter(float timestep){
 
   // Thesholds
   float angularErrorMult = 1.0;
-  float linearErrorMult = 1.0;
+  float linearErrorMult = 1.0;  
 
   if (angularError > rejectCriteria[0]){
     // High uncertainty if more than 45 degrees
@@ -1303,6 +1314,8 @@ void NurbSLAM::alignAndUpdateMeshes(){
 
       mp.updateObject(objIDList[i], cloudTransformed); 
 
+      cout << "Updated object (in nubrSLAM.cpp)" << endl;
+
       // track if there were any updates - change in the number of control points
       if (nRows != mp.objectMap[objIDList[i]].ctrlPnts().rows() ||
       nCols != mp.objectMap[objIDList[i]].ctrlPnts().cols()){
@@ -1313,27 +1326,31 @@ void NurbSLAM::alignAndUpdateMeshes(){
           cout << "Nans in combined object. Reverting" << endl;
           mp.updateObjectInMap(objIDList[i],oldObj);
         }
-
+        mapExtendCount[objIDList[i]] = 0;
       }else{
         // No update
-        if (mp.ss.extendDirection[0] != 'N'){
-          // If an extension computed, but not enough data points
-          mapExtendCount[objIDList[i]]++;
-          cout << "Incrementing mapExtendCount for object " << objIDList[i] << ", count is now: " << mapExtendCount[objIDList[i]] << endl;
-        }else{
-          // No extension computed (e.g. all overlap)
-          mapExtendCount[objIDList[i]] = 0;
-          cout << "Map extend cound for object " << objIDList[i] << ", at 0" << endl;
-        }
+        mapExtendCount[objIDList[i]]++;
+        // if (mp.ss.extendDirection[0] != 'N'){
+        //   // If an extension computed, but not enough data points
+        //   cout << "Incrementing mapExtendCount for object " << objIDList[i] << ", count is now: " << mapExtendCount[objIDList[i]] << endl;
+        //   mapExtendCount[objIDList[i]]++;
+        // }else{
+        //   // No extension computed (e.g. all overlap)
+        //   cout << "Map extend count for object " << objIDList[i] << ", at 0" << endl;
+        //   mapExtendCount[objIDList[i]] = 0;
+        // }
         
-        if (mapExtendCount[objIDList[i]] > mapExtendThreshold){
-          cout << "Creating new object as Map Extend count for object " << objIDList[i] << " exceeds limit: " << mapExtendThreshold << endl;
-          // Set ID for new object
-          updateID = mp.objectMap.size() - 1;
-        }else{
-          // Flag for no update
+        // if (mapExtendCount[objIDList[i]] > mapExtendThreshold){
+        //   cout << "Creating new object as Map Extend count for object " << objIDList[i] << " exceeds limit: " << mapExtendThreshold << endl;
+        //   // Set ID for new object
+        //   updateID = mp.objectMap.size() - 1;
+        // }else{
+        //   // Flag for no update
+        //   updateID = -1;
+        // }
+
+        // Flag for no update
           updateID = -1;
-        }
       }
       
     }
@@ -1343,6 +1360,13 @@ void NurbSLAM::alignAndUpdateMeshes(){
       updatePointCloudAndFeaturesInMap(updateID);
     }else{
       cout << "In Mapping mode. data points or map features for localisation to be computed" << endl;
+      if (updateID == mp.objectMap.size() - 1){
+        // If there is a new object - add to the list
+        mapMeshList.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr (new pcl::PointCloud<pcl::PointNormal>));
+        mapFeatureList.push_back(pcl::PointCloud<pcl::FPFHSignature33>::Ptr (new pcl::PointCloud<pcl::FPFHSignature33>));
+        mapMatchCount.push_back(0);
+        mapExtendCount.push_back(0);
+      }
       // Set flag that there have been updates
       bMapUpdatedFromScan = true;
     }
