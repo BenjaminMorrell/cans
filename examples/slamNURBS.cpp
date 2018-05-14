@@ -289,6 +289,24 @@ void runSLAM(int argc,char ** argv, ros::NodeHandle nh){
       numberOfScans = numberOfScans*scanSteps;
       nData = 40;
       break;
+    case 8:
+      // Blob 3
+      if (machine == 0){
+        filestem = "/home/bjm/Dropbox/PhD_Code/Data/3D_Scans/Blensor/Blob3/BlobScan_data00";
+        outFilestem = "/home/bjm/Dropbox/PhD_Code/Results/Blob3/blob_";
+        pathFilename = "/home/bjm/Dropbox/PhD_Code/Data/3D_Scans/Blensor/Blob3/BlobScan_path.txt";
+      }else if (machine == 1){
+        filestem = "/home/amme2/Development/Data/Blob3/BlobScan_data00";
+        outFilestem = "/home/amme2/Development/Results/Blensor/Blob3/blob_";
+        pathFilename = "/home/amme2/Development/Data/Blob3/BlobScan_path.txt";
+      }
+      cout << "Running Long Blob3 Dataset\n";
+      
+      scanSteps = 1;
+      numberOfScans = numberOfScans*scanSteps;
+      nData = 100;
+      nObjLocalisation = 1;
+      break;
     case 99:
       // NEW BLOB
       cout << "Running New Blob Dataset\n";
