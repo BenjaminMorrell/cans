@@ -97,6 +97,8 @@ public:
 
     void fillObject3DMessage(int objID, cans_msgs::Object3D& msg);
 
+    SplitSurface ss;
+
     int numRowsDesired;
     int numColsDesired;
     int minRowsColsAllowed;

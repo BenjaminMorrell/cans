@@ -95,6 +95,12 @@ void setSLAMParameters(NurbSLAM& slam, ros::NodeHandle nh){
 
   nh.param("maxDistanceOverlap", slam.maxDistanceOverlap, slam.maxDistanceOverlap);
 
+  nh.param("mapCountThreshold", slam.mapCountThreshold, slam.mapCountThreshold);
+  nh.param("mapExtendThreshold", slam.mapExtendThreshold, slam.mapExtendThreshold);
+  
+
+  
+
   // Mapping
   nh.param("/meshing/numRowsDesired", slam.mp.numRowsDesired, slam.mp.numRowsDesired);
   nh.param("/meshing/numColsDesired", slam.mp.numColsDesired, slam.mp.numColsDesired);
@@ -422,9 +428,9 @@ void runSLAM(int argc,char ** argv, ros::NodeHandle nh){
   for (int i = start_i; i < numberOfScans; i += scanSteps){
     cout << "Processing Scan " << i << endl;
 
-    // if (i == 49){
-    //   slam.bShowAlignment = true;
-    // }
+    if (i == 77){
+      slam.bShowAlignment = true;
+    }
 
     // if (i == 60){
     //   slam.bShowAlignment = false;

@@ -1655,7 +1655,6 @@ void Mapping3D::updateObject(int objID, pcl::PointCloud<pcl::PointNormal>::Ptr o
 
   
   // Split new surface observation
-  SplitSurface ss;
   ss.newRowColBuffer = newRowColBuffer; // number of allowed overlap points in a row/column
 
   ss.splitNewSurfaceObservation(mapObjPC, obsObjPC);

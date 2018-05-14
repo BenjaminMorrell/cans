@@ -27,8 +27,8 @@ NurbSLAM::NurbSLAM():
     ransac_correspondenceRandomness(3), ransac_similarityThreshold(0.9), ransac_inlierFraction(0.25),
     processTimes(5), bObjectNormalsComputed(false), processModel(0),numberOfPointsInAlignment(0),
     bUseFullAlignmentTransformInUpdate(false), bRejectAlignment(false), bUseOldStateForNewObjects(false),
-    rejectCriteria(6), bKeepPConstant(false)
-{
+    rejectCriteria(6), bKeepPConstant(false), mapCountThreshold(3), mapExtendThreshold(2)
+{// TODO - make this initialiser list organised...
   state = Eigen::Affine3f::Identity();
   oldState = Eigen::Affine3f::Identity();
   previousState = Eigen::Affine3f::Identity();
@@ -174,6 +174,27 @@ void NurbSLAM::processScans(std::vector<pcl::PointCloud<pcl::PointNormal>::Ptr> 
       processTimes[2] = -1.0; // Flag that there is no time
     }
   }
+
+  // Update map match count
+  bool bIsMatched;
+  cout << "Match count is: [";
+  for (int i = 0; i < mapMatchCount.size(); i++){
+    bIsMatched = false;
+    for (int j = 0; j < objIDList.size(); j++){
+      if (i == objIDList[j]){
+        // Object has been matched, reset count to zero
+        mapMatchCount[i] = 0;
+        bIsMatched = true;
+      }
+    }
+    if (!bIsMatched){
+      // Increment if not matched
+      mapMatchCount[i]++;
+    }
+    cout << mapMatchCount[i] << ", ";
+  }
+  cout << "]" << endl;
+  
 
   cout << "Starting filter update" << endl;  
   // Perform the SLAM update with the computed transformations
@@ -589,6 +610,13 @@ Eigen::Matrix4f NurbSLAM::alignScanWithMapObject(int objID, pcl::PointCloud<pcl:
     // nest.compute(*obsObjPC);
     computeNormals(obsObjPC);
     cout << "computed normals for observation" << endl;
+
+    if (mapMatchCount[objID] > mapCountThreshold){
+      computeNormals(mapMeshList[objID]);
+      cout << "\nComputed normals for Map because mapCount was: " << mapMatchCount[objID] << endl;
+    }
+
+
     bObjectNormalsComputed = true;
 
     if (bRejectNonOverlappingInAlign){
@@ -616,6 +644,11 @@ Eigen::Matrix4f NurbSLAM::alignScanWithMapObject(int objID, pcl::PointCloud<pcl:
     // fest.setInputNormals(obsObjPC);
     // fest.compute (*obsObjPC_features);
     cout << "Features have been computed for observation" << endl;
+
+     if (mapMatchCount[objID] > mapCountThreshold){
+      computeFeatures(mapMeshList[objID], mapMeshList[objID], mapFeatureList[objID]);
+      cout << "\nComputed features for Map because mapCount was: " << mapMatchCount[objID] << endl;
+    }
   
 
     //Perform alignment 
@@ -1282,8 +1315,25 @@ void NurbSLAM::alignAndUpdateMeshes(){
         }
 
       }else{
-        // Flag for no update
-        updateID = -1;
+        // No update
+        if (mp.ss.extendDirection[0] != 'N'){
+          // If an extension computed, but not enough data points
+          mapExtendCount[objIDList[i]]++;
+          cout << "Incrementing mapExtendCount for object " << objIDList[i] << ", count is now: " << mapExtendCount[objIDList[i]] << endl;
+        }else{
+          // No extension computed (e.g. all overlap)
+          mapExtendCount[objIDList[i]] = 0;
+          cout << "Map extend cound for object " << objIDList[i] << ", at 0" << endl;
+        }
+        
+        if (mapExtendCount[objIDList[i]] > mapExtendThreshold){
+          cout << "Creating new object as Map Extend count for object " << objIDList[i] << " exceeds limit: " << mapExtendThreshold << endl;
+          // Set ID for new object
+          updateID = mp.objectMap.size() - 1;
+        }else{
+          // Flag for no update
+          updateID = -1;
+        }
       }
       
     }
@@ -1327,6 +1377,8 @@ void NurbSLAM::updatePointCloudAndFeaturesInMap(int objID){
     cout << "new object - first mesh to generate" << endl;
     mapMeshList.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr (new pcl::PointCloud<pcl::PointNormal>(mtSurf, msSurf, pcl::PointNormal())));
     mapFeatureList.push_back(pcl::PointCloud<pcl::FPFHSignature33>::Ptr (new pcl::PointCloud<pcl::FPFHSignature33>));
+    mapMatchCount.push_back(0);
+    mapExtendCount.push_back(0);
   }else{
     // write a new object over the old
     cout << "update object - replace the mesh and features" << endl;

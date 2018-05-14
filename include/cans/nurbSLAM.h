@@ -64,6 +64,8 @@ class NurbSLAM {
     std::vector<int> objIDList;
     std::vector<Eigen::Matrix4f> transformationList;
     std::vector<float> inlierFractionList;
+    std::vector<int> mapMatchCount;
+    std::vector<int> mapExtendCount;
 
     float inlierFraction;
     int numberOfPointsInAlignment;
@@ -137,6 +139,9 @@ class NurbSLAM {
     bool bRejectNonOverlappingInAlign; // To reject points that don't overlap before alignment
     float maxDistanceOverlap;
     
+    int mapCountThreshold;
+    int mapExtendThreshold;
+
     int alignmentOption;
     int localisationOption;
 

@@ -33,15 +33,17 @@ pclFeatureRadiusSetting: 0.1
 /ransac/numberOfSamples: 3
 /ransac/correspondenceRandomness: 3
 /ransac/similarityThreshold: 0.9
-/ransac/inlierFraction: 0.6 # this should maybe be more strict for the blender data
+/ransac/inlierFraction: 0.4 # this should maybe be more strict for the blender data
 
-validInlierThreshold: 0.6
+validInlierThreshold: 0.4
 
 maxDistanceOverlap: 0.05 # maximum allowed distance away from existing surface to not be classed as new data
 
 # Number of data points
 nSurfPointsFactor: 5.0 # multiplier by the number of control points to get the number of surface points to sample
 
+mapCountThreshold: 3
+mapExtendThreshold: 100
 
 # -----------------------------
 # Mapping
@@ -70,12 +72,13 @@ nSurfPointsFactor: 5.0 # multiplier by the number of control points to get the n
 /mapping/bUseFullAlignmentTransformInUpdate: true
 /mapping/bUseOldStateForNewObjects: true
 
+
 # -----------------------------
 # EKF
 # -----------------------------
 /ekf/pNoisePos: 5.0
-/ekf/pNoiseVel: 0.05
-/ekf/pNoiseAccel: 0.005
+/ekf/pNoiseVel: 0.005
+/ekf/pNoiseAccel: 0.0005
 /ekf/pNoiseAng: 40000.0
 /ekf/qNoiseMultiplier: 5.0 # may have been best at 1.0
 /ekf/pNoiseMultiplier: 1.0
@@ -95,7 +98,7 @@ nSurfPointsFactor: 5.0 # multiplier by the number of control points to get the n
 
 /ekf/rejectCriteriaAng: 1.2
 /ekf/rejectCriteriaLin: 3.0
-/ekf/rejectCriteriaInlier: 0.6
+/ekf/rejectCriteriaInlier: 0.4
 /ekf/rejectCriteriaNumberP: 0.25
 
 # No filter settings
