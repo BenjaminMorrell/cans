@@ -97,10 +97,9 @@ void setSLAMParameters(NurbSLAM& slam, ros::NodeHandle nh){
 
   nh.param("mapCountThreshold", slam.mapCountThreshold, slam.mapCountThreshold);
   nh.param("mapExtendThreshold", slam.mapExtendThreshold, slam.mapExtendThreshold);
-  
 
+  nh.param("bLocalisationRejectionOn", slam.bLocalisationRejectionOn, slam.bLocalisationRejectionOn);
   
-
   // Mapping
   nh.param("/meshing/numRowsDesired", slam.mp.numRowsDesired, slam.mp.numRowsDesired);
   nh.param("/meshing/numColsDesired", slam.mp.numColsDesired, slam.mp.numColsDesired);
@@ -175,6 +174,11 @@ void runSLAM(int argc,char ** argv, ros::NodeHandle nh){
     
   }
 
+  int runNoisy = 0;
+  if (argc > 4){
+    runNoisy = atoi(argv[4]);
+  }
+
   // Initialise
   std::string filename;
   std::string outFilename;
@@ -222,6 +226,9 @@ void runSLAM(int argc,char ** argv, ros::NodeHandle nh){
       // outFilestem = "/home/bjm/Dropbox/PhD_Code/Results/Cube/cube_scan_res_";
       // pathFilename = "/home/bjm/Dropbox/PhD_Code/Data/3D_Scans/Blensor/Scan02/BlockScan_path.txt";
       filestem = "/home/bjm/Dropbox/PhD_Code/Data/3D_Scans/Blensor/One_Object/CUBE/oneObj_scan_data00";
+      if (runNoisy == 1){
+        filestem = "/home/bjm/Dropbox/PhD_Code/Data/3D_Scans/Blensor/One_Object/CUBE/oneObj_scan_data_noisy00";
+      }
       outFilestem = "/home/bjm/Dropbox/PhD_Code/Results/Cube/cube_one_obj_scan_res_";
       pathFilename = "/home/bjm/Dropbox/PhD_Code/Data/3D_Scans/Blensor/One_Object/CUBE/oneObj_scan_path.txt";
       // Also CUBE_DIAG, CUBE_VERT, 
@@ -233,6 +240,9 @@ void runSLAM(int argc,char ** argv, ros::NodeHandle nh){
       // Cube
       cout << "\n\t\tRunning Cube VERT Dataset\n\n";
       filestem = "/home/bjm/Dropbox/PhD_Code/Data/3D_Scans/Blensor/One_Object/CUBE_VERT/oneObj_scan_data00";
+      if (runNoisy == 1){
+        filestem = "/home/bjm/Dropbox/PhD_Code/Data/3D_Scans/Blensor/One_Object/CUBE_VERT/oneObj_scan_data_noisy00";
+      }
       outFilestem = "/home/bjm/Dropbox/PhD_Code/Results/Cube/cube_vert_one_obj_scan_res_";
       pathFilename = "/home/bjm/Dropbox/PhD_Code/Data/3D_Scans/Blensor/One_Object/CUBE_VERT/oneObj_scan_path.txt";
       // Also CUBE_DIAG, CUBE_VERT, 
@@ -244,6 +254,9 @@ void runSLAM(int argc,char ** argv, ros::NodeHandle nh){
       // Sphere
       cout << "Running Sphere Dataset\n";
       filestem = "/home/bjm/Dropbox/PhD_Code/Data/3D_Scans/Blensor/One_Object/SPHERE/oneObj_scan_data00";
+      if (runNoisy == 1){
+        filestem = "/home/bjm/Dropbox/PhD_Code/Data/3D_Scans/Blensor/One_Object/SPHERE/oneObj_scan_data_noisy00";
+      }
       outFilestem = "/home/bjm/Dropbox/PhD_Code/Results/Sphere/sphere_scan_res_";
       pathFilename = "/home/bjm/Dropbox/PhD_Code/Data/3D_Scans/Blensor/One_Object/SPHERE/oneObj_scan_path.txt";
       // ALso SPHERE_DIAG
@@ -266,11 +279,17 @@ void runSLAM(int argc,char ** argv, ros::NodeHandle nh){
       // Longer Blob 2 - no problematic square parts
       if (machine == 0){
         filestem = "/home/bjm/Dropbox/PhD_Code/Data/3D_Scans/Blensor/Blob2/BlobScan_data00";
+        if (runNoisy == 1){
+          filestem = "/home/bjm/Dropbox/PhD_Code/Data/3D_Scans/Blensor/Blob2/BlobScan_data_noisy00";
+        }
         outFilestem = "/home/bjm/Dropbox/PhD_Code/Results/Blob2/blob_";
-        mapFilestem = "/home/bjm/Dropbox/PhD_Code/Results/Blob2/localisation_map/blob_";
+        mapFilestem = "/home/bjm/Dropbox/PhD_Code/Results/Blob2/final_objs/blob_";
         pathFilename = "/home/bjm/Dropbox/PhD_Code/Data/3D_Scans/Blensor/Blob2/BlobScan_path.txt";
       }else if (machine == 1){
         filestem = "/home/amme2/Development/Data/Blob2/BlobScan_data00";
+        if (runNoisy == 1){
+          filestem = "/home/amme2/Development/Data/Blob2/BlobScan_data_noisy00";
+        }
         outFilestem = "/home/amme2/Development/Results/Blensor/Blob2/blob_";
         pathFilename = "/home/amme2/Development/Data/Blob2/BlobScan_path.txt";
       }
@@ -279,7 +298,7 @@ void runSLAM(int argc,char ** argv, ros::NodeHandle nh){
       scanSteps = 1;
       numberOfScans = numberOfScans*scanSteps;
       nData = 100;
-      nObjLocalisation = 2;
+      nObjLocalisation = 1;
       break;
     case 7:
       // Blob Lateral - NOTE that the path may be wrong - so only use for SLAM...
@@ -295,11 +314,17 @@ void runSLAM(int argc,char ** argv, ros::NodeHandle nh){
       // Blob 3
       if (machine == 0){
         filestem = "/home/bjm/Dropbox/PhD_Code/Data/3D_Scans/Blensor/Blob3/BlobScan_data00";
+        if (runNoisy == 1){
+          filestem = "/home/bjm/Dropbox/PhD_Code/Data/3D_Scans/Blensor/Blob3/BlobScan_data_noisy00";
+        }
         outFilestem = "/home/bjm/Dropbox/PhD_Code/Results/Blob3/blob_";
-        mapFilestem = "/home/bjm/Dropbox/PhD_Code/Results/Blob3/localisation_map/blob_";
+        mapFilestem = "/home/bjm/Dropbox/PhD_Code/Results/Blob3/final_objs/blob_";
         pathFilename = "/home/bjm/Dropbox/PhD_Code/Data/3D_Scans/Blensor/Blob3/BlobScan_path.txt";
       }else if (machine == 1){
         filestem = "/home/amme2/Development/Data/Blob3/BlobScan_data00";
+        if (runNoisy == 1){
+          filestem = "/home/amme2/Development/Data/Blob3/BlobScan_data_noisy00";
+        }
         outFilestem = "/home/amme2/Development/Results/Blensor/Blob3/blob_";
         pathFilename = "/home/amme2/Development/Data/Blob3/BlobScan_path.txt";
       }
@@ -412,7 +437,7 @@ void runSLAM(int argc,char ** argv, ros::NodeHandle nh){
         filenameObj = mapFilestem + static_cast<ostringstream*>( &(ostringstream() << (k)) )->str() + "_final_obj.obj";
         slam.loadObjectIntoMap(filenameObj.c_str());
       }
-      // TODO may need to update this to load multiple objects
+      
     }catch(...){
       cout << "\n\nNo object found to use for localisation. Exiting." << endl;
       return;
@@ -458,8 +483,11 @@ void runSLAM(int argc,char ** argv, ros::NodeHandle nh){
   for (int i = start_i; i < numberOfScans; i += scanSteps){
     cout << "Processing Scan " << i << endl;
 
-    // if (i == 77){
-    //   slam.bShowAlignment = true;
+    // if (i > 70){
+    //   slam.mapExtendThreshold = 1;
+    // }
+    // if (i > 82){
+    //   slam.mapExtendThreshold = 17;
     // }
 
     // if (i == 60){

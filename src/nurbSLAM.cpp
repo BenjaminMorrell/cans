@@ -27,7 +27,8 @@ NurbSLAM::NurbSLAM():
     ransac_correspondenceRandomness(3), ransac_similarityThreshold(0.9), ransac_inlierFraction(0.25),
     processTimes(5), bObjectNormalsComputed(false), processModel(0),numberOfPointsInAlignment(0),
     bUseFullAlignmentTransformInUpdate(false), bRejectAlignment(false), bUseOldStateForNewObjects(false),
-    rejectCriteria(6), bKeepPConstant(false), mapCountThreshold(3), mapExtendThreshold(2)
+    rejectCriteria(6), bKeepPConstant(false), mapCountThreshold(3), mapExtendThreshold(2), updateCount(0),
+    bLocalisationRejectionOn(false)
 {// TODO - make this initialiser list organised...
   state = Eigen::Affine3f::Identity();
   oldState = Eigen::Affine3f::Identity();
@@ -214,6 +215,12 @@ void NurbSLAM::processScans(std::vector<pcl::PointCloud<pcl::PointNormal>::Ptr> 
     processTimes[3] = -1.0;
   }
   cout << "Updated filter" << endl;
+
+  if (bLocalisationRejectionOn && bLocalisationModeOn && (bRejectAlignment || objIDList[0] < 0)){
+    // If doing localisation and a scan is rejected - reset to the previous state
+    cout << "In Localisation Mode. Not changing state this iteration..." << endl;
+    state = previousState;
+  }
   
   if (!bLocalisationModeOn){
     // Start time
@@ -622,7 +629,7 @@ Eigen::Matrix4f NurbSLAM::alignScanWithMapObject(int objID, pcl::PointCloud<pcl:
     computeNormals(obsObjPC);
     cout << "computed normals for observation" << endl;
 
-    if (mapMatchCount[objID] > mapCountThreshold){
+    if (mapMatchCount[objID] > mapCountThreshold || bLocalisationModeOn){
       computeNormals(mapMeshList[objID]);
       cout << "\nComputed normals for Map because mapCount was: " << mapMatchCount[objID] << endl;
     }
@@ -656,7 +663,7 @@ Eigen::Matrix4f NurbSLAM::alignScanWithMapObject(int objID, pcl::PointCloud<pcl:
     // fest.compute (*obsObjPC_features);
     cout << "Features have been computed for observation" << endl;
 
-     if (mapMatchCount[objID] > mapCountThreshold){
+     if (mapMatchCount[objID] > mapCountThreshold || bLocalisationModeOn){
       computeFeatures(mapMeshList[objID], mapMeshList[objID], mapFeatureList[objID]);
       cout << "\nComputed features for Map because mapCount was: " << mapMatchCount[objID] << endl;
     }
@@ -1304,6 +1311,10 @@ void NurbSLAM::alignAndUpdateMeshes(){
 
       // ID for the latest object
       updateID = mp.objectMap.size() - 1;
+
+      // std::string filename = "/home/bjm/SpaceCRAFT/ros_ws/updatedSurface_" + std::to_string(updateCount) + ".pcd";
+      // mp.writeObjectPCDFile(filename.c_str(), updateID, 125, 125);
+      // updateCount++;
     }else{
       cout << "\n\t\t UPDATING OBJECT " << objIDList[i] << "...\n\n";
       // Update object
@@ -1321,6 +1332,10 @@ void NurbSLAM::alignAndUpdateMeshes(){
       nCols != mp.objectMap[objIDList[i]].ctrlPnts().cols()){
         cout << "Surface was updated" << endl;
         updateID = objIDList[i];
+
+        // std::string filename = "/home/bjm/SpaceCRAFT/ros_ws/updatedSurface_" + std::to_string(updateCount) + ".pcd";
+        // mp.writeObjectPCDFile(filename.c_str(), objIDList[i], 125, 125);
+        // updateCount++;
 
         if (mp.objectMap[objIDList[i]].nansInObject()){
           cout << "Nans in combined object. Reverting" << endl;

@@ -4,6 +4,8 @@
 
 #include "cans/mapping3D.h"
 #include <chrono>
+#include <iostream>
+#include <fstream>
 
 //PCL includes
 #include <Eigen/Core>
@@ -72,6 +74,8 @@ class NurbSLAM {
     bool bRejectAlignment;
     
     bool bObjectNormalsComputed;
+
+    int updateCount;
 
     // Options
     bool bMappingModeOn;
@@ -144,6 +148,8 @@ class NurbSLAM {
 
     int alignmentOption;
     int localisationOption;
+
+    bool bLocalisationRejectionOn;
 
     bool bUseFullAlignmentTransformInUpdate;
     bool bUseOldStateForNewObjects; 

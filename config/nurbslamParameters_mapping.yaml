@@ -14,9 +14,7 @@ bPublishNurbsPointCloud: false # whether or not to publish the point cloud for v
 
 bTestMapGeneration: false
 
-bLocalisationRejectionOn: false
-
-mappingSteps: 1
+mappingSteps: 5
 
 # -----------------------------
 # Localisation
@@ -47,7 +45,7 @@ maxDistanceOverlap: 0.05 # maximum allowed distance away from existing surface t
 nSurfPointsFactor: 5.0 # multiplier by the number of control points to get the number of surface points to sample
 
 mapCountThreshold: 3
-mapExtendThreshold: 4 # Make this very high to turn off the "new object when no extension for too long" feature
+mapExtendThreshold: 6
 
 # -----------------------------
 # Mapping
@@ -57,7 +55,7 @@ mapExtendThreshold: 4 # Make this very high to turn off the "new object when no 
 /meshing/numColsDesired: 95
 /meshing/maxNanAllowed: 5
 /meshing/removeNanBuffer: 2
-/meshing/newRowColBuffer: 10 # Good for mapping - 20
+/meshing/newRowColBuffer: 20
 
 /meshing/bFilterZ: false
 /meshing/nPointsZLim: 10000
@@ -71,7 +69,7 @@ mapExtendThreshold: 4 # Make this very high to turn off the "new object when no 
 /mapping/degree: 3
 
 # Data association
-/mapping/searchThresh: 50.0 # capture everything for 67p
+# /mapping/searchThresh: 50.0 # capture everything for 67p
 
 /mapping/bUseFullAlignmentTransformInUpdate: true
 /mapping/bUseOldStateForNewObjects: true
