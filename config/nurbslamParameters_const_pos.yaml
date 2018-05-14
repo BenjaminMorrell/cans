@@ -76,25 +76,25 @@ mapExtendThreshold: 100
 # -----------------------------
 # EKF
 # -----------------------------
-/ekf/pNoisePos: 5.0
+/ekf/pNoisePos: 7000.0
 /ekf/pNoiseVel: 0.0025
 /ekf/pNoiseAccel: 0.00025
 /ekf/pNoiseAng: 40000.0
-/ekf/qNoiseMultiplier: 5.0 # may have been best at 1.0
-/ekf/pNoiseMultiplier: 1.0
+/ekf/qNoiseMultiplier: 3.0 
+/ekf/pNoiseMultiplier: 2.0
 /ekf/noiseObsBasePos: 0.001 
 /ekf/noiseObsMultPos: 500.0
 /ekf/noiseObsMultPosErr: 1000.0
 /ekf/noiseObsBaseAng: 0.00001
 /ekf/noiseObsMultAng: 2500.0
 /ekf/noiseObsMultAngErr: 50000.0 
-/ekf/rMatMultiplier: 2375.0
+/ekf/rMatMultiplier: 2500.0
 
 /ekf/bKeepPConstant: false
 
 /ekf/timestep: 20.0 # For data-based cases
 
-/ekf/processModel: 0 # 0 - const accel, 1 - const vel, 2 - const pos
+/ekf/processModel: 2 # 0 - const accel, 1 - const vel, 2 - const pos
 
 /ekf/rejectCriteriaAng: 1.2
 /ekf/rejectCriteriaLin: 3.0
