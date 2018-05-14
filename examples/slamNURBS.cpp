@@ -161,6 +161,7 @@ void runSLAM(int argc,char ** argv, ros::NodeHandle nh){
   int scanSteps;
   int nData;
   int nurbSLAMMode;
+  int nObjLocalisation = 1;
 
   if (argc < 3){
     cout << "Error: need to use at least 2 arugments: int dataset, int numberOfScans (optional) mode {0, SLAM (default), 1, mapping, 2 localisation}" << endl;
@@ -276,6 +277,7 @@ void runSLAM(int argc,char ** argv, ros::NodeHandle nh){
       scanSteps = 1;
       numberOfScans = numberOfScans*scanSteps;
       nData = 100;
+      nObjLocalisation = 1;
       break;
     case 7:
       // Blob Lateral - NOTE that the path may be wrong - so only use for SLAM...
@@ -358,16 +360,16 @@ void runSLAM(int argc,char ** argv, ros::NodeHandle nh){
   transform.rotate (Eigen::AngleAxisf(state(4,0),Eigen::Vector3f::UnitY()));
   transform.rotate (Eigen::AngleAxisf(state(3,0),Eigen::Vector3f::UnitX()));
 
-  if (nurbSLAMMode==2){
-    transform.setIdentity();
-    transform(0,3) = 1.03987;
-    transform(1,3) = 3.49792;
-    transform(2,3) = 0.178754;
+  // if (nurbSLAMMode==2){
+  //   transform.setIdentity();
+  //   transform(0,3) = 1.03987;
+  //   transform(1,3) = 3.49792;
+  //   transform(2,3) = 0.178754;
 
-    transform.rotate (Eigen::AngleAxisf(3.0279,Eigen::Vector3f::UnitZ()));
-    transform.rotate (Eigen::AngleAxisf(0.0100855,Eigen::Vector3f::UnitY()));
-    transform.rotate (Eigen::AngleAxisf(1.67344,Eigen::Vector3f::UnitX()));
-  }
+  //   transform.rotate (Eigen::AngleAxisf(3.0279,Eigen::Vector3f::UnitZ()));
+  //   transform.rotate (Eigen::AngleAxisf(0.0100855,Eigen::Vector3f::UnitY()));
+  //   transform.rotate (Eigen::AngleAxisf(1.67344,Eigen::Vector3f::UnitX()));
+  // }
   
 
   cout << "transform is " << transform.matrix() << endl;
@@ -381,7 +383,12 @@ void runSLAM(int argc,char ** argv, ros::NodeHandle nh){
   if (nurbSLAMMode==2){
     // load object
     try{
-      slam.loadObjectIntoMap((outFilestem + "1_final_obj_saved.obj").c_str());
+      std::string filenameObj;
+      cout << "Loading " << nObjLocalisation << " objects into map" << endl;
+      for (int k = 0; k < nObjLocalisation; k++){
+        filenameObj = outFilestem + static_cast<ostringstream*>( &(ostringstream() << (k)) )->str() + "_final_obj_saved.obj";
+        slam.loadObjectIntoMap(filenameObj.c_str());
+      }
       // TODO may need to update this to load multiple objects
     }catch(...){
       cout << "\n\nNo object found to use for localisation. Exiting." << endl;
@@ -420,9 +427,9 @@ void runSLAM(int argc,char ** argv, ros::NodeHandle nh){
   
   int start_i = 0;
 
-  if (nurbSLAMMode==2){
-    start_i = 50;
-  }
+  // if (nurbSLAMMode==2){
+  //   start_i = 50;
+  // }
 
   // Run sequence of scans 
   for (int i = start_i; i < numberOfScans; i += scanSteps){
@@ -448,6 +455,27 @@ void runSLAM(int argc,char ** argv, ros::NodeHandle nh){
       cout << "filename is : " << filename;
     }
 
+    if (nurbSLAMMode==1){
+      // Mapping - update internal state from the truth
+      transform = Eigen::Affine3f::Identity();
+
+      // Translation
+      transform(0,3) = state(0,i);
+      transform(1,3) = state(1,i);
+      transform(2,3) = state(2,i);
+      
+        
+      // 3, 2, 1 Euler transformation
+      transform.rotate (Eigen::AngleAxisf(state(5,i),Eigen::Vector3f::UnitZ()));
+      transform.rotate (Eigen::AngleAxisf(state(4,i),Eigen::Vector3f::UnitY()));
+      transform.rotate (Eigen::AngleAxisf(state(3,i),Eigen::Vector3f::UnitX()));
+
+      slam.setState(transform);
+
+      cout << "Mapping... Set state from truth" << endl;
+
+    }
+
     // Read Scan
     reader.read (filename, *cloud_blob);
     cout << "scan read" << endl;
@@ -471,19 +499,21 @@ void runSLAM(int argc,char ** argv, ros::NodeHandle nh){
     for (int i = 0; i < 5; i++){processTimesVec[i] = slam.processTimes[i];}
     processTimesVec[5] = runtimeDuration.count();
 
-    // Get the state
-    transform = slam.getState();
+    if (nurbSLAMMode!=1){
+      // Get the state
+      transform = slam.getState();
 
-    // Update State for tracking
-    state(0,i) = transform.matrix()(0,3);
-    state(1,i) = transform.matrix()(1,3);
-    state(2,i) = transform.matrix()(2,3);
+      // Update State for tracking
+      state(0,i) = transform.matrix()(0,3);
+      state(1,i) = transform.matrix()(1,3);
+      state(2,i) = transform.matrix()(2,3);
 
-    rpy = transform.rotation().eulerAngles(2, 1, 0); // Check ordering
+      rpy = transform.rotation().eulerAngles(2, 1, 0); // Check ordering
 
-    state(3,i) = rpy(2);
-    state(4,i) = rpy(1);
-    state(5,i) = rpy(0);
+      state(3,i) = rpy(2);
+      state(4,i) = rpy(1);
+      state(5,i) = rpy(0);
+    }
 
     // Empty cloud vector
     clouds.clear();

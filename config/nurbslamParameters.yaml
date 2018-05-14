@@ -77,8 +77,8 @@ mapExtendThreshold: 100
 # EKF
 # -----------------------------
 /ekf/pNoisePos: 5.0
-/ekf/pNoiseVel: 0.005
-/ekf/pNoiseAccel: 0.0005
+/ekf/pNoiseVel: 0.0025
+/ekf/pNoiseAccel: 0.00025
 /ekf/pNoiseAng: 40000.0
 /ekf/qNoiseMultiplier: 5.0 # may have been best at 1.0
 /ekf/pNoiseMultiplier: 1.0
@@ -88,7 +88,7 @@ mapExtendThreshold: 100
 /ekf/noiseObsBaseAng: 0.00001
 /ekf/noiseObsMultAng: 2500.0
 /ekf/noiseObsMultAngErr: 50000.0 
-/ekf/rMatMultiplier: 2500.0
+/ekf/rMatMultiplier: 2375.0
 
 /ekf/bKeepPConstant: false
 
