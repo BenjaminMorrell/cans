@@ -6,7 +6,7 @@ bShowAlignment: false
 localisationOption: 2 # Option for localisation method (0 - PCL, 1 - RANSAC IA, 2 - Prerejective RANSAC)
 keypointOption: 0
 
-machine: 0
+machine: 1
 
 bRejectNonOverlappingInAlign: false # whether or not to reject non-overlapping points before alignment
 
@@ -47,7 +47,7 @@ maxDistanceOverlap: 0.05 # maximum allowed distance away from existing surface t
 nSurfPointsFactor: 5.0 # multiplier by the number of control points to get the number of surface points to sample
 
 mapCountThreshold: 3
-mapExtendThreshold: 1 # Make this very high to turn off the "new object when no extension for too long" feature
+mapExtendThreshold: 100 # Make this very high to turn off the "new object when no extension for too long" feature
 
 # -----------------------------
 # Mapping
@@ -71,7 +71,7 @@ mapExtendThreshold: 1 # Make this very high to turn off the "new object when no 
 /mapping/degree: 3
 
 # Data association
-/mapping/searchThresh: 50.0 # capture everything for 67p
+# /mapping/searchThresh: 50.0 # capture everything for 67p
 
 /mapping/bUseFullAlignmentTransformInUpdate: true
 /mapping/bUseOldStateForNewObjects: true
@@ -84,7 +84,7 @@ mapExtendThreshold: 1 # Make this very high to turn off the "new object when no 
 /ekf/pNoiseVel: 0.0025
 /ekf/pNoiseAccel: 0.00025
 /ekf/pNoiseAng: 40000.0
-/ekf/qNoiseMultiplier: 5.0 # may have been best at 1.0
+/ekf/qNoiseMultiplier: 5.0 
 /ekf/pNoiseMultiplier: 1.0
 /ekf/noiseObsBasePos: 0.001 
 /ekf/noiseObsMultPos: 500.0

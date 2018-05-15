@@ -4,13 +4,20 @@
 alignmentOption: 0 # 0 - dense to dense, 1 - keypoints to dense, 2 - keypoints to keypoints
 bShowAlignment: false
 localisationOption: 2 # Option for localisation method (0 - PCL, 1 - RANSAC IA, 2 - Prerejective RANSAC)
-keypointOption: 0 # 0 - ISS detector, 1: Smoothed surface (not good)
+keypointOption: 0
+processRate: 10.0
+
+machine: 1
 
 bRejectNonOverlappingInAlign: false # whether or not to reject non-overlapping points before alignment
 
 bPublishNurbsPointCloud: true # whether or not to publish the point cloud for visualuisation in Rviz
 
 bTestMapGeneration: false
+
+bLocalisationRejectionOn: false
+
+mappingSteps: 5
 
 # -----------------------------
 # Localisation
@@ -20,64 +27,93 @@ bTestMapGeneration: false
 /keypoints/minNeighbours: 5
 
 # Normals
-pclNormalRadiusSetting: 0.6
+pclNormalRadiusSetting: 0.2
 # Features
-pclFeatureRadiusSetting: 1.2
+pclFeatureRadiusSetting: 0.35
 # RANSAC
 /ransac/inlierMultiplier: 0.05
-/ransac/maximumIterations: 500
+/ransac/maximumIterations: 5000
 
 # POSSIBLY USE
 /ransac/numberOfSamples: 3
 /ransac/correspondenceRandomness: 3
 /ransac/similarityThreshold: 0.9
-/ransac/inlierFraction: 0.6
+/ransac/inlierFraction: 0.4 # this should maybe be more strict for the blender data
 
-validInlierThreshold: 0.6
+validInlierThreshold: 0.4
 
-maxDistanceOverlap: 0.35 # maximum allowed distance away from existing surface to not be classes as new data
-
+maxDistanceOverlap: 0.05 # maximum allowed distance away from existing surface to not be classed as new data
 
 # Number of data points
 nSurfPointsFactor: 5.0 # multiplier by the number of control points to get the number of surface points to sample
-# Was 7.0
 
+mapCountThreshold: 3
+mapExtendThreshold: 100 # Make this very high to turn off the "new object when no extension for too long" feature
 
 # -----------------------------
 # Mapping
 # -----------------------------
 # Mesh processing
-/meshing/numRowsDesired: 115
-/meshing/numColsDesired: 115
-/meshing/minRowsColsAllowed: 15
+/meshing/numRowsDesired: 95
+/meshing/numColsDesired: 95
 /meshing/maxNanAllowed: 5
-/meshing/maxNanPercentage: 0.25
+/meshing/removeNanBuffer: 2
+/meshing/newRowColBuffer: 10 # Good for mapping - 20
 
-/meshing/removeNanBuffer: 4
-/meshing/newRowColBuffer: 10
-
-/meshing/bFilterZ: true
-/meshing/nPointsZLim: 1000
-/meshing/zThreshMultiplier: 0.005
+/meshing/bFilterZ: false
+/meshing/nPointsZLim: 10000
+/meshing/zThreshMultiplier: 1.0
+/meshing/bNegateZ: false
 
 # NURBS generation
-/mapping/useNonRectData: false # To use the new extension method
-/mapping/nCtrlDefaultS: 25
-/mapping/nCtrlDefaultT: 25
-/mapping/degree: 2
+/mapping/useNonRectData: true # To use the new extension method
+/mapping/nCtrlDefaultS: 17
+/mapping/nCtrlDefaultR: 17
+/mapping/degree: 3
 
 # Data association
 /mapping/searchThresh: 50.0 # capture everything for 67p
 
-# # Mesh processing
-# /meshing/numRowsDesired: 125
-# /meshing/numColsDesired: 125
-# /meshing/maxNanAllowed: 50
-# /meshing/removeNanBuffer: 1
-# /meshing/newRowColBuffer: 10
+/mapping/bUseFullAlignmentTransformInUpdate: true
+/mapping/bUseOldStateForNewObjects: true
 
-# # NURBS generation
-# /mapping/useNonRectData: true # To use the new extension method
-# /mapping/nCtrlDefaultS: 25
-# /mapping/nCtrlDefaultR: 25
+
+# -----------------------------
+# EKF
+# -----------------------------
+/ekf/pNoisePos: 5.0
+/ekf/pNoiseVel: 0.0025
+/ekf/pNoiseAccel: 0.00025
+/ekf/pNoiseAng: 40000.0
+/ekf/qNoiseMultiplier: 5.0 
+/ekf/pNoiseMultiplier: 1.0
+/ekf/noiseObsBasePos: 0.001 
+/ekf/noiseObsMultPos: 500.0
+/ekf/noiseObsMultPosErr: 1000.0
+/ekf/noiseObsBaseAng: 0.00001
+/ekf/noiseObsMultAng: 2500.0
+/ekf/noiseObsMultAngErr: 50000.0 
+/ekf/rMatMultiplier: 2375.0
+
+/ekf/bKeepPConstant: false
+
+/ekf/timestep: 20.0 # For data-based cases
+
+/ekf/processModel: 0 # 0 - const accel, 1 - const vel, 2 - const pos
+
+/ekf/rejectCriteriaAng: 1.2
+/ekf/rejectCriteriaLin: 3.0
+/ekf/rejectCriteriaInlier: 0.4
+/ekf/rejectCriteriaNumberP: 0.25
+
+# No filter settings
+# /ekf/pNoisePos: 3.0
+# /ekf/pNoiseVel: 3.0
+# /ekf/pNoiseAccel: 3.0
+# /ekf/pNoiseAng: 3.0
+# /ekf/qNoiseMultiplier: 3.0
+# /ekf/noiseObsBasePos: 0.000000001
+# /ekf/noiseObsMultPos: 0.0
+# /ekf/noiseObsBaseAng: 0.000000001
+# /ekf/noiseObsMultAng: 0.0
 
