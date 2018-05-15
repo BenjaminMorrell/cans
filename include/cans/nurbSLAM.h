@@ -77,6 +77,8 @@ class NurbSLAM {
 
     int updateCount;
 
+    int lastMatchID;
+
     // Options
     bool bMappingModeOn;
     bool bLocalisationModeOn;

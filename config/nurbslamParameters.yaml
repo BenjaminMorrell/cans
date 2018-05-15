@@ -16,7 +16,7 @@ bTestMapGeneration: false
 
 bLocalisationRejectionOn: false
 
-mappingSteps: 5
+mappingSteps: 3
 
 # -----------------------------
 # Localisation

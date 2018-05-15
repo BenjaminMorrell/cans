@@ -28,7 +28,7 @@ NurbSLAM::NurbSLAM():
     processTimes(5), bObjectNormalsComputed(false), processModel(0),numberOfPointsInAlignment(0),
     bUseFullAlignmentTransformInUpdate(false), bRejectAlignment(false), bUseOldStateForNewObjects(false),
     rejectCriteria(6), bKeepPConstant(false), mapCountThreshold(3), mapExtendThreshold(2), updateCount(0),
-    bLocalisationRejectionOn(false)
+    bLocalisationRejectionOn(false),lastMatchID(-1)
 {// TODO - make this initialiser list organised...
   state = Eigen::Affine3f::Identity();
   oldState = Eigen::Affine3f::Identity();
@@ -116,6 +116,8 @@ void NurbSLAM::processScans(std::vector<pcl::PointCloud<pcl::PointNormal>::Ptr> 
   processStepEKF(timestep);
 
   oldState = state;
+
+  int preAlignmentID;
   
   // Initial Scan processing
   for (int i = 0; i < clouds.size(); i++){
@@ -127,6 +129,7 @@ void NurbSLAM::processScans(std::vector<pcl::PointCloud<pcl::PointNormal>::Ptr> 
     // Process the scan and perform data association
     objIDList.push_back(processSingleScan(clouds[i], objectMeshList[i]));
 
+    preAlignmentID = objIDList[i];
     
     cout << "\n\n\t\t FINISHED PROCESSING SCAN " << i << "\n\n";
 
@@ -164,6 +167,29 @@ void NurbSLAM::processScans(std::vector<pcl::PointCloud<pcl::PointNormal>::Ptr> 
         }
       }
 
+      if (objIDList[i] == -1){ //if (bLocalisationModeOn && objIDList[i] == -1){
+        // If doing localisation and there is a failure - try use the last matched object (if different)
+        cout << "Failed alignment on obj: " << objIDList[i] << ", last match is: " << lastMatchID << endl;
+        if (lastMatchID != preAlignmentID || lastMatchID != -1){
+          // Try localisation on lastMatchID
+          cout << "Trying alignment with previous match, of ID: " << lastMatchID << endl;
+          transformationList.push_back(alignScanWithMapObject(lastMatchID, objectMeshList[i]));
+
+          inlierFractionList.push_back(inlierFraction);
+
+          if (inlierFraction < validInlierTheshold){
+            cout << "inlier fraction of " << inlierFraction << " is below valid threshold: " << validInlierTheshold << ". Ignoring match." << endl;
+            objIDList[i] = -1;
+            // Remove transformation
+            transformationList.pop_back();
+            inlierFractionList.pop_back();
+          }else{
+            cout << "Success in alignment with previous match!" << endl;
+            objIDList[i] = lastMatchID;
+          }
+        }
+      }
+
       t2 = std::chrono::high_resolution_clock::now();
 
       dur = t2-t1;
@@ -175,6 +201,11 @@ void NurbSLAM::processScans(std::vector<pcl::PointCloud<pcl::PointNormal>::Ptr> 
       processTimes[2] = -1.0; // Flag that there is no time
     }
   }
+
+  if (objIDList[0] != -1){
+    lastMatchID = objIDList[0];
+  }
+  
 
   // Update map match count
   bool bIsMatched;
