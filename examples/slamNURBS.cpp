@@ -490,8 +490,8 @@ void runSLAM(int argc,char ** argv, ros::NodeHandle nh){
     //   slam.mapExtendThreshold = 17;
     // }
 
-    // if (i == 60){
-    //   slam.bShowAlignment = false;
+    // if (i == 14){
+    //   slam.bShowAlignment = true;
     // }
 
     // Get filename:
