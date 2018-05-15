@@ -311,58 +311,83 @@ class nurbSLAMNode {
 
     void setSLAMParameters(ros::NodeHandle& nh){
 
-      cout << "Inside set parameters" << endl;
-      // OPTIONS
-      nh.param("alignmentOption", slam.alignmentOption, slam.alignmentOption);
-      nh.param("bShowAlignment", slam.bShowAlignment, slam.bShowAlignment);
-      nh.param("localisationOption", slam.localisationOption, slam.localisationOption);
-      nh.param("keypointOption", slam.keypointOption, slam.keypointOption);
-      nh.param("bRejectNonOverlappingInAlign", slam.bRejectNonOverlappingInAlign, slam.bRejectNonOverlappingInAlign);
+    cout << "Inside set parameters" << endl;
+    // OPTIONS
+    nh.param("alignmentOption", slam.alignmentOption, slam.alignmentOption);
+    nh.param("bShowAlignment", slam.bShowAlignment, slam.bShowAlignment);
+    nh.param("localisationOption", slam.localisationOption, slam.localisationOption);
+    nh.param("keypointOption", slam.keypointOption, slam.keypointOption);
+    nh.param("bRejectNonOverlappingInAlign", slam.bRejectNonOverlappingInAlign, slam.bRejectNonOverlappingInAlign);
 
-      nh.param("bTestMapGeneration",bTestMapGeneration,bTestMapGeneration);
+    // Localisation
+    nh.param("/keypoints/modelResolution", slam.modelResolutionKeypoints, slam.modelResolutionKeypoints);
+    nh.param("/keypoints/minNeighbours", slam.minNeighboursKeypoints, slam.minNeighboursKeypoints);
 
-      // Localisation
-      nh.param("/keypoints/modelResolution", slam.modelResolutionKeypoints, slam.modelResolutionKeypoints);
-      nh.param("/keypoints/minNeighbours", slam.minNeighboursKeypoints, slam.minNeighboursKeypoints);
+    nh.param("pclNormalRadiusSetting", slam.pclNormalRadiusSetting, slam.pclNormalRadiusSetting);
+    nh.param("pclFeatureRadiusSetting", slam.pclFeatureRadiusSetting, slam.pclFeatureRadiusSetting);
 
-      nh.param("pclNormalRadiusSetting", slam.pclNormalRadiusSetting, slam.pclNormalRadiusSetting);
-      nh.param("pclFeatureRadiusSetting", slam.pclFeatureRadiusSetting, slam.pclFeatureRadiusSetting);
+    nh.param("/ransac/inlierMultiplier", slam.ransac_inlierMultiplier, slam.ransac_inlierMultiplier);
+    nh.param("/ransac/maximumIterations", slam.ransac_maximumIterations, slam.ransac_maximumIterations);
+    nh.param("/ransac/numberOfSamples", slam.ransac_numberOfSamples, slam.ransac_numberOfSamples);
+    nh.param("/ransac/correspondenceRandomness", slam.ransac_correspondenceRandomness, slam.ransac_correspondenceRandomness);
+    nh.param("/ransac/similarityThreshold", slam.ransac_similarityThreshold, slam.ransac_similarityThreshold);
+    nh.param("/ransac/inlierFraction", slam.ransac_inlierFraction, slam.ransac_inlierFraction);
+    nh.param("validInlierThreshold", slam.validInlierTheshold, slam.validInlierTheshold);
+    nh.param("nSurfPointsFactor", slam.nSurfPointsFactor, slam.nSurfPointsFactor);
 
-      nh.param("/ransac/inlierMultiplier", slam.ransac_inlierMultiplier, slam.ransac_inlierMultiplier);
-      nh.param("/ransac/maximumIterations", slam.ransac_maximumIterations, slam.ransac_maximumIterations);
-      nh.param("/ransac/numberOfSamples", slam.ransac_numberOfSamples, slam.ransac_numberOfSamples);
-      nh.param("/ransac/correspondenceRandomness", slam.ransac_correspondenceRandomness, slam.ransac_correspondenceRandomness);
-      nh.param("/ransac/similarityThreshold", slam.ransac_similarityThreshold, slam.ransac_similarityThreshold);
-      nh.param("/ransac/inlierFraction", slam.ransac_inlierFraction, slam.ransac_inlierFraction);
-      nh.param("validInlierThreshold", slam.validInlierTheshold, slam.validInlierTheshold);
-      nh.param("nSurfPointsFactor", slam.nSurfPointsFactor, slam.nSurfPointsFactor);
+    nh.param("maxDistanceOverlap", slam.maxDistanceOverlap, slam.maxDistanceOverlap);
 
-      nh.param("maxDistanceOverlap", slam.maxDistanceOverlap, slam.maxDistanceOverlap);
+    nh.param("mapCountThreshold", slam.mapCountThreshold, slam.mapCountThreshold);
+    nh.param("mapExtendThreshold", slam.mapExtendThreshold, slam.mapExtendThreshold);
 
-      // Mapping
-      nh.param("/meshing/numRowsDesired", slam.mp.numRowsDesired, slam.mp.numRowsDesired);
-      nh.param("/meshing/numColsDesired", slam.mp.numColsDesired, slam.mp.numColsDesired);
-      nh.param("/meshing/minRowsColsAllowed", slam.mp.minRowsColsAllowed, slam.mp.minRowsColsAllowed);
-      nh.param("/meshing/maxNanAllowed", slam.mp.maxNanAllowed, slam.mp.maxNanAllowed);
-      nh.param("/meshing/maxNanPercentage", slam.mp.maxNanPercentage, slam.mp.maxNanPercentage);
-      nh.param("/meshing/removeNanBuffer", slam.mp.removeNanBuffer, slam.mp.removeNanBuffer);
-      nh.param("/meshing/newRowColBuffer", slam.mp.newRowColBuffer, slam.mp.newRowColBuffer);
-      nh.param("/meshing/bFilterZ", slam.mp.bFilterZ, slam.mp.bFilterZ);
-      nh.param("/meshing/nPointsZLim", slam.mp.nPointsZLim, slam.mp.nPointsZLim);
-      nh.param("/meshing/zThreshMultiplier", slam.mp.zThreshMultiplier, slam.mp.zThreshMultiplier);
+    nh.param("bLocalisationRejectionOn", slam.bLocalisationRejectionOn, slam.bLocalisationRejectionOn);
+    
+    // Mapping
+    nh.param("/meshing/numRowsDesired", slam.mp.numRowsDesired, slam.mp.numRowsDesired);
+    nh.param("/meshing/numColsDesired", slam.mp.numColsDesired, slam.mp.numColsDesired);
+    nh.param("/meshing/maxNanAllowed", slam.mp.maxNanAllowed, slam.mp.maxNanAllowed);
+    nh.param("/meshing/removeNanBuffer", slam.mp.removeNanBuffer, slam.mp.removeNanBuffer);
+    nh.param("/meshing/newRowColBuffer", slam.mp.newRowColBuffer, slam.mp.newRowColBuffer);
+    nh.param("/meshing/bFilterZ", slam.mp.bFilterZ, slam.mp.bFilterZ);
+    nh.param("/meshing/nPointsZLim", slam.mp.nPointsZLim, slam.mp.nPointsZLim);
+    nh.param("/meshing/bNegateZ", slam.mp.bNegateZ, slam.mp.bNegateZ);
 
-      nh.param("/mapping/useNonRectData", slam.mp.useNonRectData, slam.mp.useNonRectData);
-      nh.param("/mapping/nCtrlDefaultS", slam.mp.nCtrlDefault[0], slam.mp.nCtrlDefault[0]); 
-      nh.param("/mapping/nCtrlDefaultT", slam.mp.nCtrlDefault[1], slam.mp.nCtrlDefault[1]);
-      nh.param("/mapping/degree", slam.mp.order[0], slam.mp.order[0]);
-      nh.param("/mapping/degree", slam.mp.order[1], slam.mp.order[1]);
+    nh.param("/mapping/useNonRectData", slam.mp.useNonRectData, slam.mp.useNonRectData);
+    nh.param("/mapping/nCtrlDefaultS", slam.mp.nCtrlDefault[0], slam.mp.nCtrlDefault[0]); 
+    nh.param("/mapping/nCtrlDefaultT", slam.mp.nCtrlDefault[1], slam.mp.nCtrlDefault[1]);
 
-      nh.param("/mapping/searchThresh", slam.mp.searchThresh[0], slam.mp.searchThresh[0]);
-      nh.param("/mapping/searchThresh", slam.mp.searchThresh[1], slam.mp.searchThresh[1]);
-      nh.param("/mapping/searchThresh", slam.mp.searchThresh[2], slam.mp.searchThresh[2]);
+    nh.param("/mapping/bUseFullAlignmentTransformInUpdate", slam.bUseFullAlignmentTransformInUpdate, slam.bUseFullAlignmentTransformInUpdate);
+    nh.param("/mapping/bUseOldStateForNewObjects", slam.bUseOldStateForNewObjects, slam.bUseOldStateForNewObjects);
+    
 
-      cout << "nCtrlDefaultS is " << slam.mp.nCtrlDefault[0] << endl;
-      cout << "nCtrlDefaultT is " << slam.mp.nCtrlDefault[1] << endl;
+    cout << "nCtrlDefaultS is " << slam.mp.nCtrlDefault[0] << endl;
+    cout << "nCtrlDefaultT is " << slam.mp.nCtrlDefault[1] << endl;
+
+    // SLAM EKF
+    nh.param("/ekf/pNoisePos", slam.pNoisePos, slam.pNoisePos);
+    nh.param("/ekf/pNoiseVel", slam.pNoiseVel, slam.pNoiseVel);
+    nh.param("/ekf/pNoiseAccel", slam.pNoiseAccel, slam.pNoiseAccel);
+    nh.param("/ekf/pNoiseAng", slam.pNoiseAng, slam.pNoiseAng);
+    nh.param("/ekf/pNoiseMultiplier", slam.pNoiseMultiplier, slam.pNoiseMultiplier);
+    nh.param("/ekf/qNoiseMultiplier", slam.qNoiseMultiplier, slam.qNoiseMultiplier);
+    
+    nh.param("/ekf/noiseObsBasePos", slam.noiseObsBasePos, slam.noiseObsBasePos);
+    nh.param("/ekf/noiseObsMultPos", slam.noiseObsMultPos, slam.noiseObsMultPos);
+    nh.param("/ekf/noiseObsMultPosErr", slam.noiseObsMultPosErr, slam.noiseObsMultPosErr);
+    nh.param("/ekf/noiseObsBaseAng", slam.noiseObsBaseAng, slam.noiseObsBaseAng);
+    nh.param("/ekf/noiseObsMultAng", slam.noiseObsMultAng, slam.noiseObsMultAng);
+    nh.param("/ekf/noiseObsMultAngErr", slam.noiseObsMultAngErr, slam.noiseObsMultAngErr);
+    nh.param("/ekf/rMatMultiplier", slam.rMatMultiplier, slam.rMatMultiplier);
+    nh.param("/ekf/bKeepPConstant", slam.bKeepPConstant, slam.bKeepPConstant);
+
+    nh.param("/ekf/processModel", slam.processModel, slam.processModel);
+
+    nh.param("/ekf/rejectCriteriaAng", slam.rejectCriteria[0], slam.rejectCriteria[0]);
+    nh.param("/ekf/rejectCriteriaLin", slam.rejectCriteria[2], slam.rejectCriteria[2]);
+    nh.param("/ekf/rejectCriteriaInlier", slam.rejectCriteria[4], slam.rejectCriteria[4]);
+    nh.param("/ekf/rejectCriteriaNumberP", slam.rejectCriteria[5], slam.rejectCriteria[5]);
+    slam.rejectCriteria[3] = 2.0*slam.rejectCriteria[2];
+    slam.rejectCriteria[1] = 2.0*slam.rejectCriteria[0];
 
       cout << "Finished setting SLAM parameters" << endl;
 
@@ -404,9 +429,9 @@ main (int argc, char** argv)
           nurbnode.slam.loadObjectIntoMap(filename.c_str());
           filename = ros::package::getPath("cans")+"/data/blob_1_final_obj.obj";
           nurbnode.slam.loadObjectIntoMap(filename.c_str());
-          filename = ros::package::getPath("cans")+"/data/blob_2_final_obj.obj";
-          nurbnode.slam.loadObjectIntoMap(filename.c_str());
-          filename = ros::package::getPath("cans")+"/data/blob_3_final_obj.obj";
+          // filename = ros::package::getPath("cans")+"/data/blob_2_final_obj.obj";
+          // nurbnode.slam.loadObjectIntoMap(filename.c_str());
+          // filename = ros::package::getPath("cans")+"/data/blob_3_final_obj.obj";
 
           nurbnode.bNewObjects = true;
           // TODO may need to update this to load multiple objects

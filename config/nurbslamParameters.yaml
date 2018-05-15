@@ -16,7 +16,7 @@ bTestMapGeneration: false
 
 bLocalisationRejectionOn: false
 
-mappingSteps: 1
+mappingSteps: 5
 
 # -----------------------------
 # Localisation
@@ -47,7 +47,7 @@ maxDistanceOverlap: 0.05 # maximum allowed distance away from existing surface t
 nSurfPointsFactor: 5.0 # multiplier by the number of control points to get the number of surface points to sample
 
 mapCountThreshold: 3
-mapExtendThreshold: 4 # Make this very high to turn off the "new object when no extension for too long" feature
+mapExtendThreshold: 1 # Make this very high to turn off the "new object when no extension for too long" feature
 
 # -----------------------------
 # Mapping

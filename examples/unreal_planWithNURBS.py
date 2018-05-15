@@ -58,8 +58,9 @@ class Planner:
     self.global_dict['fsp_out_map'] = None
 
     self.planner.inflate_buffer = 0.0
-    self.planner.quad_buffer = 0.3
-    self.planner.nurbs_weight = 1e-27
+    self.planner.quad_buffer = 0.1
+    # self.planner.nurbs_weight = 1e-27 # UNREAL
+    self.planner.nurbs_weight = 1e-22
 
   def initialisePlanner(self):
     # Waypoints
@@ -79,7 +80,8 @@ class Planner:
     self.planner.on_disc_updated_signal()
 
     # Set mutation strength
-    self.planner.qr_polytraj.mutation_strength = 1e-26
+    # self.planner.qr_polytraj.mutation_strength = 1e-26 # UNREAL
+    self.planner.qr_polytraj.mutation_strength = 1e-23
 
   def computeTrajTime(self):
     if not'x' in self.start.keys():
@@ -137,9 +139,10 @@ class Planner:
     # self.planner.on_run_astro_button_click()
 
     self.planner.qr_polytraj.exit_on_feasible = True
-    self.planner.qr_polytraj.optimise(mutate_serial=10)
+    self.planner.qr_polytraj.optimise(mutate_serial=5)
     self.planner.qr_polytraj.get_trajectory()
     self.planner.update_path_markers()
+    self.saveTrajectory()
     
   def saveTrajectory(self,filename="test_traj.traj"):
 
@@ -151,7 +154,7 @@ class Planner:
 
       pickle.dump(qrp_out, f, 2 )
 
-    scipy.io.savemat('traj_opt.mat', qrp_out.state_combined)
+    scipy.io.savemat('/home/bjm/Dropbox/PhD_Code/Results/Traj/traj_opt.mat', qrp_out.state_combined)
 
   def readNURBSMessage(self,msg):
     
@@ -351,24 +354,24 @@ if __name__ == '__main__':
 
   # Set up start and goal 
   # For simple test case
-  # plan.start['x'] = [0.8]
-  # plan.start['y'] = [-2.0]
-  # plan.start['z'] = [0.6]
-  # plan.start['yaw'] = [0.0]
-  # plan.goal['x'] = [0.8]
-  # plan.goal['y'] = [1.0]
-  # plan.goal['z'] = [0.6]
-  # plan.goal['yaw'] = [0.0]
+  plan.start['x'] = [0.8]
+  plan.start['y'] = [-2.0]
+  plan.start['z'] = [0.6]
+  plan.start['yaw'] = [0.0]
+  plan.goal['x'] = [0.8]
+  plan.goal['y'] = [1.0]
+  plan.goal['z'] = [0.6]
+  plan.goal['yaw'] = [0.0]
 
   # For 67P test case
-  plan.start['x'] = [-12.0]
-  plan.start['y'] = [0.0]
-  plan.start['z'] = [0.0]
-  plan.start['yaw'] = [0.0]
-  plan.goal['x'] = [11.5]
-  plan.goal['y'] = [-2.0]
-  plan.goal['z'] = [0.0]
-  plan.goal['yaw'] = [0.0]
+  # plan.start['x'] = [-12.0]
+  # plan.start['y'] = [0.0]
+  # plan.start['z'] = [0.0]
+  # plan.start['yaw'] = [0.0]
+  # plan.goal['x'] = [11.5]
+  # plan.goal['y'] = [-2.0]
+  # plan.goal['z'] = [0.0]
+  # plan.goal['yaw'] = [0.0]
 
   plan.initialisePlanner()
 

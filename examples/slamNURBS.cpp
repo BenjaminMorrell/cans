@@ -283,7 +283,7 @@ void runSLAM(int argc,char ** argv, ros::NodeHandle nh){
           filestem = "/home/bjm/Dropbox/PhD_Code/Data/3D_Scans/Blensor/Blob2/BlobScan_data_noisy00";
         }
         outFilestem = "/home/bjm/Dropbox/PhD_Code/Results/Blob2/blob_";
-        mapFilestem = "/home/bjm/Dropbox/PhD_Code/Results/Blob2/final_objs/blob_";
+        mapFilestem = "/home/bjm/Dropbox/PhD_Code/Results/Blob2/localisation_objs/blob_";
         pathFilename = "/home/bjm/Dropbox/PhD_Code/Data/3D_Scans/Blensor/Blob2/BlobScan_path.txt";
       }else if (machine == 1){
         filestem = "/home/amme2/Development/Data/Blob2/BlobScan_data00";
@@ -298,7 +298,7 @@ void runSLAM(int argc,char ** argv, ros::NodeHandle nh){
       scanSteps = 1;
       numberOfScans = numberOfScans*scanSteps;
       nData = 100;
-      nObjLocalisation = 1;
+      nObjLocalisation = 4;
       break;
     case 7:
       // Blob Lateral - NOTE that the path may be wrong - so only use for SLAM...
