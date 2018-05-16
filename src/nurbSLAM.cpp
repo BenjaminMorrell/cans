@@ -167,7 +167,7 @@ void NurbSLAM::processScans(std::vector<pcl::PointCloud<pcl::PointNormal>::Ptr> 
         }
       }
 
-      if (objIDList[i] == -1){ //if (bLocalisationModeOn && objIDList[i] == -1){
+      if (bLocalisationModeOn && objIDList[i] == -1){
         // If doing localisation and there is a failure - try use the last matched object (if different)
         cout << "Failed alignment on obj: " << objIDList[i] << ", last match is: " << lastMatchID << endl;
         if (lastMatchID != preAlignmentID || lastMatchID != -1){
