@@ -994,15 +994,15 @@ void Mapping3D::meshFromScan(pcl::PointCloud<pcl::PointNormal>::Ptr cloudOut, pc
           cloudOut->at(jj,ii).y = cloudIn->at(j,i).y;
           cloudOut->at(jj,ii).z = cloudIn->at(j,i).z;
 
-          if (abs(cloudOut->at(jj,ii).z) < 0.001){
-            // Handle different Invalid point definition - zero value
-            cloudOut->at(jj,ii).z = 1.0/0.0;
+          
+          // Store indices if the value is nan
+          if (!pcl::isFinite(cloudIn->at(j,i))){
             nanIndices(0,ijk) = ii;
             nanIndices(1,ijk) = jj;
             ijk++; 
-          }
-          // Store indices if the value is nan
-          if (!pcl::isFinite(cloudIn->at(j,i))){
+          }else if (std::abs(cloudOut->at(jj,ii).z) < 0.001){
+            // Handle different Invalid point definition - zero value
+            cloudOut->at(jj,ii).z = 1.0/0.0;
             nanIndices(0,ijk) = ii;
             nanIndices(1,ijk) = jj;
             ijk++; 

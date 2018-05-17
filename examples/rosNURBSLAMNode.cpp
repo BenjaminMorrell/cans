@@ -567,7 +567,7 @@ main (int argc, char** argv)
 
   try{
     tf_listener.waitForTransform("/world", "/starting_cam",
-                            ros::Time(0), ros::Duration(3.0));
+                            ros::Time(0), ros::Duration(15.0));
     tf_listener.lookupTransform("/world", "/starting_cam",  
                               ros::Time(0), transform);
     tf::transformTFToEigen(transform,transformEigen);

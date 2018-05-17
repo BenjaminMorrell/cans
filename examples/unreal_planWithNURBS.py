@@ -58,9 +58,9 @@ class Planner:
     self.global_dict['fsp_out_map'] = None
 
     self.planner.inflate_buffer = 0.0
-    self.planner.quad_buffer = 0.1
+    self.planner.quad_buffer = 0.6
     # self.planner.nurbs_weight = 1e-27 # UNREAL
-    self.planner.nurbs_weight = 1e-22
+    self.planner.nurbs_weight = 5e-23 
 
   def initialisePlanner(self):
     # Waypoints
@@ -81,7 +81,7 @@ class Planner:
 
     # Set mutation strength
     # self.planner.qr_polytraj.mutation_strength = 1e-26 # UNREAL
-    self.planner.qr_polytraj.mutation_strength = 1e-23
+    self.planner.qr_polytraj.mutation_strength = 1e-18
 
   def computeTrajTime(self):
     if not'x' in self.start.keys():
@@ -366,11 +366,11 @@ if __name__ == '__main__':
 
   # For 67P test case
   plan.start['x'] = [-3.76]
-  plan.start['y'] = [0.0]
+  plan.start['y'] = [0.01]
   plan.start['z'] = [0.0]
   plan.start['yaw'] = [0.0]
   plan.goal['x'] = [3.76]
-  plan.goal['y'] = [-0.2]
+  plan.goal['y'] = [-0.19]
   plan.goal['z'] = [0.1]
   plan.goal['yaw'] = [0.0]
 
