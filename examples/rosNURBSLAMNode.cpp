@@ -48,8 +48,6 @@ class nurbSLAMNode {
     bool bNewScanReceived;
     bool bTestMapGeneration;
 
-    char* stateFilename;
-
     int scanNumber;
 
     float timestep;
@@ -59,13 +57,22 @@ class nurbSLAMNode {
     // Image pointer
     cv_bridge::CvImagePtr cv_ptr;
 
+    std::string timingFilename;
+    std::string stateFilename;
+
+    // fOR TIMING
+    std::chrono::high_resolution_clock::time_point startTime;
+    std::chrono::high_resolution_clock::time_point endTime;
+    std::chrono::duration<double, std::milli> runtimeDuration;
+    std::vector<double> processTimesVec;
+
     
   public:
     //------------------------------------------
     // Constructor
     nurbSLAMNode(): runFlag(true), useTruthTransform(false), scanNumber(0), 
         bNewObjects(false), bNewState(false), cloud(new pcl::PointCloud<pcl::PointNormal>),
-        bNewScanReceived(false), stateFilename("/home/amme2/Development/unrealDataTrack.txt"),
+        bNewScanReceived(false),processTimesVec(6),
         staticErrorTrack(0.0), timestep(0.1)
     {
       state = Eigen::Affine3f::Identity();
@@ -86,8 +93,14 @@ class nurbSLAMNode {
       transformTF.frame_id_ = "world";
 
       // Clear file
+      timingFilename = ros::package::getPath("cans")+"/data/nurbsTimes.txt";
+      stateFilename = ros::package::getPath("cans")+"/data/unrealDataTrack.txt";
+ 
+      // Clear file
       ofstream myfile;
-      myfile.open (stateFilename, std::ofstream::out | std::ofstream::trunc); // open and close to clear.
+      myfile.open (timingFilename.c_str(), std::ofstream::out | std::ofstream::trunc); // open and close to clear.
+      myfile.close();
+      myfile.open (stateFilename.c_str(), std::ofstream::out | std::ofstream::trunc); // open and close to clear.
       myfile.close();
 
     }
@@ -227,8 +240,20 @@ class nurbSLAMNode {
 
       // Open file
       ofstream myfile;
-      myfile.open (stateFilename, std::ios_base::app); // Append
+      myfile.open (stateFilename.c_str(), std::ios_base::app); // Append
       myfile << stateData << "\n";
+      myfile.close();
+    }
+
+    void updateTimingFile(){
+
+      // Open file
+      ofstream myfile;
+      // Write timing information
+      myfile.open (timingFilename.c_str(), std::ios_base::app); // Append
+      myfile << processTimesVec[0];
+      for (int k=1; k < 6; k++){myfile << ", " << processTimesVec[k];}
+      myfile << "\n";
       myfile.close();
     }
 
@@ -250,8 +275,17 @@ class nurbSLAMNode {
         slam.setState(transformTruth.cast<float>()); 
       }
 
+      // Start timer
+      startTime = std::chrono::high_resolution_clock::now(); 
+
       // Process scans
       slam.processScans(clouds,timestep);
+
+      // End time and duraction
+      endTime = std::chrono::high_resolution_clock::now();
+      runtimeDuration = endTime - startTime;
+      for (int i = 0; i < 5; i++){processTimesVec[i] = slam.processTimes[i];}
+      processTimesVec[5] = runtimeDuration.count();
       
       // Get the state
       state = slam.getState();
@@ -286,6 +320,7 @@ class nurbSLAMNode {
       // Store state
       updateStaticError();
       updateStateFile();
+      updateTimingFile();
       
     }
 

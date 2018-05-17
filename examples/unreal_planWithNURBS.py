@@ -154,7 +154,8 @@ class Planner:
 
       pickle.dump(qrp_out, f, 2 )
 
-    scipy.io.savemat('/home/bjm/Dropbox/PhD_Code/Results/Traj/traj_opt.mat', qrp_out.state_combined)
+    # scipy.io.savemat('/home/bjm/Dropbox/PhD_Code/Results/Traj/traj_opt.mat', qrp_out.state_combined)
+    scipy.io.savemat('/home/amme2/Development/Results/Traj/traj_opt.mat', qrp_out.state_combined)
 
   def readNURBSMessage(self,msg):
     
@@ -352,26 +353,26 @@ if __name__ == '__main__':
   # Init class
   plan = Planner()
 
-  # Set up start and goal 
-  # For simple test case
-  plan.start['x'] = [0.8]
-  plan.start['y'] = [-2.0]
-  plan.start['z'] = [0.6]
-  plan.start['yaw'] = [0.0]
-  plan.goal['x'] = [0.8]
-  plan.goal['y'] = [1.0]
-  plan.goal['z'] = [0.6]
-  plan.goal['yaw'] = [0.0]
+  # # Set up start and goal 
+  # # For simple test case
+  # plan.start['x'] = [0.8]
+  # plan.start['y'] = [-2.0]
+  # plan.start['z'] = [0.6]
+  # plan.start['yaw'] = [0.0]
+  # plan.goal['x'] = [0.8]
+  # plan.goal['y'] = [1.0]
+  # plan.goal['z'] = [0.6]
+  # plan.goal['yaw'] = [0.0]
 
   # For 67P test case
-  # plan.start['x'] = [-12.0]
-  # plan.start['y'] = [0.0]
-  # plan.start['z'] = [0.0]
-  # plan.start['yaw'] = [0.0]
-  # plan.goal['x'] = [11.5]
-  # plan.goal['y'] = [-2.0]
-  # plan.goal['z'] = [0.0]
-  # plan.goal['yaw'] = [0.0]
+  plan.start['x'] = [-3.76]
+  plan.start['y'] = [0.0]
+  plan.start['z'] = [0.0]
+  plan.start['yaw'] = [0.0]
+  plan.goal['x'] = [3.76]
+  plan.goal['y'] = [-0.2]
+  plan.goal['z'] = [0.1]
+  plan.goal['yaw'] = [0.0]
 
   plan.initialisePlanner()
 
