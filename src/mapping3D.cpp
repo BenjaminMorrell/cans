@@ -17,7 +17,8 @@ Mapping3D::Mapping3D():
     maxNanAllowed(10), removeNanBuffer(0), numberOfMetrics(7), msSurf(125), mtSurf(125),
     knotInsertionFlag(true), numInsert(3), deltaKnotInsert(1e-2), newRowColBuffer(0), useNonRectData(false),
     bFilterZ(false), nPointsZLim(400), zThreshMultiplier(0.03), bRejectScan(false),
-    minRowsColsAllowed(15), maxNanPercentage(0.1), bNegateZ(false)
+    minRowsColsAllowed(15), maxNanPercentage(0.1), bNegateZ(false), exitOnlyOnMinNans(false),
+    bUseObjectMask(false), maskID(-1)
 {
   searchThresh[0] = 7.75;
   searchThresh[1] = 7.75;
@@ -905,9 +906,22 @@ void Mapping3D::meshFromScan(pcl::PointCloud<pcl::PointNormal>::Ptr cloudOut, pc
       if (nansPresent){
         // Check dimensions 
         // cout << "Nans removed: Row count: " << rowFlags.count() << "\nCol Count: " << colFlags.count() << endl;
-        if (rowFlags.count() <= this->numRowsDesired || colFlags.count() <= this->numColsDesired){
-          exitFlag = true;
-          cout << "Exiting because dimensions are too small" << endl;
+        if (!exitOnlyOnMinNans){
+          if (rowFlags.count() <= this->numRowsDesired || colFlags.count() <= this->numColsDesired){
+            exitFlag = true;
+            cout << "Exiting because dimensions are too small" << endl;
+          }
+        }else{
+          if ((float)nanArray.count()/(float)(rowFlags.count()&colFlags.count()) < maxNanPercentage){
+            exitFlag = true;
+            cout << "Exiting because the percentage of nans is small enough" << endl;
+          }
+
+          if ((rowFlags.count() < minRowsColsAllowed || colFlags.count() < minRowsColsAllowed) && (rowFlags.count() <= this->numRowsDesired || colFlags.count() <= this->numColsDesired)){
+            cout << "Too few rows/cols without Nans when downsampling. Rejecting" << endl;
+            bRejectScan = true;
+            return;
+          }
         }
       }else{
         exitFlag = true;
@@ -1075,6 +1089,7 @@ void Mapping3D::getNanMatrixFromPointCloud(Eigen::Array<bool, Eigen::Dynamic, Ei
   }
 
   cout << "Zlow is: " << zLimLow << ", Zhigh is: " << zLimHigh << endl;
+  cout << "Using object mask?: " << bUseObjectMask << endl;
 
    // Loop through Point cloud 
   for (int i = 0; i < cloud->height; i++){
@@ -1088,6 +1103,11 @@ void Mapping3D::getNanMatrixFromPointCloud(Eigen::Array<bool, Eigen::Dynamic, Ei
       }else if (cloud->at(j,i).z < zLimLow){
         nanArray(i,j) = true;
         // cout << "Capping Z low at value: " << cloud->at(j,i).z << endl;
+      }else if (bUseObjectMask && objectMask.rows() > 0){
+        if (objectMask(i,j) != maskID) {
+          // Nan if not the object with the current maskID
+          nanArray(i,j) = true;
+        }
       }else{
         nanArray(i,j) = false;
       }

@@ -25,10 +25,10 @@ NurbSLAM::NurbSLAM():
     modelResolutionKeypoints(0.005), minNeighboursKeypoints(5),
     ransac_maximumIterations(5000), ransac_numberOfSamples(3),
     ransac_correspondenceRandomness(3), ransac_similarityThreshold(0.9), ransac_inlierFraction(0.25),
-    processTimes(5), bObjectNormalsComputed(false), processModel(0),numberOfPointsInAlignment(0),
+    processTimes(5), bObjectNormalsComputed(false), processModel(0),
     bUseFullAlignmentTransformInUpdate(false), bRejectAlignment(false), bUseOldStateForNewObjects(false),
     rejectCriteria(6), bKeepPConstant(false), mapCountThreshold(3), mapExtendThreshold(2), updateCount(0),
-    bLocalisationRejectionOn(false),lastMatchID(-1)
+    bLocalisationRejectionOn(false),lastMatchID(-1), numberOfMaskSegments(0), bUseObjectMaskSegmentation(false)
 {// TODO - make this initialiser list organised...
   state = Eigen::Affine3f::Identity();
   oldState = Eigen::Affine3f::Identity();
@@ -97,6 +97,7 @@ void NurbSLAM::processScans(std::vector<pcl::PointCloud<pcl::PointNormal>::Ptr> 
   transformationList.clear();
   inlierFractionList.clear();
   processTimes.clear();
+  numberOfPointsInAlignment.clear();
   transformDelta = Eigen::Affine3f::Identity();
 
   // Store the previous state
@@ -118,16 +119,35 @@ void NurbSLAM::processScans(std::vector<pcl::PointCloud<pcl::PointNormal>::Ptr> 
   oldState = state;
 
   int preAlignmentID;
+
+  int numberOfObjects = 1;
+  int scanNumber;
+
+  if (bUseObjectMaskSegmentation){
+    cout << "Using object mask segmentation for " << numberOfMaskSegments << " objects" << endl;
+    numberOfObjects = numberOfMaskSegments;
+    scanNumber = 0;
+    mp.bUseObjectMask = true;
+  }else{
+    numberOfObjects = clouds.size();
+  }
   
   // Initial Scan processing
-  for (int i = 0; i < clouds.size(); i++){
+  for (int i = 0; i < numberOfObjects; i++){
 
     bObjectNormalsComputed = false;
 
     objectMeshList.push_back(pcl::PointCloud<pcl::PointNormal>::Ptr (new pcl::PointCloud<pcl::PointNormal>(mp.numRowsDesired, mp.numColsDesired)));
 
     // Process the scan and perform data association
-    objIDList.push_back(processSingleScan(clouds[i], objectMeshList[i]));
+    if (!bUseObjectMaskSegmentation){
+      scanNumber = i;
+    }else{
+      mp.maskID = i;
+      cout << "Mask ID is: " << mp.maskID << endl;
+    }
+
+    objIDList.push_back(processSingleScan(clouds[scanNumber], objectMeshList[i]));
 
     preAlignmentID = objIDList[i];
     
@@ -163,6 +183,7 @@ void NurbSLAM::processScans(std::vector<pcl::PointCloud<pcl::PointNormal>::Ptr> 
           // Remove transformation
           transformationList.pop_back();
           inlierFractionList.pop_back();
+          numberOfPointsInAlignment.pop_back();
 
         }
       }
@@ -183,6 +204,7 @@ void NurbSLAM::processScans(std::vector<pcl::PointCloud<pcl::PointNormal>::Ptr> 
             // Remove transformation
             transformationList.pop_back();
             inlierFractionList.pop_back();
+            numberOfPointsInAlignment.pop_back();
           }else{
             cout << "Success in alignment with previous match!" << endl;
             objIDList[i] = lastMatchID;
@@ -233,8 +255,9 @@ void NurbSLAM::processScans(std::vector<pcl::PointCloud<pcl::PointNormal>::Ptr> 
   if (transformationList.size() > 0){
     t1 = std::chrono::high_resolution_clock::now();
     
-
+  
     updateSLAMFilter(timestep); // updates state and EKF states
+    
 
 
     t2 = std::chrono::high_resolution_clock::now();
@@ -279,6 +302,16 @@ void NurbSLAM::processScans(std::vector<pcl::PointCloud<pcl::PointNormal>::Ptr> 
   
 }
 
+
+void NurbSLAM::processScans(std::vector<pcl::PointCloud<pcl::PointNormal>::Ptr> clouds, Eigen::Array<int, Eigen::Dynamic, Eigen::Dynamic> mask, float timestep){
+
+  mp.objectMask = mask;
+
+  mp.bUseObjectMask = true; // Revise this...
+
+  processScans(clouds, timestep);
+
+}
 
 /*! 
   \brief Process scan for a single object
@@ -680,7 +713,7 @@ Eigen::Matrix4f NurbSLAM::alignScanWithMapObject(int objID, pcl::PointCloud<pcl:
       obsObjPC_filtered = obsObjPC;
     }
 
-    numberOfPointsInAlignment = obsObjPC_filtered->width*obsObjPC_filtered->height;
+    numberOfPointsInAlignment.push_back(obsObjPC_filtered->width*obsObjPC_filtered->height);
 
     // Estimate features
     computeFeatures(obsObjPC_filtered, obsObjPC, obsObjPC_features);
@@ -1060,211 +1093,218 @@ void NurbSLAM::processStepEKF(float timestep){
 */
 void NurbSLAM::updateSLAMFilter(float timestep){
   // Maybe just loop for each observation
-  
 
-  //--------------------------------------------------
-  //--------------------------------------------------
-  // Get the observation(s)
-  //--------------------------------------------------
-  //--------------------------------------------------
-  // Observation
-  transformDelta.matrix() = transformationList[0];// list is of 4x4 matrices
-  // Eigen::Affine3f deltaRotOnly(Eigen::AngleAxisf(transformDelta.linear()));
   Eigen::Matrix<float,6,1> observation, predicted;
-  predicted.setZero();
   Eigen::Vector3f stateTrans;
-  stateTrans(0) = state(0,3);
-  stateTrans(1) = state(1,3);
-  stateTrans(2) = state(2,3);
-
-  // cout << "Transformation linear is:\n" << transformDelta.linear() << endl;
-
-  // Rotation - get rodrigeuz parameters
   Eigen::Vector3f attitudeErrorRodrigeuz;
-  // Axis angle
-  Eigen::AngleAxisf attitudeErrorAA(transformDelta.linear());
-  // Compute Rodrigeuz parameter
-  attitudeErrorRodrigeuz = attitudeErrorAA.axis()*std::tan(attitudeErrorAA.angle()/2.0);
-
-  observation(3) = attitudeErrorRodrigeuz(0);
-  observation(4) = attitudeErrorRodrigeuz(1);
-  observation(5) = attitudeErrorRodrigeuz(2);
-  
-  // Translation 
-  Eigen::Vector3f deltaTrans; deltaTrans.setZero();
-  deltaTrans(0) = transformDelta(0,3);
-  deltaTrans(1) = transformDelta(1,3);
-  deltaTrans(2) = transformDelta(2,3);
-
-  // Get t_delt = R_delt t_1 + t_delt - t_1
-  deltaTrans = deltaTrans + transformDelta.linear()*stateTrans - stateTrans;
-  // deltaTrans = deltaTrans + deltaRotOnly*stateTrans - stateTrans;
-  
-  
-  // Put in the observation
-  // observation.block(0,0,3,2) = deltaTrans;
-  observation(0) = deltaTrans(0);
-  observation(1) = deltaTrans(1);
-  observation(2) = deltaTrans(2);
-
-  cout << "Observation is:\n" << observation << endl;
-  // cout << "Predicted is:\n" << predicted << endl;
-  // cout << "Innovation is: \n" << (observation - predicted) << endl;
-
-  //--------------------------------------------------
-  //--------------------------------------------------
-  // Update R
-  //--------------------------------------------------
-  //--------------------------------------------------
-  
-  float angularError = std::abs(attitudeErrorAA.angle());
-  float linearError = 0.0;
-  for (int k = 0; k < 3; k++){linearError += std::pow(observation(k),2.0);}
-  linearError = std::sqrt(linearError);
-  cout << "Transform size metrics are, linear: " << linearError << ", angular: " << angularError << endl;
-
-  // Thesholds
-  float angularErrorMult = 1.0;
-  float linearErrorMult = 1.0;  
-
-  if (angularError > rejectCriteria[0]){
-    // High uncertainty if more than 45 degrees
-    angularErrorMult = 1e10;
-    cout << "Angular error > 45 deg, placing large uncertainty" << endl;
-    bRejectAlignment = true;
-  }
-  if (angularError > rejectCriteria[1]){
-    // High uncertainty if more than 90 degrees
-    cout << "Angular error > 90 deg, placing very large uncertainty" << endl;
-    angularErrorMult = 1e15;
-    bRejectAlignment = true;
-  }
-
-  if (linearError > rejectCriteria[2]){
-    // High uncertainty if more than 5 m NEED TO ADJUST THIS FOR DIFFERENT SCALES
-    cout << "Linear error > " << rejectCriteria[2] << " m, placing large uncertainty" << endl;
-    linearErrorMult = 1e10;
-    bRejectAlignment = true;
-  }
-
-  if (linearError > rejectCriteria[3]){
-    // High uncertainty if more than 5 m NEED TO ADJUST THIS FOR DIFFERENT SCALES
-    cout << "Linear error > " << rejectCriteria[3] << " m, placing very large uncertainty" << endl;
-    linearErrorMult = 1e15;
-    bRejectAlignment = true;
-  }
-
-  if (inlierFractionList[0] < rejectCriteria[4]){
-    // Increase uncertainty if fraction is low
-    cout << "Very low inlier fraction. Placing large uncertainty" << endl;
-    linearErrorMult *= 1e5;
-    angularErrorMult *= 1e5;
-    bRejectAlignment = true;
-  }
-
-  int desiredSize = mp.numRowsDesired*mp.numColsDesired;
-  if ((float)numberOfPointsInAlignment/(float)desiredSize < rejectCriteria[5]){
-    // High penaty if there are not many points
-    cout << "Very low number of points. Placing large uncertainty" << endl;
-    linearErrorMult *= 1e5;
-    angularErrorMult *= 1e5;
-    bRejectAlignment = true;
-  }
-
-  if (bRejectAlignment){
-    cout << "No update to state, alignment rejected" << endl;
-    transformDelta = Eigen::Affine3f::Identity();
-    // State not updated
-    return;
-  }
-
-  linearErrorMult = std::min((float)1e25,linearErrorMult);
-  angularErrorMult = std::min((float)1e25,angularErrorMult);
-
-  cout << "Linear Error Mult is: " << linearErrorMult << endl;
-  cout << "Angular Error Mult is: " << angularErrorMult << endl;
-  
-  float noiseObsMultPosSize = noiseObsMultPos*0.1;
-  // float noiseObsMultPosErr = noiseObsMultPos*0.5;
-  float noiseObsMultAngSize = noiseObsMultAng*0.1;
-  // float noiseObsMultAngErr = noiseObsMultAng*0.5;
-
-  // Set R from inlier fraction
-  float metric = inlierFractionList[0];
-  float threeSig = noiseObsBasePos + noiseObsMultPos*(std::pow(1.0-metric,2.0)) + noiseObsMultPosSize*(std::pow(1.0 - (float)numberOfPointsInAlignment/(float)desiredSize,2.0)) + noiseObsMultPosErr*(std::pow(linearError,4.0));
-  R.setIdentity();
-  R(0,0) = std::sqrt(threeSig/3.0);
-  R(1,1) = std::sqrt(threeSig/3.0);
-  R(2,2) = std::sqrt(threeSig/3.0);
-  // Angles
-  threeSig = noiseObsBaseAng + noiseObsMultAng*(std::pow(1.0-metric,2.0)) + noiseObsMultAngSize*(std::pow(1.0 - (float)numberOfPointsInAlignment/(float)desiredSize,2.0)) + noiseObsMultAngErr*(std::pow(angularError,4.0));
-  R(3,3) = std::sqrt(threeSig/3.0);
-  R(4,4) = std::sqrt(threeSig/3.0);
-  R(5,5) = std::sqrt(threeSig/3.0);
-
-  if (bRejectAlignment){
-    R = R*(float)1e25;
-  }else{
-    R = R*rMatMultiplier*linearErrorMult*angularErrorMult;
-  }
-  
-
-  cout << "R is: \n" << R << endl;
-  // TODO - Revise and tune these settings 
-
-
-  // Compute the Kalman gain
-  K = P*Jh.transpose()*(Jh*P*Jh.transpose() + R).inverse();
-
-  cout << "Kalman Gain is:\n" << K << endl;
-
-  // KF Update 
+  Eigen::AngleAxisf attitudeErrorAA;
+  Eigen::Vector3f deltaTrans;  
   Eigen::Matrix<float,12,1> ekfUpdate;
+  Eigen::Affine3f deltaRotTransform;
 
-  ekfUpdate = K*(observation - predicted);
+  Eigen::Affine3f workingTransformDelta = Eigen::Affine3f::Identity();
 
-  cout << "EKF Update is:\n" << ekfUpdate << endl;
+  float angularError;
+  float linearError;
 
-  // Update linear
-  ekfState.block(0,0,9,1) += ekfUpdate.block(0,0,9,1);
-  // cout << "EKF State is:\n" << ekfState << endl;
-
-  // Output angular
-  attitudeErrorRodrigeuz = ekfUpdate.block(9,0,3,1);
-
-  cout << "Rodrigeuz state is:\n" << attitudeErrorRodrigeuz << endl;
-  cout << "Norm is: " << 2.0*std::atan(attitudeErrorRodrigeuz.norm()) << "\nVector is: \n" << attitudeErrorRodrigeuz.normalized() << endl;
-
-  cout << "TransformDelta from alignment is:\n" << transformDelta.matrix() << endl;
-
-  // Update state estimate
-  cout << "State, pre transformation is:\n" << state.matrix() << endl;  
+  Eigen::Affine3f revertTransformationToNow = Eigen::Affine3f::Identity();
   
-  // Apply rotation 
-  Eigen::Affine3f deltaRotTransform(Eigen::AngleAxisf(2.0*std::atan(attitudeErrorRodrigeuz.norm()), attitudeErrorRodrigeuz.normalized()));
-  // state.rotate(Eigen::AngleAxisf(2*std:atanf(attitudeErrorRodrigeuz.norm()), attitudeErrorRodrigeuz.normalized()));
+  for (int k = 0; k < transformationList.size(); k++){
+    cout << "Computing SLAM EKF update for observation " << k << endl;
+    //--------------------------------------------------
+    //--------------------------------------------------
+    // Get the observation(s)
+    //--------------------------------------------------
+    //--------------------------------------------------
+    // Observation
+    workingTransformDelta.matrix() = transformationList[k];// list is of 4x4 matrices
 
-  state = deltaRotTransform*state;
+    // Update from previous transforms
+    workingTransformDelta = workingTransformDelta * revertTransformationToNow;
 
-  // Apply Translation
-  state(0,3) = ekfState(0);
-  state(1,3) = ekfState(1);
-  state(2,3) = ekfState(2);
-  
-  cout << "State after transform is:\n" << state.matrix() << endl;
+  \
+    predicted.setZero();
+    observation.setZero();
+    
+    stateTrans(0) = state(0,3);
+    stateTrans(1) = state(1,3);
+    stateTrans(2) = state(2,3);
 
-  // Get updated transform delta
-  transformDelta = state*oldState.inverse();
+    // cout << "Transformation linear is:\n" << transformDelta.linear() << endl;
 
-  cout << "TransformDelta is:\n" << transformDelta.matrix() << endl;
+    // Rotation - get rodrigeuz parameters
+    // Axis angle
+    attitudeErrorAA.fromRotationMatrix(workingTransformDelta.linear());
+    // Compute Rodrigeuz parameter
+    attitudeErrorRodrigeuz = attitudeErrorAA.axis()*std::tan(attitudeErrorAA.angle()/2.0);
 
-  // Update covariance
-  if (!bKeepPConstant){
-    P = (Eigen::Matrix<float, 12,12>::Identity() - K*Jh)*P;
+    observation(3) = attitudeErrorRodrigeuz(0);
+    observation(4) = attitudeErrorRodrigeuz(1);
+    observation(5) = attitudeErrorRodrigeuz(2);
+    
+    // Translation 
+    deltaTrans.setZero();
+    deltaTrans(0) = workingTransformDelta(0,3);
+    deltaTrans(1) = workingTransformDelta(1,3);
+    deltaTrans(2) = workingTransformDelta(2,3);
+
+    // Get t_delt = R_delt t_1 + t_delt - t_1
+    deltaTrans = deltaTrans + workingTransformDelta.linear()*stateTrans - stateTrans;
+    // deltaTrans = deltaTrans + deltaRotOnly*stateTrans - stateTrans;
+    
+    
+    // Put in the observation
+    // observation.block(0,0,3,2) = deltaTrans;
+    observation(0) = deltaTrans(0);
+    observation(1) = deltaTrans(1);
+    observation(2) = deltaTrans(2);
+
+    cout << "Observation is:\n" << observation << endl;
+    // cout << "Predicted is:\n" << predicted << endl;
+    // cout << "Innovation is: \n" << (observation - predicted) << endl;
+
+    //--------------------------------------------------
+    //--------------------------------------------------
+    // Update R
+    //--------------------------------------------------
+    //--------------------------------------------------
+    
+    angularError = std::abs(attitudeErrorAA.angle());
+    linearError = 0.0;
+    for (int k = 0; k < 3; k++){linearError += std::pow(observation(k),2.0);}
+    linearError = std::sqrt(linearError);
+    cout << "Transform size metrics are, linear: " << linearError << ", angular: " << angularError << endl;
+
+    // Thesholds
+    if (angularError > rejectCriteria[0]){
+      // High uncertainty if more than 45 degrees
+      cout << "Angular error > limit, rejecting" << endl;
+      bRejectAlignment = true;
+    }
+    if (angularError > rejectCriteria[1]){
+      // High uncertainty if more than 90 degrees
+      cout << "Angular error > 90 deg, placing very large uncertainty" << endl;
+      bRejectAlignment = true;
+    }
+
+    if (linearError > rejectCriteria[2]){
+      // High uncertainty if more than 5 m NEED TO ADJUST THIS FOR DIFFERENT SCALES
+      cout << "Linear error > " << rejectCriteria[2] << " m, placing large uncertainty" << endl;
+      bRejectAlignment = true;
+    }
+
+    if (linearError > rejectCriteria[3]){
+      // High uncertainty if more than 5 m NEED TO ADJUST THIS FOR DIFFERENT SCALES
+      cout << "Linear error > " << rejectCriteria[3] << " m, placing very large uncertainty" << endl;
+      bRejectAlignment = true;
+    }
+
+    if (inlierFractionList[0] < rejectCriteria[4]){
+      // Increase uncertainty if fraction is low
+      cout << "Very low inlier fraction. Placing large uncertainty" << endl;
+      bRejectAlignment = true;
+    }
+
+    int desiredSize = mp.numRowsDesired*mp.numColsDesired;
+    if ((float)numberOfPointsInAlignment[k]/(float)desiredSize < rejectCriteria[5]){
+      // High penaty if there are not many points
+      cout << "Very low number of points. Placing large uncertainty" << endl;
+      bRejectAlignment = true;
+    }
+
+    if (bRejectAlignment){
+      cout << "No update to state, alignment rejected" << endl;
+      workingTransformDelta = Eigen::Affine3f::Identity();
+      // State not updated
+      return;
+    }
+
+    float noiseObsMultPosSize = noiseObsMultPos*0.1;
+    // float noiseObsMultPosErr = noiseObsMultPos*0.5;
+    float noiseObsMultAngSize = noiseObsMultAng*0.1;
+    // float noiseObsMultAngErr = noiseObsMultAng*0.5;
+
+    // Set R from inlier fraction
+    float metric = inlierFractionList[0];
+    float threeSig = noiseObsBasePos + noiseObsMultPos*(std::pow(1.0-metric,2.0)) + noiseObsMultPosSize*(std::pow(1.0 - (float)numberOfPointsInAlignment[k]/(float)desiredSize,2.0)) + noiseObsMultPosErr*(std::pow(linearError,4.0));
+    R.setIdentity();
+    R(0,0) = std::sqrt(threeSig/3.0);
+    R(1,1) = std::sqrt(threeSig/3.0);
+    R(2,2) = std::sqrt(threeSig/3.0);
+    // Angles
+    threeSig = noiseObsBaseAng + noiseObsMultAng*(std::pow(1.0-metric,2.0)) + noiseObsMultAngSize*(std::pow(1.0 - (float)numberOfPointsInAlignment[k]/(float)desiredSize,2.0)) + noiseObsMultAngErr*(std::pow(angularError,4.0));
+    R(3,3) = std::sqrt(threeSig/3.0);
+    R(4,4) = std::sqrt(threeSig/3.0);
+    R(5,5) = std::sqrt(threeSig/3.0);
+
+    if (bRejectAlignment){
+      R = R*(float)1e25;
+    }else{
+      R = R*rMatMultiplier;
+    }
+    
+
+    cout << "R is: \n" << R << endl;
+    
+
+    // Compute the Kalman gain
+    K = P*Jh.transpose()*(Jh*P*Jh.transpose() + R).inverse();
+
+    cout << "Kalman Gain is:\n" << K << endl;
+
+    // KF Update 
+    ekfUpdate = K*(observation - predicted);
+
+    cout << "EKF Update is:\n" << ekfUpdate << endl;
+
+    // Update linear
+    ekfState.block(0,0,9,1) += ekfUpdate.block(0,0,9,1);
+    // cout << "EKF State is:\n" << ekfState << endl;
+
+    // Output angular
+    attitudeErrorRodrigeuz = ekfUpdate.block(9,0,3,1);
+
+    cout << "Rodrigeuz state is:\n" << attitudeErrorRodrigeuz << endl;
+    cout << "Norm is: " << 2.0*std::atan(attitudeErrorRodrigeuz.norm()) << "\nVector is: \n" << attitudeErrorRodrigeuz.normalized() << endl;
+
+    cout << "TransformDelta from alignment is:\n" << workingTransformDelta.matrix() << endl;
+
+    // Update state estimate
+    cout << "State, pre transformation is:\n" << state.matrix() << endl;  
+    
+    // Apply rotation 
+    deltaRotTransform.setIdentity();
+    deltaRotTransform.rotate(Eigen::AngleAxisf(2.0*std::atan(attitudeErrorRodrigeuz.norm()), attitudeErrorRodrigeuz.normalized()));
+    // state.rotate(Eigen::AngleAxisf(2*std:atanf(attitudeErrorRodrigeuz.norm()), attitudeErrorRodrigeuz.normalized()));
+
+    state = deltaRotTransform*state;
+
+    // Apply Translation
+    state(0,3) = ekfState(0);
+    state(1,3) = ekfState(1);
+    state(2,3) = ekfState(2);
+    
+    cout << "State after transform is:\n" << state.matrix() << endl;
+
+    // Get updated transform delta
+    transformDelta = state*oldState.inverse();
+
+    cout << "TransformDelta is:\n" << transformDelta.matrix() << endl;
+
+    // // This may be wrong...
+    // deltaRotTransform(0,3) = ekfUpdate(0);
+    // deltaRotTransform(1,3) = ekfUpdate(1);
+    // deltaRotTransform(2,3) = ekfUpdate(2);
+
+    revertTransformationToNow = transformDelta.inverse();
+
+    // Update covariance
+    if (!bKeepPConstant){
+      P = (Eigen::Matrix<float, 12,12>::Identity() - K*Jh)*P;
+    }
+    
+    cout << "Covariance P after update step of object " << k << " is:\n" << P << endl;
   }
-  
-  cout << "Covariance P after update step is:\n" << P << endl;
-
 }
 
 /*! 

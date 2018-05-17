@@ -116,6 +116,7 @@ public:
     int nPointsZLim;
     float zThreshMultiplier;
     bool bRejectScan;
+    bool exitOnlyOnMinNans;
     
     bool bNegateZ;
 
@@ -128,6 +129,12 @@ public:
     // Eigen::Array<float,Eigen::Dynamic, Eigen::Dynamic> objectMetrics;
     // or 
     std::vector<std::vector<float> > objectMetrics;
+
+    // Object mask
+    Eigen::Array<int, Eigen::Dynamic, Eigen::Dynamic> objectMask;
+
+    bool bUseObjectMask;
+    int maskID;
 
 
 };

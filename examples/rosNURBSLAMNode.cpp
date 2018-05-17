@@ -15,6 +15,12 @@
 #include "tf_conversions/tf_eigen.h"
 #include "eigen_conversions/eigen_msg.h"
 
+// Image processing
+#include <image_transport/image_transport.h>
+#include <cv_bridge/cv_bridge.h>
+#include <sensor_msgs/image_encodings.h>
+#include <opencv2/imgproc/imgproc.hpp>
+
 // CANS includes
 #include "cans/nurbSLAM.h"
 
@@ -49,6 +55,9 @@ class nurbSLAMNode {
     float timestep;
 
     float staticErrorTrack;
+
+    // Image pointer
+    cv_bridge::CvImagePtr cv_ptr;
 
     
   public:
@@ -143,6 +152,47 @@ class nurbSLAMNode {
         // writer.write<pcl::PointNormal> ("/home/amme2/Development/voxblox_ws/unreal_scan.pcd", *cloud, false);
         
       }
+    }
+
+    void mask_cb(const sensor_msgs::ImageConstPtr& msg){
+      cout << "Inside message callback for object mask" << endl;
+
+      try{
+        cv_ptr = cv_bridge::toCvCopy(msg, std::string());
+      }
+      catch (cv_bridge::Exception& e){
+        ROS_ERROR("cv_bridge exception: %s", e.what());
+        return;
+      }
+
+      cout << "Successfully parsed message" << endl;
+
+      // Sample point
+      int pix = cv_ptr->image.at<int>(45,45);
+
+      cout << "Pixel (45, 45) is: " << pix << endl;
+
+      // Compute number of segments
+      double minVal; double maxVal; cv::minMaxLoc(cv_ptr->image, &minVal, &maxVal);
+
+      cout << "Min val is: " << minVal << ", max val is: " << maxVal << endl;
+
+      slam.numberOfMaskSegments = 2;
+
+      Eigen::Array<int, Eigen::Dynamic, Eigen::Dynamic> mask(cv_ptr->image.rows,cv_ptr->image.cols);
+
+      for (int i = 0; i < cv_ptr->image.rows; i++){
+        for (int j = 0; j < cv_ptr->image.cols; j++){
+          mask(i,j) = cv_ptr->image.at<int>(i,j);
+        }
+      }
+
+      cout << "Mask at (45,65) is: " << mask(45, 64) << endl;
+
+      slam.mp.objectMask = mask;
+
+      cout << "Updated mask in mapping class" << endl;      
+
     }
 
     void updateStaticError(){
@@ -321,6 +371,8 @@ class nurbSLAMNode {
       nh.param("keypointOption", slam.keypointOption, slam.keypointOption);
       nh.param("bRejectNonOverlappingInAlign", slam.bRejectNonOverlappingInAlign, slam.bRejectNonOverlappingInAlign);
 
+      nh.param("bUseObjectMaskSegmentation", slam.bUseObjectMaskSegmentation, slam.bUseObjectMaskSegmentation);
+
       nh.param("bTestMapGeneration",bTestMapGeneration,bTestMapGeneration);
 
       // Localisation
@@ -352,10 +404,15 @@ class nurbSLAMNode {
       nh.param("/meshing/maxNanAllowed", slam.mp.maxNanAllowed, slam.mp.maxNanAllowed);
       nh.param("/meshing/removeNanBuffer", slam.mp.removeNanBuffer, slam.mp.removeNanBuffer);
       nh.param("/meshing/newRowColBuffer", slam.mp.newRowColBuffer, slam.mp.newRowColBuffer);
+      nh.param("/meshing/maxNanPercentage", slam.mp.maxNanPercentage, slam.mp.maxNanPercentage);
+      nh.param("/meshing/minRowsColsAllowed", slam.mp.minRowsColsAllowed, slam.mp.minRowsColsAllowed);
+      nh.param("/meshing/exitOnlyOnMinNans", slam.mp.exitOnlyOnMinNans, slam.mp.exitOnlyOnMinNans);
+
       nh.param("/meshing/bFilterZ", slam.mp.bFilterZ, slam.mp.bFilterZ);
       nh.param("/meshing/nPointsZLim", slam.mp.nPointsZLim, slam.mp.nPointsZLim);
       nh.param("/meshing/bNegateZ", slam.mp.bNegateZ, slam.mp.bNegateZ);
-
+      nh.param("/meshing/zThreshMultiplier", slam.mp.zThreshMultiplier, slam.mp.zThreshMultiplier);    
+      
       nh.param("/mapping/useNonRectData", slam.mp.useNonRectData, slam.mp.useNonRectData);
       nh.param("/mapping/nCtrlDefaultS", slam.mp.nCtrlDefault[0], slam.mp.nCtrlDefault[0]); 
       nh.param("/mapping/nCtrlDefaultT", slam.mp.nCtrlDefault[1], slam.mp.nCtrlDefault[1]);
@@ -452,6 +509,9 @@ main (int argc, char** argv)
 
   // Create a ROS subscriber for the input point cloud
   ros::Subscriber sub = nh.subscribe ("/camera/points2", 1, &nurbSLAMNode::cloud_cb, &nurbnode);
+
+  // Create a ROS subscriber for the point cloud mask
+  ros::Subscriber subM = nh.subscribe ("/camera/image_mask", 1, &nurbSLAMNode::mask_cb, &nurbnode);
 
   // Timer to process the cloud
   float processRate = 30.0;

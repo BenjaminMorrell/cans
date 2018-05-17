@@ -68,9 +68,10 @@ class NurbSLAM {
     std::vector<float> inlierFractionList;
     std::vector<int> mapMatchCount;
     std::vector<int> mapExtendCount;
+    std::vector<int> numberOfPointsInAlignment;
 
     float inlierFraction;
-    int numberOfPointsInAlignment;
+    
     bool bRejectAlignment;
     
     bool bObjectNormalsComputed;
@@ -93,6 +94,7 @@ class NurbSLAM {
 
     // Higher level function
     void processScans(std::vector<pcl::PointCloud<pcl::PointNormal>::Ptr> clouds, float timestep = 0.0);
+    void processScans(std::vector<pcl::PointCloud<pcl::PointNormal>::Ptr> clouds, Eigen::Array<int, Eigen::Dynamic, Eigen::Dynamic> mask, float timestep = 0.0);
 
     int processSingleScan(pcl::PointCloud<pcl::PointNormal>::Ptr cloud, pcl::PointCloud<pcl::PointNormal>::Ptr cloudTransformed);
 
@@ -190,6 +192,11 @@ class NurbSLAM {
     float rMatMultiplier;
 
     int processModel; // 0 - const accel, 1 - const vel, 2 - const pos
+
+
+    //MULTI OBJECT
+    bool bUseObjectMaskSegmentation;
+    int numberOfMaskSegments;
 };
 
 

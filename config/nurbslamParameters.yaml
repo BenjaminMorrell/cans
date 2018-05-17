@@ -18,6 +18,8 @@ bLocalisationRejectionOn: false
 
 mappingSteps: 3
 
+bUseObjectMaskSegmentation: false
+
 # -----------------------------
 # Localisation
 # -----------------------------
@@ -44,7 +46,7 @@ validInlierThreshold: 0.4
 maxDistanceOverlap: 0.05 # maximum allowed distance away from existing surface to not be classed as new data
 
 # Number of data points
-nSurfPointsFactor: 5.0 # multiplier by the number of control points to get the number of surface points to sample
+nSurfPointsFactor: 6.5 # multiplier by the number of control points to get the number of surface points to sample
 
 mapCountThreshold: 3
 mapExtendThreshold: 100 # Make this very high to turn off the "new object when no extension for too long" feature

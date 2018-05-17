@@ -19,6 +19,8 @@ bLocalisationRejectionOn: false
 
 mappingSteps: 5
 
+bUseObjectMaskSegmentation: true
+
 # -----------------------------
 # Localisation
 # -----------------------------
@@ -27,25 +29,25 @@ mappingSteps: 5
 /keypoints/minNeighbours: 5
 
 # Normals
-pclNormalRadiusSetting: 0.2
+pclNormalRadiusSetting: 0.25
 # Features
 pclFeatureRadiusSetting: 0.35
 # RANSAC
-/ransac/inlierMultiplier: 0.05
-/ransac/maximumIterations: 5000
+/ransac/inlierMultiplier: 0.025
+/ransac/maximumIterations: 7000 # 5000
 
 # POSSIBLY USE
 /ransac/numberOfSamples: 3
 /ransac/correspondenceRandomness: 3
 /ransac/similarityThreshold: 0.9
-/ransac/inlierFraction: 0.4 # this should maybe be more strict for the blender data
+/ransac/inlierFraction: 0.6 # this should maybe be more strict for the blender data
 
-validInlierThreshold: 0.4
+validInlierThreshold: 0.6
 
 maxDistanceOverlap: 0.05 # maximum allowed distance away from existing surface to not be classed as new data
 
 # Number of data points
-nSurfPointsFactor: 5.0 # multiplier by the number of control points to get the number of surface points to sample
+nSurfPointsFactor: 5.0 #6.0 # multiplier by the number of control points to get the number of surface points to sample
 
 mapCountThreshold: 3
 mapExtendThreshold: 100 # Make this very high to turn off the "new object when no extension for too long" feature
@@ -54,21 +56,25 @@ mapExtendThreshold: 100 # Make this very high to turn off the "new object when n
 # Mapping
 # -----------------------------
 # Mesh processing
-/meshing/numRowsDesired: 95
-/meshing/numColsDesired: 95
+/meshing/numRowsDesired: 115
+/meshing/numColsDesired: 115
 /meshing/maxNanAllowed: 5
-/meshing/removeNanBuffer: 2
+/meshing/removeNanBuffer: 4 # 2
 /meshing/newRowColBuffer: 10 # Good for mapping - 20
 
-/meshing/bFilterZ: false
+/meshing/exitOnlyOnMinNans: false
+/meshing/minRowsColsAllowed: 15
+/meshing/maxNanPercentage: 0.25
+
+/meshing/bFilterZ: true
 /meshing/nPointsZLim: 10000
 /meshing/zThreshMultiplier: 1.0
 /meshing/bNegateZ: false
 
 # NURBS generation
 /mapping/useNonRectData: true # To use the new extension method
-/mapping/nCtrlDefaultS: 17
-/mapping/nCtrlDefaultR: 17
+/mapping/nCtrlDefaultS: 25
+/mapping/nCtrlDefaultR: 25
 /mapping/degree: 3
 
 # Data association
@@ -85,7 +91,7 @@ mapExtendThreshold: 100 # Make this very high to turn off the "new object when n
 /ekf/pNoiseVel: 0.0025
 /ekf/pNoiseAccel: 0.00025
 /ekf/pNoiseAng: 40000.0
-/ekf/qNoiseMultiplier: 5.0 
+/ekf/qNoiseMultiplier: 3.0 
 /ekf/pNoiseMultiplier: 1.0
 /ekf/noiseObsBasePos: 0.001 
 /ekf/noiseObsMultPos: 500.0

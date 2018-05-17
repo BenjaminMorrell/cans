@@ -77,6 +77,8 @@ void setSLAMParameters(NurbSLAM& slam, ros::NodeHandle nh){
   nh.param("keypointOption", slam.keypointOption, slam.keypointOption);
   nh.param("bRejectNonOverlappingInAlign", slam.bRejectNonOverlappingInAlign, slam.bRejectNonOverlappingInAlign);
 
+  nh.param("bUseObjectMaskSegmentation", slam.bUseObjectMaskSegmentation, slam.bUseObjectMaskSegmentation);
+
   // Localisation
   nh.param("/keypoints/modelResolution", slam.modelResolutionKeypoints, slam.modelResolutionKeypoints);
   nh.param("/keypoints/minNeighbours", slam.minNeighboursKeypoints, slam.minNeighboursKeypoints);
@@ -106,9 +108,14 @@ void setSLAMParameters(NurbSLAM& slam, ros::NodeHandle nh){
   nh.param("/meshing/maxNanAllowed", slam.mp.maxNanAllowed, slam.mp.maxNanAllowed);
   nh.param("/meshing/removeNanBuffer", slam.mp.removeNanBuffer, slam.mp.removeNanBuffer);
   nh.param("/meshing/newRowColBuffer", slam.mp.newRowColBuffer, slam.mp.newRowColBuffer);
+  nh.param("/meshing/maxNanPercentage", slam.mp.maxNanPercentage, slam.mp.maxNanPercentage);
+  nh.param("/meshing/minRowsColsAllowed", slam.mp.minRowsColsAllowed, slam.mp.minRowsColsAllowed);
+
+
   nh.param("/meshing/bFilterZ", slam.mp.bFilterZ, slam.mp.bFilterZ);
   nh.param("/meshing/nPointsZLim", slam.mp.nPointsZLim, slam.mp.nPointsZLim);
   nh.param("/meshing/bNegateZ", slam.mp.bNegateZ, slam.mp.bNegateZ);
+  nh.param("/meshing/zThreshMultiplier", slam.mp.zThreshMultiplier, slam.mp.zThreshMultiplier);
 
   nh.param("/mapping/useNonRectData", slam.mp.useNonRectData, slam.mp.useNonRectData);
   nh.param("/mapping/nCtrlDefaultS", slam.mp.nCtrlDefault[0], slam.mp.nCtrlDefault[0]); 
@@ -116,6 +123,7 @@ void setSLAMParameters(NurbSLAM& slam, ros::NodeHandle nh){
 
   nh.param("/mapping/bUseFullAlignmentTransformInUpdate", slam.bUseFullAlignmentTransformInUpdate, slam.bUseFullAlignmentTransformInUpdate);
   nh.param("/mapping/bUseOldStateForNewObjects", slam.bUseOldStateForNewObjects, slam.bUseOldStateForNewObjects);
+  
   
 
   cout << "nCtrlDefaultS is " << slam.mp.nCtrlDefault[0] << endl;
