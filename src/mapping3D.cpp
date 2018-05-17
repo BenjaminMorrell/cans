@@ -994,7 +994,13 @@ void Mapping3D::meshFromScan(pcl::PointCloud<pcl::PointNormal>::Ptr cloudOut, pc
           cloudOut->at(jj,ii).y = cloudIn->at(j,i).y;
           cloudOut->at(jj,ii).z = cloudIn->at(j,i).z;
 
-          
+          if (abs(cloudOut->at(jj,ii).z) < 0.001){
+            // Handle different Invalid point definition - zero value
+            cloudOut->at(jj,ii).z = 1.0/0.0;
+            nanIndices(0,ijk) = ii;
+            nanIndices(1,ijk) = jj;
+            ijk++; 
+          }
           // Store indices if the value is nan
           if (!pcl::isFinite(cloudIn->at(j,i))){
             nanIndices(0,ijk) = ii;
@@ -1086,6 +1092,12 @@ void Mapping3D::getNanMatrixFromPointCloud(Eigen::Array<bool, Eigen::Dynamic, Ei
     }
     
     
+  }else{
+    if (bNegateZ){
+      zLimHigh = -0.01;
+    }else{
+      zLimLow = 0.01;
+    }
   }
 
   cout << "Zlow is: " << zLimLow << ", Zhigh is: " << zLimHigh << endl;
@@ -1108,6 +1120,8 @@ void Mapping3D::getNanMatrixFromPointCloud(Eigen::Array<bool, Eigen::Dynamic, Ei
           // Nan if not the object with the current maskID
           nanArray(i,j) = true;
         }
+      }else if (std::abs(cloud->at(j,i).z) < 0.0001 ){
+        nanArray(i,j) = true;
       }else{
         nanArray(i,j) = false;
       }
