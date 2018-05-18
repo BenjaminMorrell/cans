@@ -586,7 +586,7 @@ main (int argc, char** argv)
   // Spin
   // ros::spin ();
   
-  ros::Rate r(10);// Adjust this 
+  ros::Rate r(5);// Adjust this 
   int counter = 0;
   while (nh.ok()){
     if (counter%10 == 0){//nurbnode.bNewObjects){

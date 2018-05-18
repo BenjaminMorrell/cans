@@ -154,7 +154,7 @@ void NurbSLAM::processScans(std::vector<pcl::PointCloud<pcl::PointNormal>::Ptr> 
     cout << "\n\n\t\t FINISHED PROCESSING SCAN " << i << "\n\n";
 
     if (objIDList[i] == -9){
-      cout << "Rejecting scan because of too many Nans (in NurbSLAM::processScans" << endl;
+      cout << "Rejecting scan because of too many Nans (in NurbSLAM::processScans)" << endl;
       continue;
     }
 

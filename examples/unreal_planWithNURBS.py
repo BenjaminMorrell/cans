@@ -42,7 +42,7 @@ class Planner:
     self.averageVel = 0.01 # m/s
 
     # Times for replanning
-    self.replanHz = 0.1
+    self.replanHz = 0.025
     self.timeOfReplan = 0.0
     self.startDeltaT = 0.5 # Time ahead of current time to use as the start location
     self.firstPlan = True
